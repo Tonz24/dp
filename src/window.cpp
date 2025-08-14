@@ -23,17 +23,17 @@ Window::~Window() {
 void Window::update(int keyCode) {
     if (keyCode == GLFW_KEY_C) {
 
-        if (cursorMode_ == DISABLED)
-            cursorMode_ = DEFAULT;
-        else if (cursorMode_ == DEFAULT)
-            cursorMode_ = DISABLED;
-        glfwSetInputMode(glfwWindow_, GLFW_CURSOR, cursorMode_);
+        if (cursorMode_ == CursorMode::disabled)
+            cursorMode_ = CursorMode::normal;
+        else if (cursorMode_ == CursorMode::normal)
+            cursorMode_ = CursorMode::disabled;
+        glfwSetInputMode(glfwWindow_, GLFW_CURSOR, static_cast<int>(cursorMode_));
     }
     if (keyCode == GLFW_KEY_F) {
         //  transition to fullscreen
-        if (windowMode_ == WINDOWED) {
+        if (windowMode_ == WindowMode::windowed) {
             fullscreen_ = true;
-            windowMode_ = FULLSCREEN;
+            windowMode_ = WindowMode::fullscreen;
 
             glfwGetWindowPos(glfwWindow_,&lastWindowPos_.x,&lastWindowPos_.y);
             glfwGetWindowSize(glfwWindow_,&lastWindowSize_.x,&lastWindowSize_.y);
@@ -42,8 +42,8 @@ void Window::update(int keyCode) {
             fullscreen_ = true;
         }
         //  transition to windowed
-        else if (windowMode_ == FULLSCREEN) {
-            windowMode_ = WINDOWED;
+        else if (windowMode_ == WindowMode::fullscreen) {
+            windowMode_ = WindowMode::windowed;
             glfwSetWindowMonitor(glfwWindow_, nullptr,lastWindowPos_.x,lastWindowPos_.y,lastWindowSize_.x,lastWindowSize_.y,GLFW_DONT_CARE);
             fullscreen_ = false;
         }

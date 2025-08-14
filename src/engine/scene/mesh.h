@@ -58,7 +58,5 @@ private:
 
     void initBuffers();
 
-    void initVertexBuffer();
 
-    void initIndexBuffer();
 };

@@ -7,6 +7,7 @@
 
 #include "../engine.h"
 #include "../utils.h"
+#include "../vkUtils.h"
 
 Texture::~Texture() {
     delete[] data_;
@@ -107,18 +108,12 @@ void Texture::uploadToDevice() {
 
     size_t imageSize = width_ * height_ * pixelSize_;
 
-    //  initialize local staging buffer
-    vk::raii::Buffer stagingBuffer{nullptr};
-    vk::raii::DeviceMemory stagingMemory{nullptr};
 
-    Engine::getInstance().createBuffer(
-        imageSize,stagingBuffer,
-        vk::BufferUsageFlagBits::eTransferSrc,stagingMemory,
-        vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+    auto stagingBuffer = VkUtils::createBuffer(imageSize,vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingMemoryFlags);
 
-    void* bufferData = stagingMemory.mapMemory(0,imageSize);
+    void* bufferData = stagingBuffer.memory.mapMemory(0,imageSize);
     memcpy(bufferData,data_,imageSize);
-    stagingMemory.unmapMemory(); //  put image pixel data into the mapped staging buffer
+    stagingBuffer.memory.unmapMemory(); //  put image pixel data into the mapped staging buffer
 
     //  create the image object
     vk::ImageCreateInfo imageCreateInfo{
@@ -137,7 +132,7 @@ void Texture::uploadToDevice() {
     auto memRequirements = vkImage_.getMemoryRequirements();
     auto allocInfo = vk::MemoryAllocateInfo{
         .allocationSize = memRequirements.size,
-        .memoryTypeIndex = Engine::getInstance().findMemoryType(memRequirements.memoryTypeBits,vk::MemoryPropertyFlagBits::eDeviceLocal)
+        .memoryTypeIndex = VkUtils::findMemoryType(memRequirements.memoryTypeBits,vk::MemoryPropertyFlagBits::eDeviceLocal)
     };
     vkImageMemory_ = vk::raii::DeviceMemory(Engine::getInstance().getDevice(),allocInfo);
     vkImage_.bindMemory(vkImageMemory_,0);
@@ -145,10 +140,36 @@ void Texture::uploadToDevice() {
     //  transition to dst optimal because the image will be written to from the staging buffer
     transitionImageLayout(vk::ImageLayout::eUndefined,vk::ImageLayout::eTransferDstOptimal);
 
-    Engine::getInstance().copyBufferToImage(stagingBuffer,vkImage_,width_,height_);
+    auto cmdBuf = VkUtils::beginSingleTimeCommand();
+    VkUtils::transitionImageLayout(
+        vkImage_,
+        vk::ImageLayout::eUndefined,
+        vk::ImageLayout::eTransferDstOptimal,
+        vk::PipelineStageFlagBits2::eTopOfPipe,
+        vk::AccessFlagBits2::eNone,
+        vk::PipelineStageFlagBits2::eTransfer,
+        vk::AccessFlagBits2::eTransferWrite,
+        vk::ImageAspectFlagBits::eColor,
+        cmdBuf
+    );
+    VkUtils::endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
 
-    //  transition to shader read only optimal layout from transfer dst optimal
-    transitionImageLayout(vk::ImageLayout::eTransferDstOptimal,vk::ImageLayout::eShaderReadOnlyOptimal);
+    VkUtils::copyBufferToImage(stagingBuffer.buffer,vkImage_,width_,height_);
+
+    auto cmdBuf2 = VkUtils::beginSingleTimeCommand();
+    VkUtils::transitionImageLayout(
+       vkImage_,
+       vk::ImageLayout::eTransferDstOptimal,
+       vk::ImageLayout::eShaderReadOnlyOptimal,
+       vk::PipelineStageFlagBits2::eTransfer,
+       vk::AccessFlagBits2::eTransferWrite,
+       vk::PipelineStageFlagBits2::eFragmentShader,
+       vk::AccessFlagBits2::eShaderRead,
+       vk::ImageAspectFlagBits::eColor,
+       cmdBuf2
+   );
+
+    VkUtils::endSingleTimeCommand(cmdBuf2,VkUtils::QueueType::graphics);
 }
 
 
@@ -176,51 +197,6 @@ void Texture::assignVkFormat() {
             std::cout << "ERROR! Unsupported format type" << std::endl;
             exit(EXIT_FAILURE);
     }
-}
-
-void Texture::transitionImageLayout(vk::ImageLayout oldLayout, vk::ImageLayout newLayout) {
-    auto cmdBuf = Engine::getInstance().beginSingleTimeCommand();
-
-    vk::ImageMemoryBarrier barrier{
-        .oldLayout = oldLayout,
-        .newLayout = newLayout,
-        .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
-        .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
-        .image = vkImage_,
-        .subresourceRange = {
-            .aspectMask = vk::ImageAspectFlagBits::eColor,
-            .baseMipLevel = 0,
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 1
-        }
-    };
-
-    vk::PipelineStageFlags sourceStage;
-    vk::PipelineStageFlags destinationStage;
-
-    if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eTransferDstOptimal) {
-        barrier.srcAccessMask = {};
-        barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-
-        sourceStage = vk::PipelineStageFlagBits::eTopOfPipe;
-        destinationStage = vk::PipelineStageFlagBits::eTransfer;
-    }
-    else if (oldLayout == vk::ImageLayout::eTransferDstOptimal && newLayout == vk::ImageLayout::eShaderReadOnlyOptimal) {
-        barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-        barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-
-        sourceStage = vk::PipelineStageFlagBits::eTransfer;
-        destinationStage = vk::PipelineStageFlagBits::eFragmentShader;
-    }
-    else {
-        std::cerr << "ERROR: Unsupported image layout!" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    cmdBuf.pipelineBarrier(sourceStage,destinationStage,{},nullptr,nullptr,barrier);
-
-    Engine::getInstance().endSingleTimeCommand(cmdBuf);
 }
 
 void Texture::initImageViewAndSampler() {

@@ -23,22 +23,12 @@ public:
     void run();
     void init();
 
-    uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags  properties) const;
-
-    const vk::raii::Device &getDevice() const;
-
-
-    void createBuffer(vk::DeviceSize size, vk::raii::Buffer& buffer, vk::BufferUsageFlags bufferUsage, vk::raii::DeviceMemory& bufferMemory, vk::MemoryPropertyFlags properties) const;
-    void copyBuffer(vk::raii::Buffer & srcBuffer, vk::raii::Buffer & dstBuffer, vk::DeviceSize size);
+    const vk::raii::Device &getDevice() const {return device_;}
 
     [[nodiscard]] const Scene& getScene() const { return *scene_; }
     void setScene(std::shared_ptr<Scene> scene) { scene_ = std::move(scene); }
 
-    vk::raii::CommandBuffer beginSingleTimeCommand() const;
 
-    void endSingleTimeCommand(vk::raii::CommandBuffer& cmdBuf) const;
-
-    void copyBufferToImage(const vk::raii::Buffer& buffer, vk::raii::Image& image,uint32_t width, uint32_t height) const;
 
     [[nodiscard]] const vk::PhysicalDeviceLimits & getDeviceLimits() const { return deviceLimits; }
     [[nodiscard]] const vk::raii::DescriptorPool & getDescriptorPool() const { return descriptorPool_; }
@@ -88,10 +78,6 @@ private:
 
     void updateUniformBuffers(uint32_t currentFrame) const;
 
-    void transitionImageLayout(const vk::Image &image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
-                               vk::AccessFlags2 srcAccessMask, vk::AccessFlags2 dstAccessMask,
-                               vk::PipelineStageFlags2 srcStageMask, vk::PipelineStageFlags2 dstStageMask,
-                               vk::raii::CommandBuffer &cmdBuf);
 
     void recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightIndex, vk::raii::CommandBuffer &cmdBuf);
 
@@ -148,7 +134,7 @@ private:
     vk::raii::SurfaceKHR surface_{nullptr};
 
     vk::raii::PhysicalDevice physicalDevice{nullptr};
-    vk::raii::Device device{nullptr};
+    vk::raii::Device device_{nullptr};
 
     QueueFamilyIndices queueFamilyIndices{};
     vk::raii::Queue graphicsQueue{nullptr};
@@ -167,8 +153,7 @@ private:
     vk::raii::PipelineLayout pipelineLayout{nullptr};
     vk::raii::Pipeline graphicsPipeline{nullptr};
 
-    vk::raii::CommandPool drawCommandPool{nullptr};
-    vk::raii::CommandPool transferCommandPool{nullptr};
+    vk::raii::CommandPool graphicsCommandPool_{nullptr};
 
     std::vector<vk::raii::CommandBuffer> commandBuffers_{};
 

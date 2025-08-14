@@ -41,7 +41,7 @@ private:
     void uploadToDevice();
     void initImageViewAndSampler();
     void assignVkFormat();
-    void transitionImageLayout(vk::ImageLayout oldLayout, vk::ImageLayout newLayout);
+
 
     uint32_t width_{};
     uint32_t height_{};

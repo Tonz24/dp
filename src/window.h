@@ -29,14 +29,14 @@ public:
 
     void update(int keyCode) override;
 
-    enum CursorMode {
-        DEFAULT = GLFW_CURSOR_NORMAL,
-        DISABLED = GLFW_CURSOR_DISABLED,
+    enum class CursorMode {
+        normal = GLFW_CURSOR_NORMAL,
+        disabled = GLFW_CURSOR_DISABLED,
     };
 
-    enum WindowMode {
-        WINDOWED,
-        FULLSCREEN
+    enum class WindowMode {
+        windowed,
+        fullscreen
     };
 
 private:
@@ -49,8 +49,8 @@ private:
 
     GLFWwindow* glfwWindow_{nullptr};
     std::string name_{};
-    CursorMode cursorMode_{DISABLED};
-    WindowMode windowMode_{WINDOWED};
+    CursorMode cursorMode_{CursorMode::disabled};
+    WindowMode windowMode_{WindowMode::windowed};
 
     glm::ivec2 lastWindowPos_{};
     glm::ivec2 lastWindowSize_{};
