@@ -1,0 +1,22 @@
+{
+  "name" : "dp",
+  "version-string" : "1.0.0",
+  "builtin-baseline" : "ce613c41372b23b1f51333815feb3edd87ef8a8b",
+  "dependencies" : [ {
+    "name" : "glfw3",
+    "version>=" : "3.4#1"
+  }, {
+    "name" : "vcpkg-cmake-config",
+    "version>=" : "2024-05-23"
+  }, {
+    "name" : "freeimage",
+    "version>=" : "3.18.0#27"
+  }, {
+    "name" : "assimp",
+    "version>=" : "6.0.2#1"
+  } ],
+  "overrides" : [ {
+    "name" : "assimp",
+    "version" : "5.4.3"
+  } ]
+}

@@ -1,0 +1,18 @@
+#include "../engine.h"
+#include "../engine/managers/meshManager.h"
+#include "../engine/scene/modelLoader.h"
+
+
+int main() {
+    Engine::getInstance().init();
+
+    auto model = ModelLoader::loadModel("cube/cube.obj");
+
+    auto cam = std::make_shared<Camera>(glm::vec3{0,0,2},glm::vec3{0,0,0});
+
+    auto scene = std::make_shared<Scene>(model,cam);
+
+    Engine::getInstance().setScene(scene);
+    Engine::getInstance().run();
+    return 0;
+}
