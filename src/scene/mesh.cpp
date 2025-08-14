@@ -3,8 +3,8 @@
 //
 
 #include "mesh.h"
-#include "../../engine.h"
-#include "../../vkUtils.h"
+#include "../engine/engine.h"
+#include "../engine/vkUtils.h"
 
 Mesh::Mesh(std::vector<Vertex> &&vertexList, std::vector<uint32_t> &&indexList, std::shared_ptr<Material> material):
     vertices_(std::move(vertexList)), indices_(std::move(indexList)), material_(std::move(material)) {

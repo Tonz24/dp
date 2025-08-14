@@ -7,8 +7,8 @@
 #include <memory>
 #include <assimp/scene.h>
 
-#include "../material.h"
-#include "mesh.h"
+#include "../scene/material.h"
+#include "../scene/mesh.h"
 
 class ModelLoader {
 public:
@@ -17,7 +17,7 @@ public:
 private:
     static std::vector<std::shared_ptr<Material>> loadMaterials(const std::string &directory, const aiScene& scene);
 
-    inline static bool gammaCorrectOnLoad{true};
+    inline static bool gammaCorrectOnLoad{false};
 
     inline static const std::string modelPathPrefix{"../assets/models/"};
 };

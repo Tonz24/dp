@@ -5,13 +5,13 @@
 #include "modelLoader.h"
 #include <iostream>
 
-#include "../../utils.h"
-#include "assimp/Importer.hpp"
-#include "assimp/postprocess.h"
+#include "utils.h"
+#include <assimp/Importer.hpp>
+#include <assimp/postprocess.h>
 
-#include "../managers/materialManager.h"
-#include "../managers/meshManager.h"
-#include "../managers/textureManager.h"
+#include "managers/materialManager.h"
+#include "managers/meshManager.h"
+#include "managers/textureManager.h"
 
 std::vector<std::shared_ptr<Mesh>> ModelLoader::loadModel(std::string_view path) {
     std::string fullPath{ModelLoader::modelPathPrefix + std::string{path}};

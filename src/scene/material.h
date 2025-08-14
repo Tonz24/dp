@@ -11,8 +11,8 @@
 
 #include <glm/glm.hpp>
 
-#include "texture.h"
-#include "../uboFormat.h"
+#include "../engine/texture.h"
+#include "../engine/uboFormat.h"
 
 
 class Material : public ManagedResource, public UBOFormat<MaterialUBOFormat> {

@@ -15,7 +15,7 @@
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_vulkan.h>
 
-#include "engine/managers/inputManager.h"
+#include "managers/inputManager.h"
 #include "utils.h"
 #include "vkUtils.h"
 

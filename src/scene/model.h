@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "mesh.h"
-#include "../transform.h"
+#include "transform.h"
 
 //TODO: move memory management from per mesh to per Model and then later to central management
 class Model {

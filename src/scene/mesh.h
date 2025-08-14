@@ -6,8 +6,8 @@
 #include <vector>
 
 #include "vertex.h"
-#include "../material.h"
-#include "../transform.h"
+#include "material.h"
+#include "transform.h"
 
 class Mesh : public ManagedResource {
 public:

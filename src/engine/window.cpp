@@ -6,7 +6,7 @@
 
 #include <iostream>
 
-#include "engine/managers/inputManager.h"
+#include "managers/inputManager.h"
 
 Window::Window(std::string_view name, uint32_t width, uint32_t height, bool fullscreen) : width_(width), height_(height), fullscreen_(fullscreen), name_(name){
     init();

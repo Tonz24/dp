@@ -8,7 +8,7 @@
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 
-#include "../../engine.h"
+#include "../engine/engine.h"
 
 Camera::Camera(const glm::vec3 &position, const glm::vec3 &viewAt, float verticalFov) : camForwardDir_(glm::normalize(viewAt - position)), positionWorld_(uboFormat_.positionWorld), verticalFov_(verticalFov){
 

@@ -5,7 +5,7 @@
 #pragma once
 
 #include "resourceManager.h"
-#include "../scene/mesh.h"
+#include "../../scene/mesh.h"
 
 class MeshManager : public ResourceManager<Mesh> {
 public:

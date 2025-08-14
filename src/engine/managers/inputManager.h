@@ -7,7 +7,7 @@
 #include <iostream>
 #include <GLFW/glfw3.h>
 
-#include "../../observers.h"
+#include "../observers.h"
 
 class InputManager : public KeyPressSubject {
 public:

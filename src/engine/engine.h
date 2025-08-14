@@ -12,9 +12,9 @@
 #include <glm/glm.hpp>
 
 #include "window.h"
-#include "engine/scene/camera.h"
-#include "engine/scene/mesh.h"
-#include "engine/scene/scene.h"
+#include "../scene/camera.h"
+#include "../scene/mesh.h"
+#include "../scene/scene.h"
 
 class Engine {
 public:
@@ -27,8 +27,6 @@ public:
 
     [[nodiscard]] const Scene& getScene() const { return *scene_; }
     void setScene(std::shared_ptr<Scene> scene) { scene_ = std::move(scene); }
-
-
 
     [[nodiscard]] const vk::PhysicalDeviceLimits & getDeviceLimits() const { return deviceLimits; }
     [[nodiscard]] const vk::raii::DescriptorPool & getDescriptorPool() const { return descriptorPool_; }
@@ -77,7 +75,6 @@ private:
     void initDescriptorPool();
 
     void updateUniformBuffers(uint32_t currentFrame) const;
-
 
     void recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightIndex, vk::raii::CommandBuffer &cmdBuf);
 

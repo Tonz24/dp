@@ -4,7 +4,7 @@
 
 #pragma once
 #include "resourceManager.h"
-#include "../material.h"
+#include "../../scene/material.h"
 
 class MaterialManager : public ResourceManager<Material> {
 public:

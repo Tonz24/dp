@@ -13,21 +13,21 @@ set(IMGUI_DIR ${CMAKE_SOURCE_DIR}/libs/imgui)
 
 add_executable(dp
         src/entry/main.cpp
-        src/engine.cpp
-        src/engine.h
-        src/window.cpp
-        src/window.h
-        src/utils.cpp
-        src/utils.h
-        src/observer.h
-        src/engine/transform.cpp
-        src/engine/transform.h
+        src/engine/engine.cpp
+        src/engine/engine.h
+        src/engine/window.cpp
+        src/engine/window.h
+        src/engine/utils.cpp
+        src/engine/utils.h
+        src/engine/observer.h
+        src/scene/transform.cpp
+        src/scene/transform.h
         src/engine/texture.cpp
         src/engine/texture.h
-        src/engine/material.cpp
-        src/engine/material.h
-        src/engine/scene/modelLoader.cpp
-        src/engine/scene/modelLoader.h
+        src/scene/material.cpp
+        src/scene/material.h
+        src/engine/modelLoader.cpp
+        src/engine/modelLoader.h
         src/engine/managers/resourceManager.cpp
         src/engine/managers/resourceManager.h
         src/engine/managers/managedResource.cpp
@@ -36,19 +36,19 @@ add_executable(dp
         src/engine/managers/textureManager.h
         src/engine/managers/materialManager.cpp
         src/engine/managers/materialManager.h
-        src/engine/scene/vertex.h
-        src/engine/scene/mesh.cpp
-        src/engine/scene/mesh.h
+        src/scene/vertex.h
+        src/scene/mesh.cpp
+        src/scene/mesh.h
         src/engine/managers/resourceManagerBase.cpp
         src/engine/managers/resourceManagerBase.h
         src/engine/managers/meshManager.cpp
         src/engine/managers/meshManager.h
-        src/engine/scene/camera.cpp
-        src/engine/scene/camera.h
-        src/engine/scene/scene.cpp
-        src/engine/scene/scene.h
-        src/engine/scene/model.cpp
-        src/engine/scene/model.h
+        src/scene/camera.cpp
+        src/scene/camera.h
+        src/scene/scene.cpp
+        src/scene/scene.h
+        src/scene/model.cpp
+        src/scene/model.h
 
         ${IMGUI_DIR}/imgui.cpp
         ${IMGUI_DIR}/imgui_draw.cpp
@@ -58,10 +58,10 @@ add_executable(dp
         ${IMGUI_DIR}/imgui_impl_glfw.cpp
         src/engine/managers/inputManager.cpp
         src/engine/managers/inputManager.h
-        src/observers.h
-        src/uboFormat.h
-        src/vkUtils.cpp
-        src/vkUtils.h
+        src/engine/observers.h
+        src/engine/uboFormat.h
+        src/engine/vkUtils.cpp
+        src/engine/vkUtils.h
 )
 
 # add shader compilation as a build step

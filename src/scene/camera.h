@@ -7,7 +7,7 @@
 
 #include <glm/glm.hpp>
 
-#include "../../uboFormat.h"
+#include "../engine/uboFormat.h"
 
 
 class Camera : public UBOFormat<CameraUBOFormat> {

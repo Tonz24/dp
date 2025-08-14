@@ -1,6 +1,6 @@
-#include "../engine.h"
+#include "../engine/engine.h"
 #include "../engine/managers/meshManager.h"
-#include "../engine/scene/modelLoader.h"
+#include "../engine/modelLoader.h"
 
 
 int main() {

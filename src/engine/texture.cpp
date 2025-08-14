@@ -5,9 +5,9 @@
 #include "texture.h"
 #include <iostream>
 
-#include "../engine.h"
-#include "../utils.h"
-#include "../vkUtils.h"
+#include "engine.h"
+#include "../engine/utils.h"
+#include "vkUtils.h"
 
 Texture::~Texture() {
     delete[] data_;
@@ -108,7 +108,6 @@ void Texture::uploadToDevice() {
 
     size_t imageSize = width_ * height_ * pixelSize_;
 
-
     auto stagingBuffer = VkUtils::createBuffer(imageSize,vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingMemoryFlags);
 
     void* bufferData = stagingBuffer.memory.mapMemory(0,imageSize);
@@ -136,9 +135,6 @@ void Texture::uploadToDevice() {
     };
     vkImageMemory_ = vk::raii::DeviceMemory(Engine::getInstance().getDevice(),allocInfo);
     vkImage_.bindMemory(vkImageMemory_,0);
-
-    //  transition to dst optimal because the image will be written to from the staging buffer
-    transitionImageLayout(vk::ImageLayout::eUndefined,vk::ImageLayout::eTransferDstOptimal);
 
     auto cmdBuf = VkUtils::beginSingleTimeCommand();
     VkUtils::transitionImageLayout(
