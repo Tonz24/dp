@@ -3,7 +3,6 @@
 //
 
 #include "engine.h"
-#include "utils.h"
 
 #include <iostream>
 #include <ranges>
@@ -17,7 +16,8 @@
 #include <imgui/imgui_impl_vulkan.h>
 
 #include "engine/managers/inputManager.h"
-
+#include "utils.h"
+#include "vkUtils.h"
 
 Engine &Engine::getInstance() {
     if (engineInstance == nullptr)
@@ -136,6 +136,8 @@ void Engine::initVulkan() {
 
     initPhysicalDevice();
     initLogicalDevice();
+
+    configureVkUtils();
 
     initSwapchain();
     initImageViews();
@@ -923,7 +925,6 @@ void Engine::transitionImageLayout(const vk::Image &image, vk::ImageLayout oldLa
 
 
 void Engine::drawFrame() {
-    updateUniformBuffers(frameInFlightIndex_);
 
     //  reset the current frame's fence
     vk::raii::Fence& frameFence = inFlightFences_[frameInFlightIndex_];
@@ -1165,9 +1166,6 @@ void Engine::initDescriptorPool() {
     descriptorPool_ = vk::raii::DescriptorPool(device,poolInfo);
 }
 
-void Engine::initTexture() {
-
-}
 
 void Engine::updateUniformBuffers(uint32_t currentFrame) const {
     memcpy(uniformBuffersMapped_[frameInFlightIndex_],&scene_->getCamera().getUBOFormat(),sizeof(CameraUBOFormat));
@@ -1188,6 +1186,7 @@ void Engine::recreateSwapchain() {
     cleanupSwapchain();
     initSwapchain();
     initImageViews();
+    initDepthResources();
 }
 
 void Engine::cleanupSwapchain() {
@@ -1387,4 +1386,8 @@ void Engine::initDepthResources() {
 
     cmdBuf.pipelineBarrier2(dependencyInfo);
     endSingleTimeCommand(cmdBuf);
+}
+
+void Engine::configureVkUtils() const {
+    VkUtils::init(&device,&physicalDevice);
 }

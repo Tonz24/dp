@@ -8,6 +8,8 @@
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 
+#include "../../engine.h"
+
 Camera::Camera(const glm::vec3 &position, const glm::vec3 &viewAt, float verticalFov) : camForwardDir_(glm::normalize(viewAt - position)), positionWorld_(uboFormat_.positionWorld), verticalFov_(verticalFov){
 
     positionWorld_ = position;
@@ -67,6 +69,9 @@ void Camera::updatePosition(const glm::vec3 &velocity) {
     if (positionWorld_ != oldPos) {
         recalculateViewMat();
         recalculateCompoundMatrices();
+
+        auto uboMapped = Engine::getInstance().getCameraUBO();
+        memcpy(uboMapped + offsetof(CameraUBOFormat,positionWorld) ,&uboFormat_.positionWorld,sizeof(uboFormat_.positionWorld));
     }
 }
 
@@ -78,15 +83,25 @@ void Camera::recalculateMatrices() {
 
 void Camera::recalculateViewMat() {
     uboFormat_.matView = glm::lookAt(positionWorld_,positionWorld_ + camForwardDir_,camUpDir_);
+
+    auto uboMapped = Engine::getInstance().getCameraUBO();
+    memcpy(uboMapped + offsetof(CameraUBOFormat,matView) ,&uboFormat_.matView,sizeof(uboFormat_.matView));
 }
 
 void Camera::recalculateProjMat() {
     uboFormat_.matProj = glm::perspective(getVerticalFov(true), aspectRatio_, zNear_, zFar_);
+
+    auto uboMapped = Engine::getInstance().getCameraUBO();
+    memcpy(uboMapped + offsetof(CameraUBOFormat,matProj) ,&uboFormat_.matProj,sizeof(uboFormat_.matProj));
 }
 
 void Camera::recalculateCompoundMatrices() {
     uboFormat_.matViewProj = uboFormat_.matProj * uboFormat_.matView;
     uboFormat_.matInvViewProj = glm::inverse(uboFormat_.matViewProj);
+
+    auto uboMapped = Engine::getInstance().getCameraUBO();
+    memcpy(uboMapped + offsetof(CameraUBOFormat,matViewProj) ,&uboFormat_.matViewProj,sizeof(uboFormat_.matViewProj));
+    memcpy(uboMapped + offsetof(CameraUBOFormat,matInvViewProj) ,&uboFormat_.matInvViewProj,sizeof(uboFormat_.matInvViewProj));
 }
 
 void Camera::updateCameraVectors() {

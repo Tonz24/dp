@@ -16,7 +16,9 @@ public:
     }
 
     [[nodiscard]] Camera& getCamera() const { return *camera_; }
-    void setCamera(std::shared_ptr<Camera> camera) { camera_ = std::move(camera); }
+    void setCamera(std::shared_ptr<Camera> camera) {
+        std::swap(camera_, camera);
+    }
 
     [[nodiscard]] const std::vector<std::shared_ptr<Mesh>>& getMeshes() const { return meshes_; }
     void setMeshes(std::vector<std::shared_ptr<Mesh>> models) { meshes_ = std::move(models); }

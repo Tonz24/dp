@@ -7,6 +7,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <memory>
+
 #include <vulkan/vulkan_raii.hpp>
 #include <glm/glm.hpp>
 
@@ -43,8 +44,10 @@ public:
     [[nodiscard]] const vk::raii::DescriptorPool & getDescriptorPool() const { return descriptorPool_; }
     [[nodiscard]] const vk::raii::DescriptorSetLayout & getDescriptorSetLayoutFrame() const { return descriptorSetLayoutFrame_; }
     [[nodiscard]] const vk::raii::DescriptorSetLayout & getDescriptorSetLayoutMaterial() const { return descriptorSetLayoutMaterial_; }
+    [[nodiscard]] uint8_t* getCameraUBO() const {return static_cast<uint8_t *>(uniformBuffersMapped_[frameInFlightIndex_]);}
 
 private:
+    friend class VkUtils;
 
     Engine() = default;
 
@@ -82,9 +85,6 @@ private:
     void initDescriptorSetLayout();
     void initUniformBuffers();
     void initDescriptorPool();
-
-    //TODO: move out
-    void initTexture();
 
     void updateUniformBuffers(uint32_t currentFrame) const;
 
@@ -231,4 +231,5 @@ private:
     vk::Format depthFormat_{vk::Format::eD32Sfloat};
 
     void initDepthResources();
+    void configureVkUtils() const;
 };

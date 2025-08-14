@@ -4,9 +4,9 @@
 
 #include "texture.h"
 #include <iostream>
-#include <omp.h>
 
 #include "../engine.h"
+#include "../utils.h"
 
 Texture::~Texture() {
     delete[] data_;

@@ -60,6 +60,8 @@ add_executable(dp
         src/engine/managers/inputManager.h
         src/observers.h
         src/uboFormat.h
+        src/vkUtils.cpp
+        src/vkUtils.h
 )
 
 # add shader compilation as a build step
@@ -76,7 +78,7 @@ find_package(OpenMP REQUIRED)
 
 
 target_compile_definitions(${PROJECT_NAME}
-        PUBLIC VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1 VULKAN_HPP_NO_STRUCT_CONSTRUCTORS=1
+        PUBLIC VULKAN_HPP_NO_STRUCT_CONSTRUCTORS=1
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/libs)

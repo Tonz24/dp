@@ -9,7 +9,6 @@
 #include <string>
 
 #include "managers/managedResource.h"
-#include "../utils.h"
 
 class Texture : public ManagedResource{
 public:

@@ -5,6 +5,7 @@
 #include "modelLoader.h"
 #include <iostream>
 
+#include "../../utils.h"
 #include "assimp/Importer.hpp"
 #include "assimp/postprocess.h"
 
