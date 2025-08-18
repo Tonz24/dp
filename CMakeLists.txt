@@ -62,6 +62,7 @@ add_executable(dp
         src/engine/uboFormat.h
         src/engine/vkUtils.cpp
         src/engine/vkUtils.h
+        src/engine/iDrawGui.h
 )
 
 # add shader compilation as a build step

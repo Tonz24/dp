@@ -5,7 +5,9 @@
 #pragma once
 #include <glm/glm.hpp>
 
-class Transform {
+#include "../engine/iDrawGui.h"
+
+class Transform : public IDrawGui {
 public:
 
     void translate(const glm::vec3& translation);
@@ -19,6 +21,8 @@ public:
 
     [[nodiscard]] const glm::mat4& getModelMat() const;
     [[nodiscard]] const glm::mat3& getNormalMat() const;
+
+    bool drawGUI() override;
 
 private:
 

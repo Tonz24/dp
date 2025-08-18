@@ -26,6 +26,6 @@ struct Material{
     float padding2;
 };
 
-layout (binding=1, std140) uniform MaterialUBO {
-   Material material[100];
+layout (set=0,binding=1, std140) uniform MaterialUBO {
+   Material materials[100];
 } materialUBO;

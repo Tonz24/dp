@@ -14,14 +14,13 @@
 class Window : public KeyPressObserver {
 public:
     Window(std::string_view name, uint32_t width, uint32_t height, bool fullscreen);
-    ~Window();
+    ~Window() override;
 
     Window(const Window&) = delete;
     Window& operator=(const Window&) = delete;
 
     Window(Window&&) = delete;
     Window& operator=(Window&&) = delete;
-
 
     [[nodiscard]] GLFWwindow *getGlfwWindow() const {
         return glfwWindow_;
@@ -38,6 +37,9 @@ public:
         windowed,
         fullscreen
     };
+
+    [[nodiscard]] CursorMode getCursorMode() const { return cursorMode_; }
+    [[nodiscard]] WindowMode getWindowMode() const { return windowMode_; }
 
 private:
 

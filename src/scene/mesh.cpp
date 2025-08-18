@@ -3,6 +3,9 @@
 //
 
 #include "mesh.h"
+
+#include <imgui/imgui.h>
+
 #include "../engine/engine.h"
 #include "../engine/vkUtils.h"
 
@@ -11,6 +14,17 @@ Mesh::Mesh(std::vector<Vertex> &&vertexList, std::vector<uint32_t> &&indexList, 
 
     initBuffers();
     stage();
+}
+
+bool Mesh::drawGUI() {
+    if (ImGui::CollapsingHeader("Mesh")) {
+        ImGui::Indent();
+        transform_.drawGUI();
+        material_->drawGUI();
+        ImGui::Unindent();
+    }
+
+    return false;
 }
 
 void Mesh::stage() {
@@ -42,6 +56,12 @@ void Mesh::stage() {
     stagingBufferMemory_.unmapMemory();
 
     VkUtils::copyBuffer(stagingBuffer_,indexBuffer_,indexBufferSize);
+}
+
+void Mesh::recordDrawCommands(vk::raii::CommandBuffer& cmdBuf) const {
+    cmdBuf.bindVertexBuffers(0,*vertexBuffer_,{0});
+    cmdBuf.bindIndexBuffer(indexBuffer_,0,vk::IndexType::eUint32);
+    cmdBuf.drawIndexed(indices_.size(), 1, 0, 0, 0);
 }
 
 void Mesh::initBuffers() {

@@ -8,6 +8,7 @@
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include <imgui/imgui.h>
 
 void Transform::translate(const glm::vec3 &translation) {
     this->translation_ += translation;
@@ -46,7 +47,6 @@ void Transform::applyTransform() {
 
     modelMat_ = translation * rotation * scale;
     normalMat_ = glm::transpose(glm::inverse(glm::mat3(modelMat_)));
-    //std::cout << glm::to_string((normalMat_)) << std::endl;
 }
 
 const glm::mat4 &Transform::getModelMat() const {
@@ -55,4 +55,23 @@ const glm::mat4 &Transform::getModelMat() const {
 
 const glm::mat3 & Transform::getNormalMat() const {
     return normalMat_;
+}
+
+bool Transform::drawGUI() {
+
+    bool changed{false};
+
+    if (ImGui::CollapsingHeader("Transform")) {
+        ImGui::Indent();
+        changed |= ImGui::DragFloat3("Translation",&translation_[0],0.01f);
+        changed |= ImGui::DragFloat3("Rotation",&rotation_[0],0.01f);
+        changed |= ImGui::DragFloat3("Scale",&scale_[0],0.01f);
+
+        if (changed)
+            applyTransform();
+
+        ImGui::Unindent();
+    }
+
+    return changed;
 }

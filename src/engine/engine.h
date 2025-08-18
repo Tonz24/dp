@@ -16,7 +16,7 @@
 #include "../scene/mesh.h"
 #include "../scene/scene.h"
 
-class Engine {
+class Engine : public IDrawGui {
 public:
     static Engine& getInstance();
 
@@ -28,11 +28,14 @@ public:
     [[nodiscard]] const Scene& getScene() const { return *scene_; }
     void setScene(std::shared_ptr<Scene> scene) { scene_ = std::move(scene); }
 
+    bool drawGUI() override;
+
     [[nodiscard]] const vk::PhysicalDeviceLimits & getDeviceLimits() const { return deviceLimits; }
     [[nodiscard]] const vk::raii::DescriptorPool & getDescriptorPool() const { return descriptorPool_; }
     [[nodiscard]] const vk::raii::DescriptorSetLayout & getDescriptorSetLayoutFrame() const { return descriptorSetLayoutFrame_; }
     [[nodiscard]] const vk::raii::DescriptorSetLayout & getDescriptorSetLayoutMaterial() const { return descriptorSetLayoutMaterial_; }
-    [[nodiscard]] uint8_t* getCameraUBO() const {return static_cast<uint8_t *>(uniformBuffersMapped_[frameInFlightIndex_]);}
+    [[nodiscard]] uint8_t* getCameraUBO() const {return static_cast<uint8_t *>(cameraUniformBuffersMapped_[frameInFlightIndex_]);}
+    [[nodiscard]] uint8_t* getMaterialUBO() const {return static_cast<uint8_t *>(materialUniformBuffersMapped_[frameInFlightIndex_]);}
 
 private:
     friend class VkUtils;
@@ -106,7 +109,8 @@ private:
     static constexpr bool ENABLE_VALIDATION_LAYERS{true};
 #endif
 
-    static constexpr uint32_t MAX_FRAMES_IN_FLIGHT{1};
+    static constexpr uint32_t maxFramesInFlight{1};
+    static constexpr uint32_t materialLimit{100};
 
     static inline Engine* engineInstance{nullptr};
     std::unique_ptr<Window> window{nullptr};
@@ -160,9 +164,13 @@ private:
 
     std::vector<vk::raii::Fence> inFlightFences_{};
 
-    std::vector<vk::raii::Buffer> uniformBuffers_{};
-    std::vector<vk::raii::DeviceMemory> uniformBufferMemory_{};
-    std::vector<void*> uniformBuffersMapped_{};
+    std::vector<vk::raii::Buffer> cameraUniformBuffers_{};
+    std::vector<vk::raii::DeviceMemory> cameraUniformBufferMemory_{};
+    std::vector<void*> cameraUniformBuffersMapped_{};
+
+    std::vector<vk::raii::Buffer> materialUniformBuffers_{};
+    std::vector<vk::raii::DeviceMemory> materialUniformBufferMemory_{};
+    std::vector<void*> materialUniformBuffersMapped_{};
 
     vk::raii::DescriptorPool descriptorPool_{nullptr};
     std::vector<vk::raii::DescriptorSet> descriptorSets_{};
@@ -200,7 +208,8 @@ private:
         glm::vec<2,double> delta = newPos - cursorPos_;
         cursorPos_ = newPos;
 
-        app->scene_->getCamera().updateOrientation(delta.x,delta.y);
+        if (app->window->getCursorMode() == Window::CursorMode::disabled)
+            app->scene_->getCamera().updateOrientation(delta.x,delta.y);
     }
 
     std::shared_ptr<Scene> scene_{};

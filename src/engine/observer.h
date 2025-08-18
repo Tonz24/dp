@@ -9,6 +9,8 @@
 template <typename ...T>
 class Observer {
 public:
+    virtual ~Observer() = default;
+
     virtual void update(T... t) = 0;
 };
 

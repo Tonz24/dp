@@ -20,4 +20,7 @@ private:
     inline static bool gammaCorrectOnLoad{false};
 
     inline static const std::string modelPathPrefix{"../assets/models/"};
+
+    static constexpr std::array textureTypes = {aiTextureType_SPECULAR, aiTextureType_SHININESS, aiTextureType_NORMALS, aiTextureType_DIFFUSE, };
+    static constexpr std::array slots = {Material::TextureMapSlot::specularMapSlot,Material::TextureMapSlot::shininessMapSlot,Material::TextureMapSlot::normalMapSlot, Material::TextureMapSlot::diffuseMapSlot,};
 };

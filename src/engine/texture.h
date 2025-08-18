@@ -28,12 +28,21 @@ public:
     explicit Texture(std::string_view fileName);
 
 
-    void expand();
+    void expand() const;
 
     [[nodiscard]] std::string getResourceType() const override;
 
     [[nodiscard]] const vk::raii::ImageView & getVkImageView() const { return vkImageView_; }
     [[nodiscard]] const vk::raii::Sampler & getVkSampler() const { return vkSampler_; }
+
+    [[nodiscard]] uint32_t getWidth() const { return width_; }
+    [[nodiscard]] uint32_t getHeight() const { return height_; }
+
+    friend class TextureManager;
+
+    static void initDummy();
+
+    static Texture& getDummy() {return *dummy_;}
 
 private:
 
@@ -55,13 +64,11 @@ private:
     FREE_IMAGE_TYPE freeImageType_{};
     vk::Format vkFormat_;
 
-    bool renameOnGenerate{false};
-
     vk::raii::Image vkImage_{nullptr};
     vk::raii::DeviceMemory vkImageMemory_{nullptr};
 
     vk::raii::ImageView vkImageView_{nullptr};
     vk::raii::Sampler   vkSampler_{nullptr};
 
-
+   static inline Texture* dummy_{nullptr};
 };

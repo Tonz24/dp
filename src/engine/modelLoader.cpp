@@ -144,50 +144,28 @@ std::vector<std::shared_ptr<Material>> ModelLoader::loadMaterials(const std::str
         //====================================================
 
         //====================================================
-        //texture
+        //textures
         aiString texName;
+        for (uint32_t j = 0; j < textureTypes.size(); ++j) {
+            auto texType = ModelLoader::textureTypes[j];
+            auto slot = ModelLoader::slots[j];
 
-        if (assimpMaterial->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0), texName) == AI_SUCCESS){
-            std::string fullName{ directory +  std::string{texName.C_Str()} };
+            if (assimpMaterial->Get(AI_MATKEY_TEXTURE(texType, 0), texName) == AI_SUCCESS){
 
-            const auto texHandle = TextureManager::getInstance()->getResource(fullName);
+                std::string fullName{ directory + std::string{texName.C_Str()}};
+                std::shared_ptr<Texture> tex = TextureManager::getInstance()->getR(fullName);
 
-            if (ModelLoader::gammaCorrectOnLoad)
-                texHandle->expand();
-
-            mat->setTexture(texHandle,Material::TextureMapSlot::DIFFUSE_MAP_SLOT);
+                if (!tex) {
+                    tex = std::make_shared<Texture>(fullName);
+                    TextureManager::getInstance()->registerResource(tex,fullName);
+                }
+                mat->setTexture(tex,slot);
+            }
         }
-
-
-        if (assimpMaterial->Get(AI_MATKEY_TEXTURE(aiTextureType_SPECULAR, 0), texName) == AI_SUCCESS) {
-            std::string fullName{ directory +  std::string{texName.C_Str()} };
-
-            const auto texHandle = TextureManager::getInstance()->getResource(fullName);
-
-            if (ModelLoader::gammaCorrectOnLoad)
-                texHandle->expand();
-
-            mat->setTexture(texHandle,Material::TextureMapSlot::SPECULAR_MAP_SLOT);
-        }
-
-
-        if (assimpMaterial->Get(AI_MATKEY_TEXTURE(aiTextureType_SHININESS, 0), texName) == AI_SUCCESS) {
-            std::string fullName{ directory + std::string{texName.C_Str()} };
-
-            const auto texHandle = TextureManager::getInstance()->getResource(fullName);
-            mat->setTexture(texHandle,Material::TextureMapSlot::SHININESS_MAP_SLOT);
-
-        }
-
-        if (assimpMaterial->Get(AI_MATKEY_TEXTURE(aiTextureType_NORMALS, 0), texName) == AI_SUCCESS) {
-            std::string fullName{ directory + std::string{texName.C_Str()} };
-
-            const auto texHandle = TextureManager::getInstance()->getResource(fullName);
-            mat->setTexture(texHandle,Material::TextureMapSlot::NORMAL_MAP_SLOT);
-        }
-        //====================================================
 
         mat->recordDescriptorSet();
+        mat->updateUBO();
+
         loadedMaterials.emplace_back(mat);
     }
     return loadedMaterials;

@@ -11,8 +11,21 @@ layout(set = 1, binding = 1) uniform sampler2D specAlbedoMap;
 layout(set = 1, binding = 2) uniform sampler2D normalMap;
 layout(set = 1, binding = 3) uniform sampler2D shininessMap;
 
+
+layout(push_constant) uniform PushConstants {
+    mat4 matM;
+    mat4 matN;
+    uint matIndex;
+} pcs;
+
+#include "common.glsl"
+
 void main() {
-    //outColor = vec4(normalize(normal), 1.0);
-    vec3 texColor = texture(diffAlbedoMap,texCoord).xyz;
-    outColor = vec4(texColor, 1.0);
+    Material mat = materialUBO.materials[pcs.matIndex];
+
+    vec3 diffColor = mat.diffuseAlbedo;
+    diffColor = texture(shininessMap, texCoord).xyz;
+
+
+    outColor = vec4(diffColor, 1.0);
 }

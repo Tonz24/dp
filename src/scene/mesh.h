@@ -8,40 +8,30 @@
 #include "vertex.h"
 #include "material.h"
 #include "transform.h"
+#include "../engine/iDrawGui.h"
 
-class Mesh : public ManagedResource {
+class Mesh : public ManagedResource, public IDrawGui {
 public:
+
+
+
 
     Mesh(std::vector<Vertex>&& vertexList, std::vector<uint32_t >&& indexList, std::shared_ptr<Material> material);
 
-    [[nodiscard]] const std::vector<Vertex>& getVertices() const{
-        return vertices_;
-    }
-
-    [[nodiscard]] const std::vector<uint32_t >& getIndices() const{
-        return indices_;
-    }
-
-    [[nodiscard]] Transform& getTransform() {
-        return transform_;
-    }
-
-    std::string getResourceType() const override {
-        return "Mesh";
-    }
-
+    [[nodiscard]] const std::vector<Vertex>& getVertices() const {return vertices_;}
+    [[nodiscard]] const std::vector<uint32_t >& getIndices() const { return indices_; }
+    [[nodiscard]] Transform& getTransform() { return transform_;}
+    std::string getResourceType() const override { return "Mesh"; }
     [[nodiscard]] const vk::raii::Buffer & getVertexBuffer() const { return vertexBuffer_; }
     [[nodiscard]] const vk::raii::Buffer & getIndexBuffer() const { return indexBuffer_; }
+    std::shared_ptr<Material> getMaterial() const {return material_;}
+
+    bool drawGUI() override;
 
     void stage();
 
-    void recordDrawCommands(vk::raii::CommandBuffer& cmdBuf) const {
-        cmdBuf.bindVertexBuffers(0,*vertexBuffer_,{0});
-        cmdBuf.bindIndexBuffer(indexBuffer_,0,vk::IndexType::eUint32);
-        cmdBuf.drawIndexed(indices_.size(), 1, 0, 0, 0);
-    }
+    void recordDrawCommands(vk::raii::CommandBuffer& cmdBuf) const;
 
-    std::shared_ptr<Material> getMaterial() const {return material_;};
 
 private:
     std::vector<Vertex> vertices_{};

@@ -18,6 +18,7 @@
 #include "managers/inputManager.h"
 #include "utils.h"
 #include "vkUtils.h"
+#include "texture.h"
 
 Engine &Engine::getInstance() {
     if (engineInstance == nullptr)
@@ -51,6 +52,19 @@ void Engine::init() {
     initImGui();
 
     isInitialized_ = true;
+}
+
+bool Engine::drawGUI() {
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    ImGui::Begin("DP");
+
+    if (scene_)
+        return scene_->drawGUI();
+
+    return false;
 }
 
 void Engine::initGLFW() {
@@ -154,6 +168,8 @@ void Engine::initVulkan() {
     initSyncObjects();
 
     initDepthResources();
+
+    Texture::initDummy();
 }
 
 void Engine::initVulkanInstance() {
@@ -595,9 +611,9 @@ void Engine::initGraphicsPipeline() {
     //  set pipeline layout (I suppose this is where uniforms are specified)
     //  try to set one push constant for model matrix
     vk::PushConstantRange pcsTest{
-        .stageFlags = vk::ShaderStageFlagBits::eVertex,
+        .stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
         .offset = 0,
-        .size = sizeof(glm::mat4) * 2
+        .size = sizeof(glm::mat4) * 2 + sizeof(uint32_t)
     };
 
     std::array descriptorSetLayouts = {*descriptorSetLayoutFrame_, *descriptorSetLayoutMaterial_};
@@ -676,7 +692,7 @@ void Engine::initCommandBuffers() {
     vk::CommandBufferAllocateInfo commandBufferAllocInfo{
         .commandPool = graphicsCommandPool_,
         .level = vk::CommandBufferLevel::ePrimary,
-        .commandBufferCount = MAX_FRAMES_IN_FLIGHT
+        .commandBufferCount = maxFramesInFlight
     };
 
     commandBuffers_ = vk::raii::CommandBuffers(device_,commandBufferAllocInfo);
@@ -766,22 +782,21 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
     cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, graphicsPipeline);
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, *descriptorSets_[frameInFlightIndex], nullptr);
 
-    //scene_->getMeshes()[0]->getTransform().setTranslation(glm::vec3{glm::sin(static_cast<float>(glfwGetTime()))});
-
     for (const auto &mesh : scene_->getMeshes()) {
         vk::ArrayProxy<const glm::mat4> modelMat = mesh->getTransform().getModelMat();
-        cmdBuf.pushConstants(pipelineLayout,vk::ShaderStageFlagBits::eVertex,0, modelMat);
+        cmdBuf.pushConstants(pipelineLayout,vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,0, modelMat);
 
         glm::mat4 nMat = static_cast<glm::mat4>(mesh->getTransform().getNormalMat());
         vk::ArrayProxy<const glm::mat4> normalMat = nMat;
+        cmdBuf.pushConstants(pipelineLayout,vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,sizeof(glm::mat4), normalMat);
 
-        cmdBuf.pushConstants(pipelineLayout,vk::ShaderStageFlagBits::eVertex,sizeof(glm::mat4), normalMat);
+        vk::ArrayProxy<const uint32_t> matIndex = mesh->getMaterial()->getCID();
+        cmdBuf.pushConstants(pipelineLayout,vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eVertex,sizeof(glm::mat4) * 2, matIndex);
 
         cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 1, *mesh->getMaterial()->getDescriptorSet(), nullptr);
 
         mesh->recordDrawCommands(cmdBuf);
     }
-
     // render GUI
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(),*cmdBuf);
 
@@ -973,7 +988,7 @@ void Engine::drawFrame() {
     }
 
     currentFrameIndex_ += 1;
-    frameInFlightIndex_ = currentFrameIndex_ % MAX_FRAMES_IN_FLIGHT;
+    frameInFlightIndex_ = currentFrameIndex_ % maxFramesInFlight;
 }
 
 void Engine::processInput() {
@@ -993,21 +1008,17 @@ void Engine::processInput() {
     if (glfwGetKey(window->getGlfwWindow(),GLFW_KEY_S) == GLFW_PRESS) {
         velocity.z -= 1.0f;
     }
-    scene_->getCamera().updatePosition(velocity);
+    if (window->getCursorMode() == Window::CursorMode::disabled)
+        scene_->getCamera().updatePosition(velocity);
 }
 
 void Engine::mainLoop() {
     isRunning_ = true;
+
     while(!glfwWindowShouldClose(window->getGlfwWindow())) {
         glfwPollEvents();
         processInput();
-
-        ImGui_ImplVulkan_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-
-        ImGui::Begin("Test");
-        ImGui::Text("Test");
+        drawGUI();
 
         ImGui::End();
         ImGui::Render();
@@ -1019,7 +1030,7 @@ void Engine::mainLoop() {
 }
 
 void Engine::initSyncObjects() {
-    for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+    for (uint32_t i = 0; i < maxFramesInFlight; ++i) {
         inFlightFences_.emplace_back(device_,vk::FenceCreateInfo{.flags = vk::FenceCreateFlagBits::eSignaled});
         acquireSemaphores_.emplace_back(device_, vk::SemaphoreCreateInfo{});
     }
@@ -1032,22 +1043,32 @@ void Engine::initSyncObjects() {
 void Engine::initDescriptorSetLayout() {
 
     //  Frame descriptor layout first
-    vk::DescriptorSetLayoutBinding frameBinding {
-        .binding = 0,
-        .descriptorType = vk::DescriptorType::eUniformBuffer,
-        .descriptorCount = 1,
-        .stageFlags = vk::ShaderStageFlagBits::eVertex
+    //  camera UBO
+
+    std::array frameDescriptorBindings{
+        vk::DescriptorSetLayoutBinding { // camera UBO
+            .binding = 0,
+            .descriptorType = vk::DescriptorType::eUniformBuffer,
+            .descriptorCount = 1,
+            .stageFlags = vk::ShaderStageFlagBits::eVertex
+        },
+        vk::DescriptorSetLayoutBinding { // material UBO
+            .binding = 1,
+            .descriptorType = vk::DescriptorType::eUniformBuffer,
+            .descriptorCount = 1,
+            .stageFlags = vk::ShaderStageFlagBits::eFragment
+        }
     };
+
     vk::DescriptorSetLayoutCreateInfo frameLayoutInfo{
         .flags = {},
-        .bindingCount = 1,
-        .pBindings = &frameBinding
+        .bindingCount = static_cast<uint32_t>(frameDescriptorBindings.size()),
+        .pBindings = frameDescriptorBindings.data()
     };
     descriptorSetLayoutFrame_ = vk::raii::DescriptorSetLayout(device_,frameLayoutInfo);
 
 
     //  Material descriptor layout second
-
     std::vector<vk::DescriptorSetLayoutBinding> materialBindings{};
 
     for (uint32_t i = 0; i < 4; ++i) {
@@ -1068,8 +1089,7 @@ void Engine::initDescriptorSetLayout() {
     };
     descriptorSetLayoutMaterial_ = vk::raii::DescriptorSetLayout(device_,materialLayoutInfo);
 
-
-    std::vector<vk::DescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT,*descriptorSetLayoutFrame_);
+    std::vector<vk::DescriptorSetLayout> layouts(maxFramesInFlight,*descriptorSetLayoutFrame_);
     vk::DescriptorSetAllocateInfo allocInfo{
         .descriptorPool = descriptorPool_,
         .descriptorSetCount = static_cast<uint32_t>(layouts.size()),
@@ -1078,46 +1098,82 @@ void Engine::initDescriptorSetLayout() {
 
     descriptorSets_ = device_.allocateDescriptorSets(allocInfo);
 
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    for (size_t i = 0; i < maxFramesInFlight; i++) {
 
-        vk::DescriptorBufferInfo bufferInfo{
-            .buffer = uniformBuffers_[i],
+        vk::DescriptorBufferInfo camBufferInfo{
+            .buffer = cameraUniformBuffers_[i],
             .offset = 0,
             .range = sizeof(CameraUBOFormat)
         };
 
-        vk::WriteDescriptorSet writeDescriptorSet{
-            .dstSet = descriptorSets_[i], //  which descriptor to update
+        vk::DescriptorBufferInfo matBufferInfo{
+            .buffer = materialUniformBuffers_[i],
+            .offset = 0,
+            .range = sizeof(MaterialUBOFormat) * materialLimit
+        };
+
+        vk::WriteDescriptorSet writeDescriptorSetCam{
+            .dstSet = descriptorSets_[i], //  which descriptor set to update
             .dstBinding = 0, // which binding to update
             .dstArrayElement = 0, //  what element the update starts at
             .descriptorCount = 1, //  how many descriptors are affected
             .descriptorType = vk::DescriptorType::eUniformBuffer,
-            .pBufferInfo = &bufferInfo,
+            .pBufferInfo = &camBufferInfo,
         };
 
-        device_.updateDescriptorSets(writeDescriptorSet,{});
+        vk::WriteDescriptorSet writeDescriptorSetMat{
+            .dstSet = descriptorSets_[i], //  which descriptor set to update
+            .dstBinding = 1, // which binding to update
+            .dstArrayElement = 0, //  what element the update starts at
+            .descriptorCount = 1, //  how many descriptors are affected
+            .descriptorType = vk::DescriptorType::eUniformBuffer,
+            .pBufferInfo = &matBufferInfo,
+        };
+
+        device_.updateDescriptorSets({writeDescriptorSetCam, writeDescriptorSetMat},{});
     }
 }
 
 void Engine::initUniformBuffers() {
-    uniformBuffers_.clear();
-    uniformBufferMemory_.clear();
-    uniformBuffersMapped_.clear();
+    cameraUniformBuffers_.clear();
+    cameraUniformBufferMemory_.clear();
+    cameraUniformBuffersMapped_.clear();
+
+    materialUniformBuffers_.clear();
+    materialUniformBufferMemory_.clear();
+    materialUniformBuffersMapped_.clear();
 
 
-    for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+    // camera UBO
+    for (uint32_t i = 0; i < maxFramesInFlight; ++i) {
 
         vk::DeviceSize bufferSize = sizeof(CameraUBOFormat);
-        auto propFlags = vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eDeviceLocal;
+        auto propFlags = vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostVisible;
 
-        auto newBuffer = VkUtils::createBuffer(sizeof(CameraUBOFormat),vk::BufferUsageFlagBits::eUniformBuffer,propFlags);
+        auto newBuffer = VkUtils::createBuffer(bufferSize,vk::BufferUsageFlagBits::eUniformBuffer,propFlags);
 
-        uniformBuffers_.emplace_back(std::move(newBuffer.buffer));
-        uniformBufferMemory_.emplace_back(std::move(newBuffer.memory));
+        cameraUniformBuffers_.emplace_back(std::move(newBuffer.buffer));
+        cameraUniformBufferMemory_.emplace_back(std::move(newBuffer.memory));
 
         //  map buffer memory
-        auto mappedMemory = uniformBufferMemory_[i].mapMemory(0,bufferSize);
-        uniformBuffersMapped_.emplace_back(mappedMemory);
+        auto mappedMemory = cameraUniformBufferMemory_[i].mapMemory(0,bufferSize);
+        cameraUniformBuffersMapped_.emplace_back(mappedMemory);
+    }
+
+    // material UBO
+    for (uint32_t i = 0; i < maxFramesInFlight; ++i) {
+
+        vk::DeviceSize bufferSize = sizeof(MaterialUBOFormat) * materialLimit;
+        auto propFlags = vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostVisible;
+
+        auto newBuffer = VkUtils::createBuffer(bufferSize,vk::BufferUsageFlagBits::eUniformBuffer,propFlags);
+
+        materialUniformBuffers_.emplace_back(std::move(newBuffer.buffer));
+        materialUniformBufferMemory_.emplace_back(std::move(newBuffer.memory));
+
+        //  map buffer memory
+        auto mappedMemory = materialUniformBufferMemory_[i].mapMemory(0,bufferSize);
+        materialUniformBuffersMapped_.emplace_back(mappedMemory);
     }
 }
 
@@ -1125,7 +1181,7 @@ void Engine::initDescriptorPool() {
     std::array poolSize{
         vk::DescriptorPoolSize {
             .type = vk::DescriptorType::eUniformBuffer,
-            .descriptorCount = MAX_FRAMES_IN_FLIGHT
+            .descriptorCount = 100
         },
         vk::DescriptorPoolSize {
             .type = vk::DescriptorType::eCombinedImageSampler,
@@ -1145,7 +1201,7 @@ void Engine::initDescriptorPool() {
 
 
 void Engine::updateUniformBuffers(uint32_t currentFrame) const {
-    memcpy(uniformBuffersMapped_[frameInFlightIndex_],&scene_->getCamera().getUBOFormat(),sizeof(CameraUBOFormat));
+    memcpy(cameraUniformBuffersMapped_[frameInFlightIndex_],&scene_->getCamera().getUBOFormat(),sizeof(CameraUBOFormat));
 }
 
 void Engine::recreateSwapchain() {

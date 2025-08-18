@@ -29,13 +29,13 @@ struct MaterialUBOFormat {
     float ior{};
 
     glm::vec3 emission{};
-    uint32_t diffuseAlbedoMapHandle;
+    uint32_t diffuseAlbedoMapHandle{0};
 
     glm::vec3 attenuation;
-    uint32_t specularALbedoMapHandle;
+    uint32_t specularALbedoMapHandle{0};
 
-    uint32_t shininessMapHandle;
-    uint32_t normalMapHandle;
+    uint32_t shininessMapHandle{0};
+    uint32_t normalMapHandle{0};
     float padding;
     float padding2;
 };

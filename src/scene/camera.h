@@ -44,7 +44,7 @@ private:
 
     void updateCameraVectors();
 
-    glm::vec3 /*positionWorld_{},*/ camForwardDir_{}, camRightDir_{}, camUpDir_{};
+    glm::vec3 camForwardDir_{}, camRightDir_{}, camUpDir_{};
     glm::vec3& positionWorld_;
 
     float verticalFov_{45.0f};

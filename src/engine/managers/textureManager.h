@@ -35,6 +35,36 @@ public:
         return newResource;
     }
 
+
+    std::shared_ptr<Texture> getR(std::string_view resourceName){
+
+        if (auto existingResource = get(resourceName))
+            return existingResource;
+
+        return nullptr;
+    }
+
+
+    void registerResource(const std::shared_ptr<Texture>& texture, std::string_view resourceName) {
+
+        if (auto existingResource = get(resourceName)) {
+            std::cerr << "ERROR: Resource with name " << resourceName << " is already registered!" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        auto newResource = texture;
+
+        uint32_t newCID = assignCID();
+        uint32_t newGID = ResourceManagerBase::getInstance()->assignGlobalId();
+        newResource->setCID(newCID);
+        newResource->setGID(newGID);
+        newResource->setResourceName(resourceName);
+        newResource->isRegistered_ = true;
+
+        nameToIdMap_[std::string{resourceName}] = newCID;
+        textureMap_[newCID] = newResource;
+    }
+
 private:
     TextureManager() = default;
 };

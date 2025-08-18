@@ -6,7 +6,7 @@
 int main() {
     Engine::getInstance().init();
 
-    auto model = ModelLoader::loadModel("cube/cube.obj");
+    auto model = ModelLoader::loadModel("room/room.obj");
 
     auto cam = std::make_shared<Camera>(glm::vec3{0,0,2},glm::vec3{0,0,0});
 

@@ -11,19 +11,20 @@
 
 #include <glm/glm.hpp>
 
+#include "../engine/iDrawGui.h"
 #include "../engine/texture.h"
 #include "../engine/uboFormat.h"
 
 
-class Material : public ManagedResource, public UBOFormat<MaterialUBOFormat> {
+class Material : public ManagedResource, public UBOFormat<MaterialUBOFormat>, public IDrawGui {
 public:
 
     enum class TextureMapSlot : uint8_t {
-        INVALID_MAP_SLOT = 255,
-        DIFFUSE_MAP_SLOT = 0,
-        SPECULAR_MAP_SLOT = 1,
-        NORMAL_MAP_SLOT = 2,
-        SHININESS_MAP_SLOT = 3,
+        invalidMapSlot = 255,
+        diffuseMapSlot = 0,
+        specularMapSlot = 1,
+        normalMapSlot = 2,
+        shininessMapSlot = 3,
     };
 
     Material() : ManagedResource(){
@@ -31,35 +32,16 @@ public:
     }
 
 
-    std::shared_ptr<Texture> getTexture(TextureMapSlot slot){
-        if (slot == TextureMapSlot::INVALID_MAP_SLOT){
-            std::cerr << "ERROR: trying to get texture at invalid slot offset!" << std::endl;
-            exit(EXIT_FAILURE);
-        }
+    std::shared_ptr<Texture> getTexture(TextureMapSlot slot);
 
-        return textures_[static_cast<uint8_t>(slot)];
-    }
+    void setTexture(std::shared_ptr<Texture> texture, TextureMapSlot slot);
 
-    void setTexture(std::shared_ptr<Texture> texture, TextureMapSlot slot){
-        if (slot == TextureMapSlot::INVALID_MAP_SLOT){
-            std::cerr << "ERROR: trying to set texture at invalid slot offset!" << std::endl;
-            exit(EXIT_FAILURE);
-        }
+    [[nodiscard]] const glm::vec3 &getDiffuseAlbedo() const { return uboFormat_.diffuseAlbedo; }
 
-        textures_[static_cast<uint8_t>(slot)] = texture;
-    }
 
-    [[nodiscard]] const glm::vec3 &getDiffuseAlbedo() const {
-        return uboFormat_.diffuseAlbedo;
-    }
+    [[nodiscard]] const glm::vec3 &getSpecularAlbedo() const { return uboFormat_.specularAlbedo; }
 
-    [[nodiscard]] const glm::vec3 &getSpecularAlbedo() const {
-        return uboFormat_.specularAlbedo;
-    }
-
-    [[nodiscard]] const glm::vec3 &getEmission() const {
-        return uboFormat_.emission;
-    }
+    [[nodiscard]] const glm::vec3 &getEmission() const { return uboFormat_.emission; }
 
     // float getRoughness() const {
     //     return roughness_;
@@ -69,17 +51,11 @@ public:
     //     return metallic_;
     // }
 
-    void setDiffuseAlbedo(const glm::vec3 &diffuseAlbedo) {
-        uboFormat_.diffuseAlbedo = diffuseAlbedo;
-    }
+    void setDiffuseAlbedo(const glm::vec3 &diffuseAlbedo) { uboFormat_.diffuseAlbedo = diffuseAlbedo; }
 
-    void setSpecularAlbedo(const glm::vec3 &specularAlbedo) {
-        uboFormat_.specularAlbedo = specularAlbedo;
-    }
+    void setSpecularAlbedo(const glm::vec3 &specularAlbedo) { uboFormat_.specularAlbedo = specularAlbedo; }
 
-    void setEmission(const glm::vec3 &emission) {
-        uboFormat_.emission = emission;
-    }
+    void setEmission(const glm::vec3 &emission) { uboFormat_.emission = emission;}
 
     // void setRoughness(float roughness) {
     //     roughness_ = roughness;
@@ -89,37 +65,26 @@ public:
     //     metallic_ = metallic;
     // }
 
-    float getShininess() const {
-        return uboFormat_.shininess;
-    }
+    float getShininess() const { return uboFormat_.shininess; }
 
-    float getIor() const {
-        return uboFormat_.ior;
-    }
+    float getIor() const { return uboFormat_.ior; }
 
-    const glm::vec3 &getAttenuation() const {
-        return uboFormat_.attenuation;
-    }
+    const glm::vec3 &getAttenuation() const { return uboFormat_.attenuation; }
 
-    void setShininess(float shininess) {
-        uboFormat_.shininess = shininess;
-    }
+    void setShininess(float shininess) { uboFormat_.shininess = shininess; }
 
-    void setIor(float ior) {
-        uboFormat_.ior = ior;
-    }
+    void setIor(float ior) { uboFormat_.ior = ior; }
 
-    void setAttenuation(const glm::vec3 &attenuation) {
-       uboFormat_.attenuation = attenuation;
-    }
+    void setAttenuation(const glm::vec3 &attenuation) { uboFormat_.attenuation = attenuation; }
 
-    std::string getResourceType() const override {
-        return "Material";
-    }
+    std::string getResourceType() const override { return "Material"; }
 
-    void recordDescriptorSet();
+    void recordDescriptorSet() const;
     const vk::raii::DescriptorSet& getDescriptorSet() const {return descriptorSet_;}
 
+    void updateUBO() const;
+
+    bool drawGUI() override;
 
 private:
 

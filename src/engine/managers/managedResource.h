@@ -59,4 +59,5 @@ protected:
     std::string extension_;
 
     bool isFromDisk_{false};
+    bool isRegistered_{false};
 };
