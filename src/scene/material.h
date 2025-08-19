@@ -86,6 +86,8 @@ public:
 
     bool drawGUI() override;
 
+
+    friend class MaterialManager;
 private:
 
     void allocateDescriptorSet();

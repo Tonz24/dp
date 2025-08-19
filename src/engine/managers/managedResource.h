@@ -6,6 +6,13 @@
 #include <cstdint>
 #include <string>
 
+class ManagedResource;
+
+template <typename T>
+concept ManagedResourceConcept = std::is_base_of_v<ManagedResource,T>;
+template <ManagedResourceConcept T, typename Derived>
+class ResourceManager;
+
 class ManagedResource {
 public:
 
@@ -47,6 +54,9 @@ public:
 
     [[nodiscard]] virtual std::string getResourceType() const = 0;
 
+
+    template <ManagedResourceConcept T, typename Derived>
+    friend class ResourceManager;
 
 protected:
     ManagedResource() = default;

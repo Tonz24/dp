@@ -32,7 +32,7 @@ public:
 
     void recordDrawCommands(vk::raii::CommandBuffer& cmdBuf) const;
 
-
+    friend class MeshManager;
 private:
     std::vector<Vertex> vertices_{};
     std::vector<uint32_t> indices_{};

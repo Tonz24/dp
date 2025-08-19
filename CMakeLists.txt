@@ -32,17 +32,11 @@ add_executable(dp
         src/engine/managers/resourceManager.h
         src/engine/managers/managedResource.cpp
         src/engine/managers/managedResource.h
-        src/engine/managers/textureManager.cpp
-        src/engine/managers/textureManager.h
-        src/engine/managers/materialManager.cpp
-        src/engine/managers/materialManager.h
         src/scene/vertex.h
         src/scene/mesh.cpp
         src/scene/mesh.h
         src/engine/managers/resourceManagerBase.cpp
         src/engine/managers/resourceManagerBase.h
-        src/engine/managers/meshManager.cpp
-        src/engine/managers/meshManager.h
         src/scene/camera.cpp
         src/scene/camera.h
         src/scene/scene.cpp

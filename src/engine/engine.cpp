@@ -713,7 +713,7 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
     VkUtils::transitionImageLayout(swapChainImages[imageIndex],
                                    vk::ImageLayout::eUndefined,
                                    vk::ImageLayout::eColorAttachmentOptimal,                           //
-                                   vk::PipelineStageFlagBits2::eTopOfPipe,
+                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput | vk::PipelineStageFlagBits2::eTopOfPipe,
                                    vk::AccessFlagBits2::eNone,
                                    vk::PipelineStageFlagBits2::eColorAttachmentOutput,
                                    vk::AccessFlagBits2::eColorAttachmentWrite,

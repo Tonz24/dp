@@ -9,9 +9,7 @@
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 
-#include "managers/materialManager.h"
-#include "managers/meshManager.h"
-#include "managers/textureManager.h"
+#include "managers/resourceManager.h"
 
 std::vector<std::shared_ptr<Mesh>> ModelLoader::loadModel(std::string_view path) {
     std::string fullPath{ModelLoader::modelPathPrefix + std::string{path}};
@@ -81,14 +79,15 @@ std::vector<std::shared_ptr<Mesh>> ModelLoader::loadModel(std::string_view path)
                     indices.push_back(face.mIndices[k]);
             }
 
-            uint32_t matIndex = mesh->mMaterialIndex;
-            auto material = materials.at(mesh->mMaterialIndex);
+            //load material
+            std::shared_ptr<Material> material = materials.at(mesh->mMaterialIndex);
 
 
-            std::shared_ptr<Mesh> parsedMesh = MeshManager::getInstance()->getResource(mesh->mName.C_Str());
-
-            if (parsedMesh == nullptr)
-                parsedMesh = MeshManager::getInstance()->createResource(mesh->mName.C_Str(),std::move(vertices),std::move(indices),std::move(material));
+            std::shared_ptr<Mesh> parsedMesh = MeshManager::getInstance()->getR(mesh->mName.C_Str());
+            if (!parsedMesh) {
+                auto mm = new Mesh(std::move(vertices),std::move(indices),material);
+                parsedMesh = MeshManager::getInstance()->registerResource(mm,mesh->mName.C_Str());
+            }
 
             meshes.emplace_back(parsedMesh);
         }
@@ -109,8 +108,13 @@ std::vector<std::shared_ptr<Material>> ModelLoader::loadMaterials(const std::str
         if (assimpMaterial->Get(AI_MATKEY_NAME, name) != aiReturn_SUCCESS)
             continue;
 
-        auto mat = MaterialManager::getInstance()->getResource(name.C_Str());
 
+        std::shared_ptr<Material> mat = MaterialManager::getInstance()->getR(name.C_Str());
+
+        if (!mat) {
+            auto mm = new Material();
+            mat = MaterialManager::getInstance()->registerResource(mm,name.C_Str());
+        }
 
         //====================================================
         //gamma correctable values first
@@ -153,13 +157,14 @@ std::vector<std::shared_ptr<Material>> ModelLoader::loadMaterials(const std::str
             if (assimpMaterial->Get(AI_MATKEY_TEXTURE(texType, 0), texName) == AI_SUCCESS){
 
                 std::string fullName{ directory + std::string{texName.C_Str()}};
-                std::shared_ptr<Texture> tex = TextureManager::getInstance()->getR(fullName);
+                std::shared_ptr<Texture> t = TextureManager::getInstance()->getR(fullName);
 
-                if (!tex) {
-                    tex = std::make_shared<Texture>(fullName);
-                    TextureManager::getInstance()->registerResource(tex,fullName);
+                if (!t) {
+                    auto tex = new Texture(fullName);
+                    t  = TextureManager::getInstance()->registerResource(tex,fullName);
                 }
-                mat->setTexture(tex,slot);
+
+                mat->setTexture(t,slot);
             }
         }
 
