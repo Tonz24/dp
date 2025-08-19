@@ -58,9 +58,20 @@ void Mesh::stage() {
     VkUtils::copyBuffer(stagingBuffer_,indexBuffer_,indexBufferSize);
 }
 
-void Mesh::recordDrawCommands(vk::raii::CommandBuffer& cmdBuf) const {
+void Mesh::recordDrawCommands(vk::raii::CommandBuffer& cmdBuf, const vk::raii::PipelineLayout& pipelineLayout) const {
     cmdBuf.bindVertexBuffers(0,*vertexBuffer_,{0});
     cmdBuf.bindIndexBuffer(indexBuffer_,0,vk::IndexType::eUint32);
+    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 1, *getMaterial()->getDescriptorSet(), nullptr);
+
+    vk::ArrayProxy<const PushConstants> pcs = {{
+        .modelMat = transform_.getModelMat(),
+        .normalMat = transform_.getNormalMat(),
+        .materialId = material_->getCID(),
+        .meshId = getCID()
+    }};
+
+    cmdBuf.pushConstants(pipelineLayout,vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,0, pcs);
+
     cmdBuf.drawIndexed(indices_.size(), 1, 0, 0, 0);
 }
 

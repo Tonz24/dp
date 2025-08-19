@@ -221,6 +221,14 @@ private:
     vk::raii::DeviceMemory depthImageMemory_{nullptr};
     vk::Format depthFormat_{vk::Format::eD32Sfloat};
 
+    vk::raii::Image idMapImage_{nullptr};
+    vk::raii::ImageView idMapImageView_{nullptr};
+    vk::raii::DeviceMemory idMapImageMemory_{nullptr};
+    vk::Format idMapFormat_{vk::Format::eR32Uint};
+
     void initDepthResources();
+    void initIdMapImage();
     void configureVkUtils() const;
+
+    static constexpr uint32_t pcsSize{sizeof(glm::mat4) * 2 + sizeof(uint32_t) * 2};
 };

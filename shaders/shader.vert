@@ -9,11 +9,7 @@ layout(location = 0) out vec3 outFragColor;
 layout(location = 1) out vec3 outNormal;
 layout(location = 2) out vec2 outTexCoord;
 
-layout(push_constant) uniform PushConstants {
-    mat4 matM;
-    mat4 matN;
-    uint matIndex;
-} pcs;
+
 
 #include "common.glsl"
 

@@ -110,6 +110,9 @@ void Engine::initImGui() {
     uiPool_ = vk::raii::DescriptorPool(device_,poolInfo);
 
     auto format = static_cast<VkFormat>(swapChainImageFormat);
+    auto idMapFormat = static_cast<VkFormat>(idMapFormat_);
+
+    std::array formats = {format, idMapFormat};
 
     ImGui_ImplVulkan_InitInfo initInfo = {
         .ApiVersion = vk::ApiVersion13,
@@ -124,10 +127,10 @@ void Engine::initImGui() {
         .UseDynamicRendering = true,
         .PipelineRenderingCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
-            .colorAttachmentCount = 1,
-            .pColorAttachmentFormats = &format,
+            .colorAttachmentCount = formats.size(),
+            .pColorAttachmentFormats = formats.data(),
             .depthAttachmentFormat = static_cast<VkFormat>(depthFormat_),
-        }
+        },
     };
 
     IMGUI_CHECKVERSION();
@@ -168,6 +171,7 @@ void Engine::initVulkan() {
     initSyncObjects();
 
     initDepthResources();
+    initIdMapImage();
 
     Texture::initDummy();
 }
@@ -601,19 +605,21 @@ void Engine::initGraphicsPipeline() {
         .blendEnable = vk::False,
         .colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA
     };
+
+    std::array blendAttachments = {colorBlendAttachment, colorBlendAttachment};
     vk::PipelineColorBlendStateCreateInfo colorBlending{
         .logicOpEnable = vk::False,
         .logicOp =  vk::LogicOp::eCopy,
-        .attachmentCount = 1,
-        .pAttachments =  &colorBlendAttachment
+        .attachmentCount = static_cast<uint32_t>(blendAttachments.size()),
+        .pAttachments =  blendAttachments.data()
     };
 
-    //  set pipeline layout (I suppose this is where uniforms are specified)
+
     //  try to set one push constant for model matrix
     vk::PushConstantRange pcsTest{
         .stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
         .offset = 0,
-        .size = sizeof(glm::mat4) * 2 + sizeof(uint32_t)
+        .size = pcsSize
     };
 
     std::array descriptorSetLayouts = {*descriptorSetLayoutFrame_, *descriptorSetLayoutMaterial_};
@@ -627,11 +633,13 @@ void Engine::initGraphicsPipeline() {
 
     pipelineLayout = vk::raii::PipelineLayout( device_, pipelineLayoutInfo );
 
+
+    std::array colorAttachmentFormats = {swapChainImageFormat, idMapFormat_};
+
     //  set the number of color attachments to render to and their formats
-    //  disable depth attachments for now
     vk::PipelineRenderingCreateInfo pipelineRenderingCreateInfo{
-        .colorAttachmentCount = 1,
-        .pColorAttachmentFormats = &swapChainImageFormat,
+        .colorAttachmentCount = colorAttachmentFormats.size(),
+        .pColorAttachmentFormats = colorAttachmentFormats.data(),
         .depthAttachmentFormat = depthFormat_,
     };
     //==============================================================
@@ -723,7 +731,7 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
 
     //set up the color attachment
     vk::ClearValue clearColor = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
-    vk::RenderingAttachmentInfo attachmentInfo = {
+    vk::RenderingAttachmentInfo colorAttachmentInfo = {
         .imageView = swapChainImageViews[imageIndex],
         .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
         .loadOp = vk::AttachmentLoadOp::eClear,
@@ -731,13 +739,23 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
         .clearValue = clearColor
     };
 
-    vk::ClearValue depthCelarColor = vk::ClearDepthStencilValue(1.0f,0);
+    vk::RenderingAttachmentInfo idMapAttachmentInfo = {
+        .imageView = idMapImageView_,
+        .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+        .loadOp = vk::AttachmentLoadOp::eClear,
+        .storeOp = vk::AttachmentStoreOp::eStore,
+        .clearValue = clearColor
+    };
+
+    std::array colorAttachmentInfos = {colorAttachmentInfo,idMapAttachmentInfo};
+
+    vk::ClearValue depthClearColor = vk::ClearDepthStencilValue(1.0f,0);
     vk::RenderingAttachmentInfo depthAttachmentInfo = {
         .imageView = depthImageView_,
         .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
         .loadOp = vk::AttachmentLoadOp::eClear,
         .storeOp = vk::AttachmentStoreOp::eStore,
-        .clearValue = depthCelarColor
+        .clearValue = depthClearColor
     };
 
     vk::RenderingInfo renderingInfo{
@@ -749,8 +767,8 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
                 .extent = swapChainExtent
         },
         .layerCount = 1,
-        .colorAttachmentCount = 1,
-        .pColorAttachments = &attachmentInfo,
+        .colorAttachmentCount = colorAttachmentInfos.size(),
+        .pColorAttachments = colorAttachmentInfos.data(),
         .pDepthAttachment = &depthAttachmentInfo,
     };
 
@@ -783,19 +801,20 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, *descriptorSets_[frameInFlightIndex], nullptr);
 
     for (const auto &mesh : scene_->getMeshes()) {
-        vk::ArrayProxy<const glm::mat4> modelMat = mesh->getTransform().getModelMat();
-        cmdBuf.pushConstants(pipelineLayout,vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,0, modelMat);
 
-        glm::mat4 nMat = static_cast<glm::mat4>(mesh->getTransform().getNormalMat());
-        vk::ArrayProxy<const glm::mat4> normalMat = nMat;
-        cmdBuf.pushConstants(pipelineLayout,vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,sizeof(glm::mat4), normalMat);
-
-        vk::ArrayProxy<const uint32_t> matIndex = mesh->getMaterial()->getCID();
-        cmdBuf.pushConstants(pipelineLayout,vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eVertex,sizeof(glm::mat4) * 2, matIndex);
+        // vk::ArrayProxy<const glm::mat4> modelMat = mesh->getTransform().getModelMat();
+        // cmdBuf.pushConstants(pipelineLayout,vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,0, modelMat);
+        //
+        // glm::mat4 nMat = static_cast<glm::mat4>(mesh->getTransform().getNormalMat());
+        // vk::ArrayProxy<const glm::mat4> normalMat = nMat;
+        // cmdBuf.pushConstants(pipelineLayout,vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,sizeof(glm::mat4), normalMat);
+        //
+        // vk::ArrayProxy<const uint32_t> matIndex = mesh->getMaterial()->getCID();
+        // cmdBuf.pushConstants(pipelineLayout,vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eVertex,sizeof(glm::mat4) * 2, matIndex);
 
         cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 1, *mesh->getMaterial()->getDescriptorSet(), nullptr);
 
-        mesh->recordDrawCommands(cmdBuf);
+        mesh->recordDrawCommands(cmdBuf, pipelineLayout);
     }
     // render GUI
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(),*cmdBuf);
@@ -1220,6 +1239,7 @@ void Engine::recreateSwapchain() {
     initSwapchain();
     initImageViews();
     initDepthResources();
+    initIdMapImage();
 }
 
 void Engine::cleanupSwapchain() {
@@ -1292,6 +1312,77 @@ void Engine::initDepthResources() {
                                    vk::PipelineStageFlagBits2::eEarlyFragmentTests,
                                    vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
                                    vk::ImageAspectFlagBits::eDepth,
+                                   cmdBuf);
+
+    VkUtils::endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
+}
+
+void Engine::initIdMapImage() {
+
+    //  create the id map image
+    int width{},height{};
+    glfwGetFramebufferSize(window->getGlfwWindow(),&width,&height);
+
+    vk::ImageCreateInfo imageInfo{
+        .imageType = vk::ImageType::e2D,
+        .format = idMapFormat_,
+        .extent = vk::Extent3D{
+            .width = static_cast<uint32_t>(width),
+            .height = static_cast<uint32_t>(height),
+            .depth = 1
+        },
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .samples = vk::SampleCountFlagBits::e1,
+        .tiling = vk::ImageTiling::eOptimal,
+        .usage = vk::ImageUsageFlagBits::eColorAttachment,
+        .sharingMode = vk::SharingMode::eExclusive
+    };
+    idMapImage_ = vk::raii::Image(device_, imageInfo);
+    auto idMapMemReqs = idMapImage_.getMemoryRequirements();
+
+    //  allocate memory for the id map image
+    vk::MemoryAllocateInfo memAllocInfo{
+        .allocationSize = idMapMemReqs.size,
+        .memoryTypeIndex = VkUtils::findMemoryType(idMapMemReqs.memoryTypeBits,vk::MemoryPropertyFlagBits::eDeviceLocal),
+    };
+    idMapImageMemory_ = vk::raii::DeviceMemory(device_,memAllocInfo);
+    idMapImage_.bindMemory(idMapImageMemory_,0);
+
+    //  create the id map image view
+    vk::ImageViewCreateInfo imageViewCreateInfo{
+        .flags = vk::ImageViewCreateFlags(),
+        .image = idMapImage_,
+        .viewType = vk::ImageViewType::e2D,
+        .format = idMapFormat_,
+        .components = vk::ComponentMapping{
+            .r = vk::ComponentSwizzle::eIdentity,
+            .g = vk::ComponentSwizzle::eIdentity,
+            .b = vk::ComponentSwizzle::eIdentity,
+            .a = vk::ComponentSwizzle::eIdentity,
+        },
+        .subresourceRange = vk::ImageSubresourceRange{
+                .aspectMask = vk::ImageAspectFlagBits::eColor,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1
+        },
+    };
+
+    idMapImageView_ = vk::raii::ImageView(device_, imageViewCreateInfo);
+
+
+    auto cmdBuf = VkUtils::beginSingleTimeCommand();
+
+    VkUtils::transitionImageLayout(idMapImage_,
+                                   vk::ImageLayout::eUndefined,
+                                   vk::ImageLayout::eColorAttachmentOptimal,
+                                   vk::PipelineStageFlagBits2::eTopOfPipe,
+                                   vk::AccessFlagBits2::eNone,
+                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                                   vk::AccessFlagBits2::eColorAttachmentWrite,
+                                   vk::ImageAspectFlagBits::eColor,
                                    cmdBuf);
 
     VkUtils::endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
