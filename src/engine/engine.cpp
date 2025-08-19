@@ -67,6 +67,7 @@ bool Engine::drawGUI() {
     return false;
 }
 
+
 void Engine::initGLFW() {
 
     if (!glfwInit()){
@@ -112,7 +113,7 @@ void Engine::initImGui() {
     auto format = static_cast<VkFormat>(swapChainImageFormat);
     auto idMapFormat = static_cast<VkFormat>(idMapFormat_);
 
-    std::array formats = {format, idMapFormat};
+    std::array formats = {format, /*idMapFormat*/};
 
     ImGui_ImplVulkan_InitInfo initInfo = {
         .ApiVersion = vk::ApiVersion13,
@@ -796,30 +797,41 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
     cmdBuf.setViewport(0, viewport);
     cmdBuf.setScissor(0, scissor);
 
-    //  render - bind graphics pipeline, the vertex buffer, then draw (FOR EACH MESH)
+    //  bind graphics pipeline and global descriptor set
     cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, graphicsPipeline);
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, *descriptorSets_[frameInFlightIndex], nullptr);
 
     for (const auto &mesh : scene_->getMeshes()) {
-
-        // vk::ArrayProxy<const glm::mat4> modelMat = mesh->getTransform().getModelMat();
-        // cmdBuf.pushConstants(pipelineLayout,vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,0, modelMat);
-        //
-        // glm::mat4 nMat = static_cast<glm::mat4>(mesh->getTransform().getNormalMat());
-        // vk::ArrayProxy<const glm::mat4> normalMat = nMat;
-        // cmdBuf.pushConstants(pipelineLayout,vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,sizeof(glm::mat4), normalMat);
-        //
-        // vk::ArrayProxy<const uint32_t> matIndex = mesh->getMaterial()->getCID();
-        // cmdBuf.pushConstants(pipelineLayout,vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eVertex,sizeof(glm::mat4) * 2, matIndex);
-
-        cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 1, *mesh->getMaterial()->getDescriptorSet(), nullptr);
-
         mesh->recordDrawCommands(cmdBuf, pipelineLayout);
     }
-    // render GUI
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(),*cmdBuf);
-
     cmdBuf.endRendering();
+
+
+    // prepare GUI render pass
+    vk::RenderingAttachmentInfo guiAttachmentInfo = {
+        .imageView = swapChainImageViews[imageIndex],
+        .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+        .loadOp = vk::AttachmentLoadOp::eLoad,
+        .storeOp = vk::AttachmentStoreOp::eStore,
+        .clearValue = clearColor
+    };
+
+    vk::RenderingInfo guiRenderingInfo{
+        .renderArea = {
+            .offset = { .x = 0, .y = 0 },
+            .extent = swapChainExtent
+        },
+        .layerCount = 1,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &guiAttachmentInfo,
+        .pDepthAttachment = nullptr,
+    };
+
+    // render GUI separately
+    cmdBuf.beginRendering(guiRenderingInfo);
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(),*cmdBuf);
+    cmdBuf.endRendering();
+
 
     //  the old layout is attachment optimal
     //  the new layout is color present src
@@ -939,9 +951,12 @@ vk::raii::ShaderModule Engine::createShaderModule(const std::vector<char> &code)
 
 void Engine::drawFrame() {
 
+
     //  reset the current frame's fence
     vk::raii::Fence& frameFence = inFlightFences_[frameInFlightIndex_];
     device_.waitForFences(*frameFence, vk::True, UINT64_MAX );
+
+    updateUBOs();
 
     //  acquire next swapchain image
     vk::raii::Semaphore& acquireSemaphore = acquireSemaphores_[frameInFlightIndex_];
@@ -1219,10 +1234,6 @@ void Engine::initDescriptorPool() {
 }
 
 
-void Engine::updateUniformBuffers(uint32_t currentFrame) const {
-    memcpy(cameraUniformBuffersMapped_[frameInFlightIndex_],&scene_->getCamera().getUBOFormat(),sizeof(CameraUBOFormat));
-}
-
 void Engine::recreateSwapchain() {
 
     //  if width or height is 0 (the window is minimized), the program hangs here until it is not minimized again
@@ -1392,3 +1403,29 @@ void Engine::configureVkUtils() const {
 
     VkUtils::init(&device_,&physicalDevice, {&graphicsQueue,&presentQueue,&transferQueue}, &graphicsCommandPool_);
 }
+
+void Engine::updateUBOs() {
+
+    //if (dirtyCameraUBO_) {
+        memcpy(cameraUniformBuffersMapped_[frameInFlightIndex_],&cameraUBOStorage_,sizeof(cameraUBOStorage_));
+        dirtyCameraUBO_ = false;
+   // }
+
+    if (dirtyMaterialUBO_) {
+        uint8_t* dst = static_cast<uint8_t*>(materialUniformBuffersMapped_[frameInFlightIndex_])  + materialUpdateIndex_ * sizeof(materialUBOStorage_);
+        memcpy(dst, &materialUBOStorage_,sizeof(materialUBOStorage_));
+        dirtyMaterialUBO_ = false;
+    }
+}
+
+void Engine::setCameraUBOStorage(const CameraUBOFormat& data) {
+    dirtyCameraUBO_ = true;
+    cameraUBOStorage_ = data;
+}
+
+void Engine::setMaterialUBOStorage(uint32_t updateIndex, const MaterialUBOFormat& data) {
+    dirtyMaterialUBO_ = true;
+    materialUpdateIndex_ = updateIndex;
+    materialUBOStorage_ = data;
+}
+

@@ -34,8 +34,12 @@ public:
     [[nodiscard]] const vk::raii::DescriptorPool & getDescriptorPool() const { return descriptorPool_; }
     [[nodiscard]] const vk::raii::DescriptorSetLayout & getDescriptorSetLayoutFrame() const { return descriptorSetLayoutFrame_; }
     [[nodiscard]] const vk::raii::DescriptorSetLayout & getDescriptorSetLayoutMaterial() const { return descriptorSetLayoutMaterial_; }
-    [[nodiscard]] uint8_t* getCameraUBO() const {return static_cast<uint8_t *>(cameraUniformBuffersMapped_[frameInFlightIndex_]);}
+
+    void setCameraUBOStorage(const CameraUBOFormat& data);
+    void setMaterialUBOStorage(uint32_t updateIndex, const MaterialUBOFormat& data);
+
     [[nodiscard]] uint8_t* getMaterialUBO() const {return static_cast<uint8_t *>(materialUniformBuffersMapped_[frameInFlightIndex_]);}
+    [[nodiscard]] const std::vector<void*>& getMaterialUBOs() const {return materialUniformBuffersMapped_;}
 
 private:
     friend class VkUtils;
@@ -77,8 +81,6 @@ private:
     void initUniformBuffers();
     void initDescriptorPool();
 
-    void updateUniformBuffers(uint32_t currentFrame) const;
-
     void recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightIndex, vk::raii::CommandBuffer &cmdBuf);
 
     void drawFrame();
@@ -109,7 +111,7 @@ private:
     static constexpr bool ENABLE_VALIDATION_LAYERS{true};
 #endif
 
-    static constexpr uint32_t maxFramesInFlight{1};
+    static constexpr uint32_t maxFramesInFlight{2};
     static constexpr uint32_t materialLimit{100};
 
     static inline Engine* engineInstance{nullptr};
@@ -229,6 +231,13 @@ private:
     void initDepthResources();
     void initIdMapImage();
     void configureVkUtils() const;
+    void updateUBOs();
+
+    bool dirtyCameraUBO_{false}, dirtyMaterialUBO_{false};
 
     static constexpr uint32_t pcsSize{sizeof(glm::mat4) * 2 + sizeof(uint32_t) * 2};
+
+    CameraUBOFormat cameraUBOStorage_{};
+    MaterialUBOFormat materialUBOStorage_{};
+    uint32_t materialUpdateIndex_{};
 };

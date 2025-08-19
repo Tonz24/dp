@@ -169,7 +169,7 @@ std::vector<std::shared_ptr<Material>> ModelLoader::loadMaterials(const std::str
         }
 
         mat->recordDescriptorSet();
-        mat->updateUBO();
+        mat->updateUBONow();
 
         loadedMaterials.emplace_back(mat);
     }

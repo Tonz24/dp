@@ -67,8 +67,14 @@ void Material::recordDescriptorSet() const {
 }
 
 void Material::updateUBO() const {
-    auto uboMapped = Engine::getInstance().getMaterialUBO();
-    memcpy(uboMapped + getCID() * sizeof(MaterialUBOFormat), &uboFormat_,sizeof(uboFormat_));
+    Engine::getInstance().setMaterialUBOStorage(getCID(), uboFormat_);
+}
+
+void Material::updateUBONow() const {
+    for (const auto & materialUBO : Engine::getInstance().getMaterialUBOs()) {
+        const auto ubo = static_cast<uint8_t*>(materialUBO);
+        memcpy(ubo + getCID() * sizeof(uboFormat_),&uboFormat_,sizeof(uboFormat_));
+    }
 }
 
 bool Material::drawGUI() {

@@ -28,7 +28,6 @@ public:
     [[nodiscard]] const glm::vec3 & getPositionWorld() const { return uboFormat_.positionWorld; }
 
     void updateOrientation(double dx, double dy);
-
     void updatePosition(const glm::vec3& velocity);
 
 
@@ -55,4 +54,5 @@ private:
 
     static constexpr glm::vec3 worldUp_{0,1,0};
 
+    bool dirty_{true};
 };

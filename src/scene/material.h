@@ -83,6 +83,7 @@ public:
     const vk::raii::DescriptorSet& getDescriptorSet() const {return descriptorSet_;}
 
     void updateUBO() const;
+    void updateUBONow() const;
 
     bool drawGUI() override;
 

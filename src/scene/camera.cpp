@@ -67,11 +67,7 @@ void Camera::updatePosition(const glm::vec3 &velocity) {
     positionWorld_ += camForwardDir_ * velocity.z;
 
     if (positionWorld_ != oldPos) {
-        recalculateViewMat();
-        recalculateCompoundMatrices();
-
-        auto uboMapped = Engine::getInstance().getCameraUBO();
-        memcpy(uboMapped + offsetof(CameraUBOFormat,positionWorld) ,&uboFormat_.positionWorld,sizeof(uboFormat_.positionWorld));
+       recalculateMatrices();
     }
 }
 
@@ -79,29 +75,24 @@ void Camera::recalculateMatrices() {
     recalculateViewMat();
     recalculateProjMat();
     recalculateCompoundMatrices();
+
+    Engine::getInstance().setCameraUBOStorage(uboFormat_);
 }
 
 void Camera::recalculateViewMat() {
     uboFormat_.matView = glm::lookAt(positionWorld_,positionWorld_ + camForwardDir_,camUpDir_);
-
-    auto uboMapped = Engine::getInstance().getCameraUBO();
-    memcpy(uboMapped + offsetof(CameraUBOFormat,matView) ,&uboFormat_.matView,sizeof(uboFormat_.matView));
+    dirty_ = true;
 }
 
 void Camera::recalculateProjMat() {
     uboFormat_.matProj = glm::perspective(getVerticalFov(true), aspectRatio_, zNear_, zFar_);
-
-    auto uboMapped = Engine::getInstance().getCameraUBO();
-    memcpy(uboMapped + offsetof(CameraUBOFormat,matProj) ,&uboFormat_.matProj,sizeof(uboFormat_.matProj));
+    dirty_ = true;
 }
 
 void Camera::recalculateCompoundMatrices() {
     uboFormat_.matViewProj = uboFormat_.matProj * uboFormat_.matView;
     uboFormat_.matInvViewProj = glm::inverse(uboFormat_.matViewProj);
-
-    auto uboMapped = Engine::getInstance().getCameraUBO();
-    memcpy(uboMapped + offsetof(CameraUBOFormat,matViewProj) ,&uboFormat_.matViewProj,sizeof(uboFormat_.matViewProj));
-    memcpy(uboMapped + offsetof(CameraUBOFormat,matInvViewProj) ,&uboFormat_.matInvViewProj,sizeof(uboFormat_.matInvViewProj));
+    dirty_ = true;
 }
 
 void Camera::updateCameraVectors() {
@@ -116,6 +107,5 @@ void Camera::updateCameraVectors() {
     camUpDir_ = glm::normalize(glm::cross(camRightDir_,camForwardDir_));
 
     // then recalculate affected matrices
-    recalculateViewMat();
-    recalculateCompoundMatrices();
+    recalculateMatrices();
 }
