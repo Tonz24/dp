@@ -111,7 +111,7 @@ private:
     static constexpr bool ENABLE_VALIDATION_LAYERS{true};
 #endif
 
-    static constexpr uint32_t maxFramesInFlight{2};
+    static constexpr uint32_t maxFramesInFlight{1};
     static constexpr uint32_t materialLimit{100};
 
     static inline Engine* engineInstance{nullptr};

@@ -1406,10 +1406,10 @@ void Engine::configureVkUtils() const {
 
 void Engine::updateUBOs() {
 
-    //if (dirtyCameraUBO_) {
+    if (dirtyCameraUBO_) {
         memcpy(cameraUniformBuffersMapped_[frameInFlightIndex_],&cameraUBOStorage_,sizeof(cameraUBOStorage_));
         dirtyCameraUBO_ = false;
-   // }
+   }
 
     if (dirtyMaterialUBO_) {
         uint8_t* dst = static_cast<uint8_t*>(materialUniformBuffersMapped_[frameInFlightIndex_])  + materialUpdateIndex_ * sizeof(materialUBOStorage_);

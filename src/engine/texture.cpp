@@ -17,12 +17,10 @@ void Texture::initDummy() {
 
     dummy_ = new Texture(1,1,4,vk::Format::eB8G8R8A8Unorm);
 
-    // dummy_->width_ = 1;
-    // dummy_->height_ = 1;
-    // dummy_->channels_ = 4;
-    // dummy_->pixelSize_ = 4;
-    // dummy_->vkFormat_ = vk::Format::eB8G8R8Srgb;
-    // dummy_->data_ = new uint8_t[dummy_->width_ * dummy_->height_ * sizeof(uint8_t) * dummy_->channels_];
+    dummy_->data_[0] = 255;
+    dummy_->data_[1] = 0;
+    dummy_->data_[2] = 255;
+    dummy_->data_[3] = 255;
 
     dummy_->uploadToDevice();
     dummy_->initImageViewAndSampler();
@@ -32,10 +30,7 @@ void Texture::initDummy() {
 Texture::Texture(uint32_t width, uint32_t height, uint32_t channels, vk::Format format): ManagedResource(), width_(width), height_(height), channels_(channels), vkFormat_(format) {
     data_ = new uint8_t[width_ * height_ * sizeof(uint8_t) * channels_];
     pixelSize_ = channels_;
-    data_[0] = 255;
-    data_[1] = 0;
-    data_[2] = 255;
-    data_[3] = 255;
+
 
     //TODO: initialize blank texture
     //std::cerr << "NOT IMPLEMENTED!" << std::endl;
