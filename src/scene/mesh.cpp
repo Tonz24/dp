@@ -64,14 +64,14 @@ void Mesh::recordDrawCommands(vk::raii::CommandBuffer& cmdBuf, const vk::raii::P
     //  bind per mesh descriptor set
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 1, *getMaterial()->getDescriptorSet(), nullptr);
 
-    const vk::ArrayProxy<const PushConstants> pcs = {{
+    const PushConstants pcs = {
         .modelMat = transform_.getModelMat(),
         .normalMat = transform_.getNormalMat(),
         .materialId = material_->getCID(),
         .meshId = getCID()
-    }};
+    };
 
-    cmdBuf.pushConstants(pipelineLayout,vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,0, pcs);
+    cmdBuf.pushConstants(pipelineLayout,vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const PushConstants>{pcs});
 
     cmdBuf.drawIndexed(indices_.size(), 1, 0, 0, 0);
 }

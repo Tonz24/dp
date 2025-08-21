@@ -742,7 +742,7 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
     };
 
     vk::RenderingAttachmentInfo idMapAttachmentInfo = {
-        .imageView = idMapImageView_,
+        .imageView = objectIdMap_->getVkImageView(),
         .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
         .loadOp = vk::AttachmentLoadOp::eClear,
         .storeOp = vk::AttachmentStoreOp::eStore,
@@ -1259,7 +1259,6 @@ void Engine::cleanupSwapchain() {
 }
 
 void Engine::initDepthResources() {
-
     int width{},height{};
     glfwGetFramebufferSize(window->getGlfwWindow(),&width,&height);
 
@@ -1282,64 +1281,15 @@ void Engine::initDepthResources() {
 }
 
 void Engine::initIdMapImage() {
-
-    //  create the id map image
     int width{},height{};
     glfwGetFramebufferSize(window->getGlfwWindow(),&width,&height);
 
-    vk::ImageCreateInfo imageInfo{
-        .imageType = vk::ImageType::e2D,
-        .format = idMapFormat_,
-        .extent = vk::Extent3D{
-            .width = static_cast<uint32_t>(width),
-            .height = static_cast<uint32_t>(height),
-            .depth = 1
-        },
-        .mipLevels = 1,
-        .arrayLayers = 1,
-        .samples = vk::SampleCountFlagBits::e1,
-        .tiling = vk::ImageTiling::eOptimal,
-        .usage = vk::ImageUsageFlagBits::eColorAttachment,
-        .sharingMode = vk::SharingMode::eExclusive
-    };
-    idMapImage_ = vk::raii::Image(device_, imageInfo);
-    auto idMapMemReqs = idMapImage_.getMemoryRequirements();
-
-    //  allocate memory for the id map image
-    vk::MemoryAllocateInfo memAllocInfo{
-        .allocationSize = idMapMemReqs.size,
-        .memoryTypeIndex = VkUtils::findMemoryType(idMapMemReqs.memoryTypeBits,vk::MemoryPropertyFlagBits::eDeviceLocal),
-    };
-    idMapImageMemory_ = vk::raii::DeviceMemory(device_,memAllocInfo);
-    idMapImage_.bindMemory(idMapImageMemory_,0);
-
-    //  create the id map image view
-    vk::ImageViewCreateInfo imageViewCreateInfo{
-        .flags = vk::ImageViewCreateFlags(),
-        .image = idMapImage_,
-        .viewType = vk::ImageViewType::e2D,
-        .format = idMapFormat_,
-        .components = vk::ComponentMapping{
-            .r = vk::ComponentSwizzle::eIdentity,
-            .g = vk::ComponentSwizzle::eIdentity,
-            .b = vk::ComponentSwizzle::eIdentity,
-            .a = vk::ComponentSwizzle::eIdentity,
-        },
-        .subresourceRange = vk::ImageSubresourceRange{
-                .aspectMask = vk::ImageAspectFlagBits::eColor,
-                .baseMipLevel = 0,
-                .levelCount = 1,
-                .baseArrayLayer = 0,
-                .layerCount = 1
-        },
-    };
-
-    idMapImageView_ = vk::raii::ImageView(device_, imageViewCreateInfo);
-
+    Texture* objectIdMapTexture = new Texture(width, height, 1,idMapFormat_, vk::ImageUsageFlagBits::eColorAttachment,vk::MemoryPropertyFlagBits::eDeviceLocal);
+    objectIdMap_ = TextureManager::getInstance()->registerResource(objectIdMapTexture,"Object id map texure");
 
     auto cmdBuf = VkUtils::beginSingleTimeCommand();
 
-    VkUtils::transitionImageLayout(idMapImage_,
+    VkUtils::transitionImageLayout(objectIdMap_->getVkImage(),
                                    vk::ImageLayout::eUndefined,
                                    vk::ImageLayout::eColorAttachmentOptimal,
                                    vk::PipelineStageFlagBits2::eTopOfPipe,
