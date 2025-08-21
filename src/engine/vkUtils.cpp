@@ -72,9 +72,7 @@ void VkUtils::copyBuffer(vk::raii::Buffer& srcBuffer, vk::raii::Buffer& dstBuffe
     endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
 }
 
-void VkUtils::copyBufferToImage(const vk::raii::Buffer& buffer, vk::raii::Image& image, uint32_t width, uint32_t height) {
-
-    auto cmdBuf = beginSingleTimeCommand();
+void VkUtils::copyBufferToImage(const vk::raii::Buffer& buffer, vk::raii::Image& image, uint32_t width, uint32_t height, vk::raii::CommandBuffer& cmdBuf) {
 
     vk::BufferImageCopy region{
         .bufferOffset = 0,
@@ -99,7 +97,6 @@ void VkUtils::copyBufferToImage(const vk::raii::Buffer& buffer, vk::raii::Image&
     };
 
     cmdBuf.copyBufferToImage(buffer,image,vk::ImageLayout::eTransferDstOptimal,region);
-    endSingleTimeCommand(cmdBuf,QueueType::graphics);
 }
 
 

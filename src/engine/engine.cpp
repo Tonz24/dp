@@ -19,6 +19,7 @@
 #include "utils.h"
 #include "vkUtils.h"
 #include "texture.h"
+#include "managers/resourceManager.h"
 
 Engine &Engine::getInstance() {
     if (engineInstance == nullptr)
@@ -164,14 +165,14 @@ void Engine::initVulkan() {
     initUniformBuffers();
     initDescriptorSetLayout();
 
-    initGraphicsPipeline();
-
     initCommandPool();
     initCommandBuffers();
 
+    initDepthResources();
+    initGraphicsPipeline();
+
     initSyncObjects();
 
-    initDepthResources();
     initIdMapImage();
 
     Texture::initDummy();
@@ -752,7 +753,7 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
 
     vk::ClearValue depthClearColor = vk::ClearDepthStencilValue(1.0f,0);
     vk::RenderingAttachmentInfo depthAttachmentInfo = {
-        .imageView = depthImageView_,
+        .imageView = depthTexture_->getVkImageView(),
         .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
         .loadOp = vk::AttachmentLoadOp::eClear,
         .storeOp = vk::AttachmentStoreOp::eStore,
@@ -813,7 +814,6 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
         .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
         .loadOp = vk::AttachmentLoadOp::eLoad,
         .storeOp = vk::AttachmentStoreOp::eStore,
-        .clearValue = clearColor
     };
 
     vk::RenderingInfo guiRenderingInfo{
@@ -1260,68 +1260,21 @@ void Engine::cleanupSwapchain() {
 
 void Engine::initDepthResources() {
 
-    //  create the depth image
     int width{},height{};
     glfwGetFramebufferSize(window->getGlfwWindow(),&width,&height);
-    vk::ImageCreateInfo imageInfo{
-        .imageType = vk::ImageType::e2D,
-        .format = depthFormat_,
-        .extent = vk::Extent3D{
-            .width = static_cast<uint32_t>(width),
-            .height = static_cast<uint32_t>(height),
-            .depth = 1
-        },
-        .mipLevels = 1,
-        .arrayLayers = 1,
-        .samples = vk::SampleCountFlagBits::e1,
-        .tiling = vk::ImageTiling::eOptimal,
-        .usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
-        .sharingMode = vk::SharingMode::eExclusive
-    };
-    depthImage_ = vk::raii::Image(device_, imageInfo);
-    auto depthMemRequirements = depthImage_.getMemoryRequirements();
 
-    //  allocate memory for the depth image
-    vk::MemoryAllocateInfo memAllocInfo{
-        .allocationSize = depthMemRequirements.size,
-        .memoryTypeIndex = VkUtils::findMemoryType(depthMemRequirements.memoryTypeBits,vk::MemoryPropertyFlagBits::eDeviceLocal),
-    };
-    depthImageMemory_ = vk::raii::DeviceMemory(device_,memAllocInfo);
-    depthImage_.bindMemory(depthImageMemory_,0);
-
-    //  create the depth image view
-    vk::ImageViewCreateInfo imageViewCreateInfo{
-        .flags = vk::ImageViewCreateFlags(),
-        .image = depthImage_,
-        .viewType = vk::ImageViewType::e2D,
-        .format = depthFormat_,
-        .components = vk::ComponentMapping{
-            .r = vk::ComponentSwizzle::eIdentity,
-            .g = vk::ComponentSwizzle::eIdentity,
-            .b = vk::ComponentSwizzle::eIdentity,
-            .a = vk::ComponentSwizzle::eIdentity,
-        },
-        .subresourceRange = vk::ImageSubresourceRange{
-                .aspectMask = vk::ImageAspectFlagBits::eDepth,
-                .baseMipLevel = 0,
-                .levelCount = 1,
-                .baseArrayLayer = 0,
-                .layerCount = 1
-        },
-    };
-
-    depthImageView_ = vk::raii::ImageView(device_, imageViewCreateInfo);
-
+    Texture* depthTexture = new Texture(width, height, 1,depthFormat_, vk::ImageUsageFlagBits::eDepthStencilAttachment,vk::MemoryPropertyFlagBits::eDeviceLocal);
+    depthTexture_ = TextureManager::getInstance()->registerResource(depthTexture,"Depth texture");
 
     auto cmdBuf = VkUtils::beginSingleTimeCommand();
 
-    VkUtils::transitionImageLayout(depthImage_,
+    VkUtils::transitionImageLayout(depthTexture_->getVkImage(),
                                    vk::ImageLayout::eUndefined,
                                    vk::ImageLayout::eDepthAttachmentOptimal,
                                    vk::PipelineStageFlagBits2::eTopOfPipe,
                                    vk::AccessFlagBits2::eNone,
-                                   vk::PipelineStageFlagBits2::eEarlyFragmentTests,
-                                   vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+                                   vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
+                                   vk::AccessFlagBits2::eDepthStencilAttachmentWrite | vk::AccessFlagBits2::eDepthStencilAttachmentRead,
                                    vk::ImageAspectFlagBits::eDepth,
                                    cmdBuf);
 

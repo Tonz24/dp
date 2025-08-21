@@ -63,8 +63,9 @@ public:
      * @param image image to copy to
      * @param width width of the image
      * @param height height of the image
+     * @param cmdBuf
      */
-    static void copyBufferToImage(const vk::raii::Buffer &buffer, vk::raii::Image &image, uint32_t width, uint32_t height);
+    static void copyBufferToImage(const vk::raii::Buffer &buffer, vk::raii::Image &image, uint32_t width, uint32_t height, vk::raii::CommandBuffer& cmdBuf);
 
     /**
      * @brief allocates and returns a new command buffer

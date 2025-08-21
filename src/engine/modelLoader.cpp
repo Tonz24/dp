@@ -83,7 +83,7 @@ std::vector<std::shared_ptr<Mesh>> ModelLoader::loadModel(std::string_view path)
             std::shared_ptr<Material> material = materials.at(mesh->mMaterialIndex);
 
 
-            std::shared_ptr<Mesh> parsedMesh = MeshManager::getInstance()->getR(mesh->mName.C_Str());
+            std::shared_ptr<Mesh> parsedMesh = MeshManager::getInstance()->getResource(mesh->mName.C_Str());
             if (!parsedMesh) {
                 auto mm = new Mesh(std::move(vertices),std::move(indices),material);
                 parsedMesh = MeshManager::getInstance()->registerResource(mm,mesh->mName.C_Str());
@@ -109,7 +109,7 @@ std::vector<std::shared_ptr<Material>> ModelLoader::loadMaterials(const std::str
             continue;
 
 
-        std::shared_ptr<Material> mat = MaterialManager::getInstance()->getR(name.C_Str());
+        std::shared_ptr<Material> mat = MaterialManager::getInstance()->getResource(name.C_Str());
 
         if (!mat) {
             auto mm = new Material();
@@ -157,7 +157,7 @@ std::vector<std::shared_ptr<Material>> ModelLoader::loadMaterials(const std::str
             if (assimpMaterial->Get(AI_MATKEY_TEXTURE(texType, 0), texName) == AI_SUCCESS){
 
                 std::string fullName{ directory + std::string{texName.C_Str()}};
-                std::shared_ptr<Texture> t = TextureManager::getInstance()->getR(fullName);
+                std::shared_ptr<Texture> t = TextureManager::getInstance()->getResource(fullName);
 
                 if (!t) {
                     auto tex = new Texture(fullName);

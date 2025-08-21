@@ -25,21 +25,25 @@ public:
         return static_cast<Derived*>(instance_);
     }
 
-    virtual std::shared_ptr<T>  getResource(std::string_view resourceName) {
-        std::cerr << "ERROR: Not implemented!" << std::endl;
-        exit(EXIT_FAILURE);
+    std::shared_ptr<T>  getResource(std::string_view resourceName) {
+        auto it = nameToIdMap_.find(std::string{resourceName});
+        if (it != nameToIdMap_.end()) {
+            return getResource(it->second);
+        }
+        return nullptr;
     }
 
-    virtual std::shared_ptr<T>  getR(std::string_view resourceName) {
-        if (auto existingResource = get(resourceName))
-            return existingResource;
-
+    std::shared_ptr<T>  getResource(uint32_t resourceId) {
+        auto it = idToResourceMap_.find(resourceId);
+        if (it != idToResourceMap_.end()) {
+            return it->second.lock();
+        }
         return nullptr;
-    };
+    }
 
     virtual std::shared_ptr<T> registerResource(T* mesh, std::string_view resourceName) {
 
-        if (auto existingResource = get(resourceName)) {
+        if (getResource(resourceName) != nullptr) {
             std::cerr << "ERROR: Resource with name " << resourceName << " is already registered!" << std::endl;
             exit(EXIT_FAILURE);
         }
@@ -89,21 +93,7 @@ public:
     };
 
 protected:
-    std::shared_ptr<T>  get(std::string_view resourceName) {
-        auto it = nameToIdMap_.find(std::string{resourceName});
-        if (it != nameToIdMap_.end()) {
-            return get(it->second);
-        }
-        return nullptr;
-    }
 
-    std::shared_ptr<T>  get(uint32_t resourceId) {
-        auto it = idToResourceMap_.find(resourceId);
-        if (it != idToResourceMap_.end()) {
-            return it->second.lock();
-        }
-        return nullptr;
-    }
     ResourceManager() = default;
 
     constexpr static const char* assetPathPrefix{"../assets/"};

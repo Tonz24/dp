@@ -218,10 +218,10 @@ private:
 
     vk::raii::DescriptorPool uiPool_{nullptr};
 
-    vk::raii::Image depthImage_{nullptr};
-    vk::raii::ImageView depthImageView_{nullptr};
-    vk::raii::DeviceMemory depthImageMemory_{nullptr};
+
     vk::Format depthFormat_{vk::Format::eD32Sfloat};
+
+    std::shared_ptr<Texture> depthTexture_{nullptr};
 
     vk::raii::Image idMapImage_{nullptr};
     vk::raii::ImageView idMapImageView_{nullptr};

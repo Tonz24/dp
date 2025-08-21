@@ -13,11 +13,6 @@
 class Texture : public ManagedResource{
 public:
 
-    [[nodiscard]] const uint8_t* getData() const{
-        return data_;
-    }
-
-    ~Texture() override;
 
     Texture(const Texture&) = delete;
     Texture& operator=(const Texture&) = delete;
@@ -27,13 +22,13 @@ public:
 
     explicit Texture(std::string_view fileName);
 
-
-    void expand() const;
+    void expand();
 
     [[nodiscard]] std::string getResourceType() const override;
 
     [[nodiscard]] const vk::raii::ImageView & getVkImageView() const { return vkImageView_; }
     [[nodiscard]] const vk::raii::Sampler & getVkSampler() const { return vkSampler_; }
+    [[nodiscard]] const vk::raii::Image& getVkImage() const { return vkImage_; }
 
     [[nodiscard]] uint32_t getWidth() const { return width_; }
     [[nodiscard]] uint32_t getHeight() const { return height_; }
@@ -43,10 +38,12 @@ public:
     static void initDummy();
 
     static Texture& getDummy() {return *dummy_;}
+    Texture(uint32_t width, uint32_t height, uint32_t channels, vk::Format format, vk::ImageUsageFlags imageUsage, vk::MemoryPropertyFlags memoryProperties);
+
 
 private:
 
-    Texture(uint32_t width, uint32_t height, uint32_t channels, vk::Format format);
+    void initVkImage();
     void uploadToDevice();
     void initImageViewAndSampler();
     void assignVkFormat();
@@ -58,7 +55,7 @@ private:
     uint32_t pixelSize_{};
     uint32_t scanWidth_{};
 
-    uint8_t* data_{nullptr};
+    std::vector<uint8_t> data_;
 
     FREE_IMAGE_FORMAT freeImageFormat_{};
     FREE_IMAGE_TYPE freeImageType_{};
@@ -69,6 +66,9 @@ private:
 
     vk::raii::ImageView vkImageView_{nullptr};
     vk::raii::Sampler   vkSampler_{nullptr};
+
+    vk::ImageUsageFlags imageUsageFlags_{};
+    vk::MemoryPropertyFlags memoryPropertyFlags_{};
 
    static inline Texture* dummy_{nullptr};
 };
