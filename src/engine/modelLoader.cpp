@@ -4,14 +4,17 @@
 
 #include "modelLoader.h"
 #include <iostream>
+#include <thread>
 
-#include "utils.h"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 
+
+#include "utils.h"
+
 #include "managers/resourceManager.h"
 
-std::vector<std::shared_ptr<Mesh>> ModelLoader::loadModel(std::string_view path) {
+std::vector<std::shared_ptr<Mesh>> ModelLoader::loadModel(std::string_view path, bool multithread) {
     std::string fullPath{ModelLoader::modelPathPrefix + std::string{path}};
 
     Assimp::Importer importer;
@@ -35,71 +38,89 @@ std::vector<std::shared_ptr<Mesh>> ModelLoader::loadModel(std::string_view path)
 
 
     std::vector<std::shared_ptr<Mesh>> meshes{};
+    std::vector<std::shared_ptr<Material>> materials{};
 
-    {
-        const auto materials = loadMaterials(directory, *scene);
+    uint32_t workerCount = std::thread::hardware_concurrency();
+    uint32_t numMaterials =  scene->mNumMaterials;
+    uint32_t chunkSize = numMaterials / workerCount;
 
-        for (uint32_t i = 0; i < scene->mNumMeshes; ++i) {
-            const auto& mesh = scene->mMeshes[i];
-
-            //  load vertices
-            std::vector<Vertex> vertices{};
-            vertices.reserve(mesh->mNumVertices);
-            for (uint32_t j = 0; j < mesh->mNumVertices; ++j) {
-                aiVector3D position_{}, normal_{}, tangent_{}, texCoord_{};
-                glm::vec3 position{}, normal{}, tangent{};
-                glm::vec2 texCoord{};
-
-                if (mesh->mVertices) {
-                    position_ = mesh->mVertices[j];
-                    position = {position_.x, position_.y, position_.z};
-                }
-                if (mesh->mNormals) {
-                    normal_ = mesh->mNormals[j];
-                    normal = {normal_.x, normal_.y, normal_.z};
-                }
-                if (mesh->mTangents) {
-                    tangent_ = mesh->mTangents[j];
-                    tangent = {tangent_.x, tangent_.y, tangent_.z};
-                }
-                if (mesh->mTextureCoords[0]) {
-                    texCoord_ = mesh->mTextureCoords[0][j];
-                    texCoord = {texCoord_.x, texCoord_.y};
-                }
-                vertices.emplace_back(position, normal, tangent, texCoord);
-            }
-
-            //  load indices
-            std::vector<uint32_t> indices{};
-            indices.reserve(mesh->mNumFaces);
-            for (uint32_t j = 0; j < mesh->mNumFaces; ++j) {
-                const auto& face = mesh->mFaces[j];
-
-                for (uint32_t k = 0; k < face.mNumIndices; ++k)
-                    indices.push_back(face.mIndices[k]);
-            }
-
-            //load material
-            std::shared_ptr<Material> material = materials.at(mesh->mMaterialIndex);
+    std::vector<std::thread> workers{};
+    workers.reserve(workerCount);
 
 
-            std::shared_ptr<Mesh> parsedMesh = MeshManager::getInstance()->getResource(mesh->mName.C_Str());
-            if (!parsedMesh) {
-                auto mm = new Mesh(std::move(vertices),std::move(indices),material);
-                parsedMesh = MeshManager::getInstance()->registerResource(mm,mesh->mName.C_Str());
-            }
-
-            meshes.emplace_back(parsedMesh);
+    if (multithread) {
+        for (int i = 0; i < workerCount; ++i) {
+            std::thread thread(loadMaterials,directory,std::ref(*scene), i* chunkSize, chunkSize, std::ref(materials));
+            workers.emplace_back(std::move(thread));
+        }
+        for (auto& worker : workers) {
+            worker.join();
         }
     }
+    else
+        loadMaterials(directory, *scene, 0, scene->mNumMaterials, materials);
+
+    for (uint32_t i = 0; i < scene->mNumMeshes; ++i) {
+        const auto& mesh = scene->mMeshes[i];
+
+        //  load vertices
+        std::vector<Vertex> vertices{};
+        vertices.reserve(mesh->mNumVertices);
+        for (uint32_t j = 0; j < mesh->mNumVertices; ++j) {
+            aiVector3D position_{}, normal_{}, tangent_{}, texCoord_{};
+            glm::vec3 position{}, normal{}, tangent{};
+            glm::vec2 texCoord{};
+
+            if (mesh->mVertices) {
+                position_ = mesh->mVertices[j];
+                position = {position_.x, position_.y, position_.z};
+            }
+            if (mesh->mNormals) {
+                normal_ = mesh->mNormals[j];
+                normal = {normal_.x, normal_.y, normal_.z};
+            }
+            if (mesh->mTangents) {
+                tangent_ = mesh->mTangents[j];
+                tangent = {tangent_.x, tangent_.y, tangent_.z};
+            }
+            if (mesh->mTextureCoords[0]) {
+                texCoord_ = mesh->mTextureCoords[0][j];
+                texCoord = {texCoord_.x, texCoord_.y};
+            }
+            vertices.emplace_back(position, normal, tangent, texCoord);
+        }
+
+        //  load indices
+        std::vector<uint32_t> indices{};
+        indices.reserve(mesh->mNumFaces);
+        for (uint32_t j = 0; j < mesh->mNumFaces; ++j) {
+            const auto& face = mesh->mFaces[j];
+
+            for (uint32_t k = 0; k < face.mNumIndices; ++k)
+                indices.push_back(face.mIndices[k]);
+        }
+
+        //load material
+        std::shared_ptr<Material> material = materials.at(mesh->mMaterialIndex);
+
+
+        std::shared_ptr<Mesh> parsedMesh = MeshManager::getInstance()->getResource(mesh->mName.C_Str());
+        if (!parsedMesh) {
+            auto mm = new Mesh(std::move(vertices),std::move(indices),material);
+            parsedMesh = MeshManager::getInstance()->registerResource(mm,mesh->mName.C_Str());
+        }
+
+        meshes.emplace_back(parsedMesh);
+    }
+
     return meshes;
 }
 
-std::vector<std::shared_ptr<Material>> ModelLoader::loadMaterials(const std::string &directory, const aiScene &scene) {
+void ModelLoader::loadMaterials(const std::string& directory, const aiScene& scene, uint32_t startIndex, uint32_t materialCount,
+                                std::vector<std::shared_ptr<Material> >& materials) {
 
-    std::vector<std::shared_ptr<Material>> loadedMaterials{};
 
-    for (uint32_t i = 0; i < scene.mNumMaterials; ++i){
+    for (uint32_t i = startIndex; i < startIndex + materialCount && i < scene.mNumMaterials; ++i){
         const aiMaterial* const assimpMaterial = scene.mMaterials[i];
 
         aiString name;
@@ -171,7 +192,9 @@ std::vector<std::shared_ptr<Material>> ModelLoader::loadMaterials(const std::str
         mat->recordDescriptorSet();
         mat->updateUBONow();
 
-        loadedMaterials.emplace_back(mat);
+        {
+            std::lock_guard<std::mutex> lockGuard(materialVectorMutex_);
+            materials.emplace_back(mat);
+        }
     }
-    return loadedMaterials;
 }
