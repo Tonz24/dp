@@ -62,11 +62,11 @@ bool Engine::drawGUI() {
 
     ImGui::Begin("DP");
 
-    std::array<char,100> input{""};
+    /*std::array<char,100> input{""};
 
     if (ImGui::InputText("scene path ",input.data(),input.size())) {
         std::cout << "h " << std::endl;
-    }
+    }*/
 
     if (scene_)
         return scene_->drawGUI();

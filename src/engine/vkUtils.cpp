@@ -24,6 +24,34 @@ void VkUtils::createBuffer(vk::DeviceSize bufferSize, vk::raii::Buffer &buffer, 
 
 }
 
+VkUtils::BufferAlloc VkUtils::createBufferVMA(vk::DeviceSize bufferSize, vk::BufferUsageFlags bufferUsage, VmaAllocationCreateFlags allocationFlags) {
+    vk::BufferCreateInfo bufferInfo{
+        .size = bufferSize,
+        .usage =  bufferUsage
+    };
+
+    VmaAllocationCreateInfo allocInfo{
+        .usage = VMA_MEMORY_USAGE_AUTO,
+        .flags = allocationFlags
+    };
+
+
+    vk::raii::Buffer buffer{*device_,vk::Buffer{}};
+
+    auto h = &buffer;
+    VmaAllocation allocation;
+    vmaCreateBuffer(allocator_,&*bufferInfo,&allocInfo, reinterpret_cast<VkBuffer*>(&buffer),&allocation,nullptr);
+
+    return {
+        std::move(buffer),
+        std::move(allocation)
+    };
+}
+
+void VkUtils::destroyBuffer(const BufferAlloc& buffer) {
+    vmaDestroyBuffer(allocator_,*buffer.buffer,buffer.allocation);
+}
+
 VkUtils::BufferWithMemory VkUtils::createBuffer(vk::DeviceSize bufferSize, vk::BufferUsageFlags bufferUsage, vk::MemoryPropertyFlags properties) {
     vk::raii::Buffer buffer{nullptr};
     vk::raii::DeviceMemory bufferMemory{nullptr};
@@ -123,8 +151,6 @@ void VkUtils::init(const vk::raii::Device* device, const vk::raii::PhysicalDevic
         .vkGetDeviceProcAddr = &vkGetDeviceProcAddr
     };
 
-    auto vkPhysicalDevice = reinterpret_cast<VkPhysicalDevice>(&physicalDevice_);
-
     VmaAllocatorCreateInfo allocatorCreateInfo{
         .flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT,
         .physicalDevice = **physicalDevice_,
@@ -135,6 +161,7 @@ void VkUtils::init(const vk::raii::Device* device, const vk::raii::PhysicalDevic
     };
 
     vmaCreateAllocator(&allocatorCreateInfo,&allocator_);
+
 }
 
 void VkUtils::destroy() {

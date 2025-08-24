@@ -15,6 +15,11 @@ public:
         vk::raii::DeviceMemory memory{nullptr};
     };
 
+    struct BufferAlloc {
+        vk::raii::Buffer buffer{nullptr};
+        VmaAllocation allocation{};
+    };
+
     enum class QueueType : uint8_t {
         graphics = 0,
         present = 1,
@@ -32,6 +37,10 @@ public:
      * @param properties desired memory properties of the buffer
      */
     static void createBuffer(vk::DeviceSize bufferSize, vk::raii::Buffer& buffer, vk::BufferUsageFlags bufferUsage, vk::raii::DeviceMemory& bufferMemory, vk::MemoryPropertyFlags properties);
+
+    static BufferAlloc createBufferVMA(vk::DeviceSize bufferSize, vk::BufferUsageFlags bufferUsage, VmaAllocationCreateFlags allocationFlags = {});
+
+    static void destroyBuffer(const BufferAlloc& buffer);
 
     /**
      * @brief configures and creates a buffer, returns it alongside its memory
