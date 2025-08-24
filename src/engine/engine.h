@@ -55,6 +55,7 @@ private:
     std::vector<const char*> initValidationLayers();
 
     void initSurface();
+    void initVMAllocator();
 
     void initPhysicalDevice();
     void initLogicalDevice();

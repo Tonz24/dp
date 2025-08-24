@@ -1,6 +1,6 @@
 #include "../engine/engine.h"
 #include "../engine/modelLoader.h"
-
+#include "vma/vk_mem_alloc.h"
 
 int main() {
     Engine::getInstance().init();
@@ -13,5 +13,8 @@ int main() {
 
     Engine::getInstance().setScene(scene);
     Engine::getInstance().run();
+
+
+    scene.reset();
     return 0;
 }

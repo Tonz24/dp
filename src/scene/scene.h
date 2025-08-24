@@ -16,6 +16,9 @@ public:
 
     }
 
+
+
+
     [[nodiscard]] Camera& getCamera() const { return *camera_; }
     void setCamera(std::shared_ptr<Camera> camera) { std::swap(camera_, camera);}
 

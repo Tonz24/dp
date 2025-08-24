@@ -109,15 +109,37 @@ uint32_t VkUtils::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags pr
     exit(EXIT_FAILURE);
 }
 
-void VkUtils::init(const vk::raii::Device* device, const vk::raii::PhysicalDevice* physicalDevice, const std::vector<const vk::raii::Queue*>&& queueHandles, const vk::
+void VkUtils::init(const vk::raii::Device* device, const vk::raii::PhysicalDevice* physicalDevice, const vk::raii::Instance* instance, const std::vector<const vk::raii::Queue*>&& queueHandles, const vk::
                    raii::CommandPool* commandPool) {
     device_ = device;
     physicalDevice_ = physicalDevice;
     memoryProperties_ = physicalDevice->getMemoryProperties();
     queueHandles_ = queueHandles;
     commandPool_ = commandPool;
+    instance_ = instance;
+
+    VmaVulkanFunctions vulkanFunctions{
+        .vkGetInstanceProcAddr = &vkGetInstanceProcAddr,
+        .vkGetDeviceProcAddr = &vkGetDeviceProcAddr
+    };
+
+    auto vkPhysicalDevice = reinterpret_cast<VkPhysicalDevice>(&physicalDevice_);
+
+    VmaAllocatorCreateInfo allocatorCreateInfo{
+        .flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT,
+        .physicalDevice = **physicalDevice_,
+        .device = **device,
+        .pVulkanFunctions = &vulkanFunctions,
+        .instance = **instance_,
+        .vulkanApiVersion = VK_API_VERSION_1_4,
+    };
+
+    vmaCreateAllocator(&allocatorCreateInfo,&allocator_);
 }
 
+void VkUtils::destroy() {
+    vmaDestroyAllocator(allocator_);
+}
 
 vk::raii::CommandBuffer VkUtils::beginSingleTimeCommand() {
     vk::CommandBufferAllocateInfo allocInfo{

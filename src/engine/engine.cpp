@@ -62,6 +62,12 @@ bool Engine::drawGUI() {
 
     ImGui::Begin("DP");
 
+    std::array<char,100> input{""};
+
+    if (ImGui::InputText("scene path ",input.data(),input.size())) {
+        std::cout << "h " << std::endl;
+    }
+
     if (scene_)
         return scene_->drawGUI();
 
@@ -209,6 +215,8 @@ void Engine::initSurface() {
     }
     surface_ = vk::raii::SurfaceKHR(vkInstance, surface);
 }
+
+void Engine::initVMAllocator() {}
 
 Engine::QueueFamilyIndices Engine::initQueueFamilyIndices() const {
     auto queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
@@ -1061,6 +1069,11 @@ void Engine::mainLoop() {
     }
     isRunning_ = false;
     device_.waitIdle();
+
+    scene_.reset();
+
+    VkUtils::destroy();
+    glfwTerminate();
 }
 
 void Engine::initSyncObjects() {
@@ -1304,7 +1317,7 @@ void Engine::initIdMapImage() {
 
 void Engine::configureVkUtils() const {
 
-    VkUtils::init(&device_,&physicalDevice, {&graphicsQueue,&presentQueue,&transferQueue}, &graphicsCommandPool_);
+    VkUtils::init(&device_,&physicalDevice, &vkInstance, {&graphicsQueue,&presentQueue,&transferQueue}, &graphicsCommandPool_);
 }
 
 void Engine::updateUBOs() {

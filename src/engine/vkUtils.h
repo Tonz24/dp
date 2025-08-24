@@ -5,6 +5,7 @@
 #pragma once
 
 #include <vulkan/vulkan_raii.hpp>
+#include "../entry/vmaUsage.h"
 
 class VkUtils {
 public:
@@ -106,14 +107,19 @@ public:
 private:
     friend class Engine;
 
-    static void init(const vk::raii::Device* device, const vk::raii::PhysicalDevice* physicalDevice, const std::vector<const vk::raii::Queue*>&& queueHandles, const vk::
+    static void init(const vk::raii::Device* device, const vk::raii::PhysicalDevice* physicalDevice, const vk::raii::Instance* instance, const std::vector<const vk::raii::Queue*>&& queueHandles, const vk::
                      raii::CommandPool* commandPool);
+
+    static void destroy();
 
     inline static const vk::raii::Device* device_{};
     inline static const vk::raii::PhysicalDevice* physicalDevice_{};
+    inline static const vk::raii::Instance* instance_{};
     inline static vk::PhysicalDeviceMemoryProperties memoryProperties_{};
     inline static std::vector<const vk::raii::Queue*> queueHandles_{};
     inline static const vk::raii::CommandPool* commandPool_{};
+
+    inline static VmaAllocator allocator_{};
 };
 
 

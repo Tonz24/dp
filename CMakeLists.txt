@@ -57,6 +57,8 @@ add_executable(dp
         src/engine/vkUtils.cpp
         src/engine/vkUtils.h
         src/engine/iDrawGui.h
+        src/entry/vmaUsage.cpp
+        src/entry/vmaUsage.h
 )
 
 # add shader compilation as a build step
