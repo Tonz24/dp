@@ -113,6 +113,31 @@ std::vector<std::shared_ptr<Mesh>> ModelLoader::loadModel(std::string_view path,
         meshes.emplace_back(parsedMesh);
     }
 
+    auto size = std::ranges::max_element(meshes,[](const std::shared_ptr<Mesh>& a, const std::shared_ptr<Mesh>& b) {
+        const uint32_t aV = a->getVertices().size() * sizeof(Vertex);
+        const uint32_t aI = a->getIndices().size() * sizeof(uint32_t);
+        const uint32_t aa = aV > aI ? aV : aI;
+
+        const uint32_t bV = b->getVertices().size() * sizeof(Vertex);
+        const uint32_t bI = b->getIndices().size() * sizeof(uint32_t);
+        const uint32_t bb = bV > bI ? bV : bI;
+
+        return aa < bb;
+    });
+    vk::DeviceSize bufferSize = size->get()->getIndices().size() * sizeof(uint32_t) > size->get()->getVertices().size() * sizeof(Vertex) ? size->get()->getIndices().size() * sizeof(uint32_t) : size->get()->getVertices().size() * sizeof(Vertex);
+
+    VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(bufferSize,vk::BufferUsageFlagBits::eTransferSrc,VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+    void* data{nullptr};
+    VkUtils::mapMemory(stagingBuffer,data);
+
+    for (auto& mesh : meshes) {
+        mesh->stage(stagingBuffer, data);
+    }
+
+    // unmap, destroy staging buffer
+    VkUtils::unmapMemory(stagingBuffer);
+    VkUtils::destroyBuffer(stagingBuffer);
+
     return meshes;
 }
 

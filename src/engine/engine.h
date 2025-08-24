@@ -22,6 +22,7 @@ public:
 
     void run();
     void init();
+    void cleanup();
 
     const vk::raii::Device &getDevice() const {return device_;}
 

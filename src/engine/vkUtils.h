@@ -39,6 +39,8 @@ public:
     static void createBuffer(vk::DeviceSize bufferSize, vk::raii::Buffer& buffer, vk::BufferUsageFlags bufferUsage, vk::raii::DeviceMemory& bufferMemory, vk::MemoryPropertyFlags properties);
 
     static BufferAlloc createBufferVMA(vk::DeviceSize bufferSize, vk::BufferUsageFlags bufferUsage, VmaAllocationCreateFlags allocationFlags = {});
+    static void mapMemory(const BufferAlloc& buffer, void*& ptr);
+    static void unmapMemory(const BufferAlloc& buffer);
 
     static void destroyBuffer(const BufferAlloc& buffer);
 

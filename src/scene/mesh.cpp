@@ -7,13 +7,16 @@
 #include <imgui/imgui.h>
 
 #include "../engine/engine.h"
-#include "../engine/vkUtils.h"
 
 Mesh::Mesh(std::vector<Vertex> &&vertexList, std::vector<uint32_t> &&indexList, std::shared_ptr<Material> material):
     vertices_(std::move(vertexList)), indices_(std::move(indexList)), material_(std::move(material)) {
 
     initBuffers();
-    stage();
+}
+
+Mesh::~Mesh() {
+    VkUtils::destroyBuffer(vertexBuffer_);
+    VkUtils::destroyBuffer(indexBuffer_);
 }
 
 bool Mesh::drawGUI() {
@@ -27,40 +30,28 @@ bool Mesh::drawGUI() {
     return false;
 }
 
-void Mesh::stage() {
+void Mesh::stage(VkUtils::BufferAlloc& stagingBuffer, void*& dataPtr) {
 
     //  determine staging buffer size (big enough for holding both vertices and indices)
     auto vertexBufferSize = sizeof(vertices_[0]) * vertices_.size();
     auto indexBufferSize = sizeof(indices_[0]) * indices_.size();
-    vk::DeviceSize bufferSize = vertexBufferSize > indexBufferSize ? vertexBufferSize : indexBufferSize;
 
-    vk::raii::Buffer stagingBuffer_{nullptr};
-    vk::raii::DeviceMemory stagingBufferMemory_{nullptr};
+    //  copy from vertices vector to staging buffer
+    memcpy(dataPtr,vertices_.data(),vertexBufferSize);
 
-    //  create the staging buffer
-    VkUtils::createBuffer(
-        bufferSize,
-        stagingBuffer_,
-        vk::BufferUsageFlagBits::eTransferSrc,
-        stagingBufferMemory_,
-        VkUtils::stagingMemoryFlags);
+    //  copy from staging buffer to vertex buffer
+    VkUtils::copyBuffer(stagingBuffer.buffer,vertexBuffer_.buffer,vertexBufferSize);
 
+    // copy from indices vector to staging buffer
+    memcpy(dataPtr,indices_.data(), indexBufferSize);
 
-    //  map the staging buffer to CPU memory
-    void* data = stagingBufferMemory_.mapMemory(0,vertexBufferSize);
-    memcpy(data,vertices_.data(),vertexBufferSize);
-    //  copy data from staging buffer to vertex buffer
-    VkUtils::copyBuffer(stagingBuffer_,vertexBuffer_,vertexBufferSize);
-
-    memcpy(data,indices_.data(), indexBufferSize);
-    stagingBufferMemory_.unmapMemory();
-
-    VkUtils::copyBuffer(stagingBuffer_,indexBuffer_,indexBufferSize);
+    // copy from staging buffer to indices buffer
+    VkUtils::copyBuffer(stagingBuffer.buffer,indexBuffer_.buffer,indexBufferSize);
 }
 
 void Mesh::recordDrawCommands(vk::raii::CommandBuffer& cmdBuf, const vk::raii::PipelineLayout& pipelineLayout) const {
-    cmdBuf.bindVertexBuffers(0,*vertexBuffer_,{0});
-    cmdBuf.bindIndexBuffer(indexBuffer_,0,vk::IndexType::eUint32);
+    cmdBuf.bindVertexBuffers(0,*vertexBuffer_.buffer,{0});
+    cmdBuf.bindIndexBuffer(indexBuffer_.buffer,0,vk::IndexType::eUint32);
     //  bind per mesh descriptor set
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 1, *getMaterial()->getDescriptorSet(), nullptr);
 
@@ -78,22 +69,8 @@ void Mesh::recordDrawCommands(vk::raii::CommandBuffer& cmdBuf, const vk::raii::P
 
 void Mesh::initBuffers() {
     vk::DeviceSize vertexBufferSize = sizeof(vertices_[0]) * vertices_.size();
-
-    VkUtils::createBuffer(
-        vertexBufferSize,
-        vertexBuffer_,
-        vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst,
-        vertexBufferMemory_,
-        vk::MemoryPropertyFlagBits::eDeviceLocal
-    );
+    vertexBuffer_ = VkUtils::createBufferVMA(vertexBufferSize,vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst);
 
     vk::DeviceSize indexBufferSize = sizeof(indices_[0]) * indices_.size();
-
-    VkUtils::createBuffer(
-        indexBufferSize,
-        indexBuffer_,
-        vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst,
-        indexBufferMemory_,
-        vk::MemoryPropertyFlagBits::eDeviceLocal
-    );
+    indexBuffer_ = VkUtils::createBufferVMA(indexBufferSize,vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst);
 }

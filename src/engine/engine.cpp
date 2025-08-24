@@ -1069,7 +1069,9 @@ void Engine::mainLoop() {
     }
     isRunning_ = false;
     device_.waitIdle();
+}
 
+void Engine::cleanup() {
     scene_.reset();
 
     VkUtils::destroy();

@@ -12,11 +12,13 @@
 class Scene : public IDrawGui {
 public:
 
-    explicit Scene(const std::vector<std::shared_ptr<Mesh>>& meshes, const std::shared_ptr<Camera> &camera) : meshes_(meshes), camera_(camera) {
+    explicit Scene(const std::vector<std::shared_ptr<Mesh>>&& meshes, const std::shared_ptr<Camera> &camera) : meshes_(std::move(meshes)), camera_(camera) {
 
     }
 
-
+    ~Scene() override {
+        meshes_.clear();
+    }
 
 
     [[nodiscard]] Camera& getCamera() const { return *camera_; }

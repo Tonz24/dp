@@ -4,6 +4,7 @@
 
 #include "vkUtils.h"
 #include <iostream>
+#include <ranges>
 
 void VkUtils::createBuffer(vk::DeviceSize bufferSize, vk::raii::Buffer &buffer, vk::BufferUsageFlags bufferUsage, vk::raii::DeviceMemory &bufferMemory, vk::MemoryPropertyFlags properties){
     vk::BufferCreateInfo bufferInfo{
@@ -27,25 +28,32 @@ void VkUtils::createBuffer(vk::DeviceSize bufferSize, vk::raii::Buffer &buffer, 
 VkUtils::BufferAlloc VkUtils::createBufferVMA(vk::DeviceSize bufferSize, vk::BufferUsageFlags bufferUsage, VmaAllocationCreateFlags allocationFlags) {
     vk::BufferCreateInfo bufferInfo{
         .size = bufferSize,
-        .usage =  bufferUsage
+        .usage =  bufferUsage,
+        .sharingMode = vk::SharingMode::eExclusive
     };
 
     VmaAllocationCreateInfo allocInfo{
+        .flags = allocationFlags,
         .usage = VMA_MEMORY_USAGE_AUTO,
-        .flags = allocationFlags
     };
 
-
-    vk::raii::Buffer buffer{*device_,vk::Buffer{}};
-
-    auto h = &buffer;
+    VkBuffer rawBuffer;
     VmaAllocation allocation;
-    vmaCreateBuffer(allocator_,&*bufferInfo,&allocInfo, reinterpret_cast<VkBuffer*>(&buffer),&allocation,nullptr);
+    vmaCreateBuffer(allocator_,&*bufferInfo,&allocInfo, &rawBuffer,&allocation,nullptr);
 
+    vk::raii::Buffer buffer{*device_,rawBuffer};
     return {
         std::move(buffer),
         std::move(allocation)
     };
+}
+
+void VkUtils::mapMemory(const BufferAlloc& buffer, void*& ptr) {
+    vmaMapMemory(allocator_,buffer.allocation,&ptr);
+}
+
+void VkUtils::unmapMemory(const BufferAlloc& buffer) {
+    vmaUnmapMemory(allocator_,buffer.allocation);
 }
 
 void VkUtils::destroyBuffer(const BufferAlloc& buffer) {
