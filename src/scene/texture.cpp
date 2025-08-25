@@ -29,18 +29,15 @@ Texture* Texture::initDummy(const glm::vec<4, uint8_t>& color) {
 
 
 Texture::Texture(uint32_t width, uint32_t height, uint32_t channels, vk::Format format, vk::ImageUsageFlags imageUsage, vk::MemoryPropertyFlags memoryProperties):
-    ManagedResource(), width_(width), height_(height), channels_(channels), vkFormat_(format), imageUsageFlags_(imageUsage), memoryPropertyFlags_(memoryProperties)
+    ManagedResource(), width_(width), height_(height), channelCount_(channels), vkFormat_(format), imageUsageFlags_(imageUsage), memoryPropertyFlags_(memoryProperties)
 {
-    data_.reserve(width_ * height_ * channels_);
-    data_.resize(width_ * height_ * channels_,0);
+    data_.reserve(width_ * height_ * channelCount_);
+    data_.resize(width_ * height_ * channelCount_,0);
     initVkImage();
 
 }
 
 void Texture::initVkImage() {
-
-    pixelSize_ = channels_;
-
     vk::ImageCreateInfo imageInfo{
         .imageType = vk::ImageType::e2D,
         .format = vkFormat_,
@@ -58,19 +55,8 @@ void Texture::initVkImage() {
     };
 
 
+
     imageAlloc_ = VkUtils::createImageVMA(imageInfo);
-
-
-
-    // vkImage_ = vk::raii::Image(device, imageInfo);
-    // auto idMapMemReqs = vkImage_.getMemoryRequirements();
-    //
-    // vk::MemoryAllocateInfo memAllocInfo{
-    //     .allocationSize = idMapMemReqs.size,
-    //     .memoryTypeIndex = VkUtils::findMemoryType(idMapMemReqs.memoryTypeBits,memoryPropertyFlags_),
-    // };
-    // vkImageMemory_ = vk::raii::DeviceMemory(device,memAllocInfo);
-    // vkImage_.bindMemory(vkImageMemory_,0);
 
     vk::ImageAspectFlags aspectFlags{vk::ImageAspectFlagBits::eColor};
     if (imageUsageFlags_ & vk::ImageUsageFlagBits::eDepthStencilAttachment)
@@ -139,9 +125,19 @@ Texture::Texture(std::string_view fileName) : ManagedResource() {
         fif = FreeImage_GetFIFFromFilename(correctFileName.c_str());
 
     if ( fif != FIF_UNKNOWN){
-        FIBITMAP* tempBitmap = FreeImage_Load(fif,correctFileName.c_str());
-        FIBITMAP* bitmap = FreeImage_ConvertTo32Bits(tempBitmap);
-        FreeImage_Unload(tempBitmap);
+
+        FIBITMAP* bitmap{nullptr};
+
+        if (fif == FIF_JPEG) {
+            FIBITMAP* tempBitmap = FreeImage_Load(fif,correctFileName.c_str());
+            bitmap = FreeImage_ConvertTo32Bits(tempBitmap);
+            FreeImage_Unload(tempBitmap);
+        }
+        if (fif == FIF_EXR || fif == FIF_HDR) {
+            FIBITMAP* tempBitmap = FreeImage_Load(fif,correctFileName.c_str());
+            bitmap = FreeImage_ConvertToRGBAF(tempBitmap);
+            FreeImage_Unload(tempBitmap);
+        }
 
         if (bitmap){
             uint8_t * bits = nullptr;
@@ -157,7 +153,7 @@ Texture::Texture(std::string_view fileName) : ManagedResource() {
             if (bits != nullptr && width_ != 0 && height_ != 0) {
                 pixelSize_ = FreeImage_GetBPP(bitmap) / 8;
                 scanWidth_ = FreeImage_GetPitch(bitmap);
-                channels_ = pixelSize_;
+                channelCount_ = getChannelCount(freeImageType_,FreeImage_GetBPP(bitmap));
 
                 data_.reserve(scanWidth_ * height_);
                 data_.resize(scanWidth_ * height_,0);
@@ -168,7 +164,7 @@ Texture::Texture(std::string_view fileName) : ManagedResource() {
                 memoryPropertyFlags_ = vk::MemoryPropertyFlagBits::eDeviceLocal;
                 imageUsageFlags_ = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
 
-                assignVkFormat();
+                vkFormat_ = chooseVkFormat();
                 initVkImage();
             }
         }
@@ -206,7 +202,7 @@ void Texture::expand() {
     }
 }
 
-void Texture::stage(const VkUtils::BufferAlloc& stagingBuffer, void*& dataPtr) {
+void Texture::stage(const VkUtils::BufferAlloc& stagingBuffer, void*& dataPtr) const {
 
     size_t imageSize = width_ * height_ * pixelSize_;
 
@@ -243,29 +239,50 @@ void Texture::stage(const VkUtils::BufferAlloc& stagingBuffer, void*& dataPtr) {
 }
 
 
-void Texture::assignVkFormat() {
+vk::Format Texture::chooseVkFormat() const {
     switch (freeImageType_) {
         case FIT_BITMAP:
-            switch (channels_) {
+            switch (channelCount_) {
                 case 1:
-                    vkFormat_ = vk::Format::eR8Srgb;
-                    return;
+                    return vk::Format::eR8Srgb;
                 case 2:
-                    vkFormat_ = vk::Format::eR8G8Srgb;
-                    return;
+                    return vk::Format::eR8G8Srgb;
                 case 3:
-                    vkFormat_ = vk::Format::eB8G8R8Srgb;
-                    return;
+                    return vk::Format::eB8G8R8Srgb;
                 case 4:
-                    vkFormat_ = vk::Format::eB8G8R8A8Srgb;
-                    return;
+                    return vk::Format::eB8G8R8A8Srgb;
                 default:
-                    std::cout << "ERROR! Unsupported format type" << std::endl;
-                    exit(EXIT_FAILURE);
+                    throw std::runtime_error("ERROR: Unsupported format type!");
             }
+        case FIT_RGB16:
+            return vk::Format::eR16G16B16Sfloat;
+        case FIT_RGBA16:
+            return  vk::Format::eR16G16B16A16Sfloat;
+        case FIT_RGBF:
+            return vk::Format::eR32G32B32Sfloat;
+        case FIT_RGBAF:
+            return vk::Format::eR32G32B32A32Sfloat;
         default:
-            std::cout << "ERROR! Unsupported format type" << std::endl;
-            exit(EXIT_FAILURE);
+            throw std::runtime_error("ERROR: Unsupported format type!");
+    }
+}
+
+int Texture::getChannelCount(FREE_IMAGE_TYPE type, uint32_t bpp) {
+    switch(type) {
+        case FIT_BITMAP: {
+            if (bpp == 8)  return 1;
+            if (bpp == 24) return 3;
+            if (bpp == 32) return 4;
+            return 0; // unsupported format
+        }
+        case FIT_RGB16:
+        case FIT_RGBF:
+            return 3;
+        case FIT_RGBA16:
+        case FIT_RGBAF:
+            return 4;
+        default:
+            return 0;
     }
 }
 

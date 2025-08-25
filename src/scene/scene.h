@@ -12,9 +12,8 @@
 class Scene : public IDrawGui {
 public:
 
-    explicit Scene(const std::vector<std::shared_ptr<Mesh>>&& meshes, const std::shared_ptr<Camera> &camera) : meshes_(std::move(meshes)), camera_(camera) {
-
-    }
+    explicit Scene(const std::vector<std::shared_ptr<Mesh>>&& meshes, std::shared_ptr<Camera> camera, std::shared_ptr<Texture> sky = {nullptr})
+        : meshes_(std::move(meshes)), camera_(std::move(camera)), sky_(std::move(sky)) {}
 
 
     [[nodiscard]] Camera& getCamera() const { return *camera_; }
@@ -28,6 +27,7 @@ public:
 private:
     std::vector<std::shared_ptr<Mesh>> meshes_{};
     std::shared_ptr<Camera> camera_{};
+    std::shared_ptr<Texture> sky_{};
 
     uint32_t selectedObjectIndex_{0};
 };

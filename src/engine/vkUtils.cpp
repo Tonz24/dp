@@ -60,25 +60,6 @@ void VkUtils::destroyBufferVMA(const BufferAlloc& buffer) {
     vmaDestroyBuffer(allocator_,buffer.buffer,buffer.allocation);
 }
 
-void VkUtils::copyBuffer(const vk::raii::Buffer& srcBuffer, const vk::raii::Buffer& dstBuffer, vk::DeviceSize size) {
-
-    vk::BufferCopy region{
-        .srcOffset = 0,
-        .dstOffset = 0,
-        .size = size
-    };
-
-    copyBuffer(srcBuffer,dstBuffer, region);
-}
-
-
-void VkUtils::copyBuffer(const vk::raii::Buffer& srcBuffer, const vk::raii::Buffer& dstBuffer, const vk::BufferCopy& region) {
-    auto cmdBuf = VkUtils::beginSingleTimeCommand();
-
-    cmdBuf.copyBuffer(srcBuffer,dstBuffer,region);
-
-    endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
-}
 
 void VkUtils::copyBuffer(const BufferAlloc& srcBuffer, const BufferAlloc& dstBuffer, vk::DeviceSize size) {
     vk::BufferCopy region{

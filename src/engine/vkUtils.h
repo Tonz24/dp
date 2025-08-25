@@ -44,22 +44,6 @@ public:
     static ImageAlloc createImageVMA(const vk::ImageCreateInfo& imageInfo, VmaAllocationCreateFlags allocationFlags = {});
     static void destroyImageVMA(const ImageAlloc& image);
 
-    /**
-     * @brief copies source buffer to dst buffer
-     * @param srcBuffer source buffer (from)
-     * @param dstBuffer destination buffer (to)
-     * @param size size of data to copy
-     */
-    static void copyBuffer(const vk::raii::Buffer& srcBuffer, const vk::raii::Buffer& dstBuffer, vk::DeviceSize size);
-
-    /**
-     * @brief copies source buffer to dst buffer
-     * @param srcBuffer source buffer (from)
-     * @param dstBuffer destination buffer (to)
-     * @param region offsets and size of data
-     */
-    static void copyBuffer(const vk::raii::Buffer& srcBuffer, const vk::raii::Buffer& dstBuffer, const vk::BufferCopy& region);
-
 
     static void copyBuffer(const BufferAlloc& srcBuffer, const BufferAlloc& dstBuffer, vk::DeviceSize size);
     static void copyBuffer(const BufferAlloc& srcBuffer, const BufferAlloc& dstBuffer, const vk::BufferCopy& region);

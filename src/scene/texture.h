@@ -45,16 +45,19 @@ public:
     Texture(uint32_t width, uint32_t height, uint32_t channels, vk::Format format, vk::ImageUsageFlags imageUsage, vk::MemoryPropertyFlags memoryProperties);
 
     uint32_t getTotalSize() const {return data_.size() * sizeof(data_[0]);}
-    void stage(const VkUtils::BufferAlloc& stagingBuffer, void*& dataPtr);
+    void stage(const VkUtils::BufferAlloc& stagingBuffer, void*& dataPtr) const;
 
 private:
 
     void initVkImage();
-    void assignVkFormat();
+
+    vk::Format chooseVkFormat() const;
+
+    static int getChannelCount(FREE_IMAGE_TYPE type, uint32_t bpp);
 
     uint32_t width_{};
     uint32_t height_{};
-    uint32_t channels_{};
+    uint32_t channelCount_{};
     uint32_t pixelSize_{};
     uint32_t scanWidth_{};
 

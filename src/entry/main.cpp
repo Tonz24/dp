@@ -1,5 +1,6 @@
 #include "../engine/engine.h"
 #include "../engine/modelLoader.h"
+#include "../engine/managers/resourceManager.h"
 #include "vma/vk_mem_alloc.h"
 
 int main() {
@@ -7,7 +8,9 @@ int main() {
 
     auto cam = std::make_shared<Camera>(glm::vec3{0,0,2},glm::vec3{0,0,0});
 
-    auto scene = std::make_shared<Scene>(ModelLoader::loadModel("room/room.obj", false),cam);
+    auto sky = TextureManager::getInstance()->registerResource(new Texture("../assets/sky/lebombo_4k.exr"),"sky");
+    auto scene = std::make_shared<Scene>(ModelLoader::loadModel("room/room.obj", false),cam,std::move(sky));
+
 
     Engine::getInstance().setScene(std::move(scene));
     Engine::getInstance().run();
