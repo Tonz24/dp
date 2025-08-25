@@ -5,10 +5,6 @@
 #include "texture.h"
 #include <iostream>
 
-#include "camera.h"
-#include "camera.h"
-#include "camera.h"
-#include "camera.h"
 #include "../engine/engine.h"
 #include "../engine/utils.h"
 

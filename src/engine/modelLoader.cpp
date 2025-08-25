@@ -227,8 +227,8 @@ void ModelLoader::loadMaterials(const std::string& directory, const aiScene& sce
         }
     }
 
-    // stage only if there are textures within the materials
-    if (stagingBufferSize != 0) {
+    // only stage if there's something to stage
+    if (!textureNames.empty() && stagingBufferSize != 0) {
 
         VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(stagingBufferSize,vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingAllocFlagsVMA);
 

@@ -1,7 +1,6 @@
 #include "../engine/engine.h"
 #include "../engine/modelLoader.h"
 #include "../engine/managers/resourceManager.h"
-#include "vma/vk_mem_alloc.h"
 
 int main() {
     Engine::getInstance().init();
