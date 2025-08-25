@@ -558,7 +558,7 @@ void Engine::initGraphicsPipeline() {
     //  -   these values will be specified each frame during command buffer creation
     std::vector<vk::DynamicState> dynamicStates = {
         vk::DynamicState::eViewport,
-        vk::DynamicState::eScissor
+        vk::DynamicState::eScissor,
     };
 
     //  create the dynamic state info structure
@@ -802,7 +802,6 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
         mesh->recordDrawCommands(cmdBuf, pipelineLayout);
     }
     cmdBuf.endRendering();
-
 
     // prepare GUI render pass
     vk::RenderingAttachmentInfo guiAttachmentInfo = {

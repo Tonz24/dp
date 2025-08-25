@@ -243,4 +243,17 @@ private:
     CameraUBOFormat cameraUBOStorage_{};
     MaterialUBOFormat materialUBOStorage_{};
     uint32_t materialUpdateIndex_{};
+
+    static constexpr float vertexData[20] = {
+        /*                            x		y	  z		u  v */
+        /* top right*/		    1.0f,       1.0f, 0.0f,	1, 1,
+        /* bottom right*/	    1.0f,   -1.0f, 0.0f,  1, -1,
+        /* bottom left*/        -1.0f,  -1.0f, 0.0f,  -1, -1,
+        /* top left*/	        -1.0f,   1.0f, 0.0f,  -1, 1
+    };
+
+    static constexpr unsigned int indexData[6] = {
+        3, 1, 0,
+        3, 2, 1
+    };
 };
