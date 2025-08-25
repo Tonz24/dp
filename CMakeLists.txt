@@ -54,11 +54,11 @@ add_executable(dp
         src/engine/managers/inputManager.h
         src/engine/observers.h
         src/engine/uboFormat.h
-        src/engine/vkUtils.cpp
-        src/engine/vkUtils.h
+        src/engine/vk/vkUtils.cpp
+        src/engine/vk/vkUtils.h
         src/engine/iDrawGui.h
-        src/entry/vmaUsage.cpp
-        src/entry/vmaUsage.h
+        src/engine/vk/vmaUsage.cpp
+        src/engine/vk/vmaUsage.h
 )
 
 # add shader compilation as a build step

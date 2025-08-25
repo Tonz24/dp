@@ -5,23 +5,23 @@
 #include "texture.h"
 #include <iostream>
 
+#include "camera.h"
+#include "camera.h"
+#include "camera.h"
+#include "camera.h"
 #include "../engine/engine.h"
 #include "../engine/utils.h"
-#include "../engine/vkUtils.h"
 
-Texture* Texture::initDummy(const glm::vec<4, uint8_t>& color) {
+::Texture* Texture::initDummy(const glm::vec<4, uint8_t>& color) {
 
     auto dummy = new Texture(1,1,4,vk::Format::eB8G8R8A8Unorm, vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
     memcpy(dummy->data_.data(),&color[0],sizeof(color));
 
-    VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(dummy->getTotalSize(),vk::BufferUsageFlagBits::eTransferSrc,VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
-    void* data{nullptr};
-    VkUtils::mapMemory(stagingBuffer,data);
+    VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(dummy->getTotalSize(),vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingAllocFlagsVMA);
 
-    dummy->stage(stagingBuffer, data);
+    dummy->stage(stagingBuffer);
 
-    VkUtils::unmapMemory(stagingBuffer);
     VkUtils::destroyBufferVMA(stagingBuffer);
 
     return dummy;
@@ -31,6 +31,7 @@ Texture* Texture::initDummy(const glm::vec<4, uint8_t>& color) {
 Texture::Texture(uint32_t width, uint32_t height, uint32_t channels, vk::Format format, vk::ImageUsageFlags imageUsage, vk::MemoryPropertyFlags memoryProperties):
     ManagedResource(), width_(width), height_(height), channelCount_(channels), vkFormat_(format), imageUsageFlags_(imageUsage), memoryPropertyFlags_(memoryProperties)
 {
+    pixelSize_ = channelCount_;
     data_.reserve(width_ * height_ * channelCount_);
     data_.resize(width_ * height_ * channelCount_,0);
     initVkImage();
@@ -53,7 +54,6 @@ void Texture::initVkImage() {
         .usage = imageUsageFlags_,
         .sharingMode = vk::SharingMode::eExclusive
     };
-
 
 
     imageAlloc_ = VkUtils::createImageVMA(imageInfo);
@@ -202,11 +202,14 @@ void Texture::expand() {
     }
 }
 
-void Texture::stage(const VkUtils::BufferAlloc& stagingBuffer, void*& dataPtr) const {
+void Texture::stage(const VkUtils::BufferAlloc& stagingBuffer) const {
+
+    if (stagingBuffer.allocationInfo.pMappedData == nullptr)
+        throw std::runtime_error("ERROR: Mapped pointer points to NULL!");
 
     size_t imageSize = width_ * height_ * pixelSize_;
 
-    memcpy(dataPtr,data_.data(),imageSize);
+    memcpy(stagingBuffer.allocationInfo.pMappedData,data_.data(),imageSize);
 
     auto cmdBuf = VkUtils::beginSingleTimeCommand();
     VkUtils::transitionImageLayout(

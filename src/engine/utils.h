@@ -29,6 +29,7 @@ public:
         else
             u = powf((u + 0.055f) / 1.055f, 2.4f);
         return u;
+
     }
 
 };

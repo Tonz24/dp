@@ -30,20 +30,22 @@ bool Mesh::drawGUI() {
     return false;
 }
 
-void Mesh::stage(const VkUtils::BufferAlloc& stagingBuffer, void*& dataPtr) const {
+void Mesh::stage(const VkUtils::BufferAlloc& stagingBuffer) const {
 
+    if (stagingBuffer.allocationInfo.pMappedData == nullptr)
+        throw std::runtime_error("ERROR: Mapped pointer points to NULL!");
 
     auto vertexBufferSize = sizeof(vertices_[0]) * vertices_.size();
     auto indexBufferSize = sizeof(indices_[0]) * indices_.size();
 
     //  copy from vertices vector to staging buffer
-    memcpy(dataPtr,vertices_.data(),vertexBufferSize);
+    memcpy(stagingBuffer.allocationInfo.pMappedData,vertices_.data(),vertexBufferSize);
 
     //  copy from staging buffer to vertex buffer
     VkUtils::copyBuffer(stagingBuffer,vertexBuffer_,vertexBufferSize);
 
     // copy from indices vector to staging buffer
-    memcpy(dataPtr,indices_.data(), indexBufferSize);
+    memcpy(stagingBuffer.allocationInfo.pMappedData,indices_.data(), indexBufferSize);
 
     // copy from staging buffer to indices buffer
     VkUtils::copyBuffer(stagingBuffer,indexBuffer_,indexBufferSize);

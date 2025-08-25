@@ -17,7 +17,7 @@
 
 #include "managers/inputManager.h"
 #include "utils.h"
-#include "vkUtils.h"
+#include "vk/vkUtils.h"
 #include "../scene/texture.h"
 #include "managers/resourceManager.h"
 
@@ -61,12 +61,6 @@ bool Engine::drawGUI() {
     ImGui::NewFrame();
 
     ImGui::Begin("DP");
-
-    /*std::array<char,100> input{""};
-
-    if (ImGui::InputText("scene path ",input.data(),input.size())) {
-        std::cout << "h " << std::endl;
-    }*/
 
     if (scene_)
         return scene_->drawGUI();

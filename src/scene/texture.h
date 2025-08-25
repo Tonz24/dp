@@ -10,7 +10,7 @@
 #include <glm/detail/type_vec4.hpp>
 
 #include "camera.h"
-#include "../engine/vkUtils.h"
+#include "../engine/vk/vkUtils.h"
 #include "../engine/managers/managedResource.h"
 
 class Texture : public ManagedResource{
@@ -40,12 +40,12 @@ public:
 
     friend class TextureManager;
 
-    static Texture* initDummy(const glm::vec<4,uint8_t>& color = {255,0,255,255});
+    static Texture* initDummy(const glm::vec<4, uint8_t>& color = {255, 0, 255, 255});
 
     Texture(uint32_t width, uint32_t height, uint32_t channels, vk::Format format, vk::ImageUsageFlags imageUsage, vk::MemoryPropertyFlags memoryProperties);
 
     uint32_t getTotalSize() const {return data_.size() * sizeof(data_[0]);}
-    void stage(const VkUtils::BufferAlloc& stagingBuffer, void*& dataPtr) const;
+    void stage(const VkUtils::BufferAlloc& stagingBuffer) const;
 
 private:
 

@@ -123,16 +123,12 @@ std::vector<std::shared_ptr<Mesh>> ModelLoader::loadModel(std::string_view path,
         meshes.emplace_back(parsedMesh);
     }
 
-    VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(stagingBufferSize,vk::BufferUsageFlagBits::eTransferSrc,VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
-    void* data{nullptr};
-    VkUtils::mapMemory(stagingBuffer,data);
+    VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(stagingBufferSize,vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingAllocFlagsVMA);
 
     for (auto& mesh : meshes) {
-        mesh->stage(stagingBuffer, data);
+        mesh->stage(stagingBuffer);
     }
-
-    // unmap, destroy staging buffer
-    VkUtils::unmapMemory(stagingBuffer);
+    // destroy staging buffer
     VkUtils::destroyBufferVMA(stagingBuffer);
 
     return meshes;
@@ -231,21 +227,17 @@ void ModelLoader::loadMaterials(const std::string& directory, const aiScene& sce
         }
     }
 
-    // stage only if there are actual textures within the material
+    // stage only if there are textures within the materials
     if (stagingBufferSize != 0) {
 
-        VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(stagingBufferSize,vk::BufferUsageFlagBits::eTransferSrc,VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
-        void* data{nullptr};
-        VkUtils::mapMemory(stagingBuffer,data);
+        VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(stagingBufferSize,vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingAllocFlagsVMA);
 
         //  now stage all marked textures
         for (const auto & textureName : textureNames) {
             auto texture = TextureManager::getInstance()->getResource(textureName);
-            texture->stage(stagingBuffer, data);
+            texture->stage(stagingBuffer);
         }
-
-        // unmap, destroy staging buffer
-        VkUtils::unmapMemory(stagingBuffer);
+        // destroy staging buffer
         VkUtils::destroyBufferVMA(stagingBuffer);
     }
 }

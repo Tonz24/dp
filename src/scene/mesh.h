@@ -9,7 +9,7 @@
 #include "material.h"
 #include "transform.h"
 #include "../engine/iDrawGui.h"
-#include "../engine/vkUtils.h"
+#include "../engine/vk/vkUtils.h"
 
 class Mesh : public ManagedResource, public IDrawGui {
 public:
@@ -29,7 +29,7 @@ public:
 
     bool drawGUI() override;
 
-    void stage(const VkUtils::BufferAlloc& stagingBuffer, void*& dataPtr) const;
+    void stage(const VkUtils::BufferAlloc& stagingBuffer) const;
 
     void recordDrawCommands(vk::raii::CommandBuffer& cmdBuf, const vk::raii::PipelineLayout& pipelineLayout) const;
 

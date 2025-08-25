@@ -5,7 +5,7 @@
 #pragma once
 
 #include <vulkan/vulkan_raii.hpp>
-#include "../entry/vmaUsage.h"
+#include "vmaUsage.h"
 
 class VkUtils {
 public:
@@ -82,11 +82,7 @@ public:
                                       vk::PipelineStageFlags2 dstStageMask, vk::AccessFlags2 dstAccessMask,
                                       vk::ImageAspectFlags imageAspectFlags, vk::raii::CommandBuffer &cmdBuf);
 
-
-    static uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties);
-
-
-    static constexpr vk::MemoryPropertyFlags stagingMemoryFlags{vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent};
+    static constexpr VmaAllocationCreateFlags stagingAllocFlagsVMA{VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT};
 
 private:
     friend class Engine;

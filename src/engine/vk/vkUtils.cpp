@@ -106,14 +106,6 @@ void VkUtils::copyBufferToImage(const BufferAlloc& buffer, const ImageAlloc& ima
 }
 
 
-uint32_t VkUtils::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) {
-    for (uint32_t i = 0; i < memoryProperties_.memoryTypeCount; ++i) {
-        if (typeFilter & (1 << i) && (memoryProperties_.memoryTypes[i].propertyFlags & properties) == properties)
-            return i;
-    }
-    throw std::runtime_error("ERROR: Failed to find suitable memory type!");
-}
-
 void VkUtils::init(const vk::raii::Device* device, const vk::raii::PhysicalDevice* physicalDevice, const vk::raii::Instance* instance, const std::vector<const vk::raii::Queue*>&& queueHandles, const vk::
                    raii::CommandPool* commandPool) {
     device_ = device;
