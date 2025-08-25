@@ -6,25 +6,6 @@
 #include <iostream>
 #include <ranges>
 
-void VkUtils::createBuffer(vk::DeviceSize bufferSize, vk::raii::Buffer &buffer, vk::BufferUsageFlags bufferUsage, vk::raii::DeviceMemory &bufferMemory, vk::MemoryPropertyFlags properties){
-    vk::BufferCreateInfo bufferInfo{
-        .size = bufferSize,
-        .usage = bufferUsage,
-        .sharingMode = vk::SharingMode::eExclusive
-    };
-    buffer = vk::raii::Buffer(*device_, bufferInfo);
-
-    vk::MemoryRequirements memRequirements = buffer.getMemoryRequirements();
-    vk::MemoryAllocateInfo allocInfo{
-        .allocationSize = memRequirements.size,
-        .memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties)
-    };
-
-    bufferMemory = vk::raii::DeviceMemory(*device_, allocInfo);
-    buffer.bindMemory(*bufferMemory, 0);
-
-}
-
 VkUtils::BufferAlloc VkUtils::createBufferVMA(vk::DeviceSize bufferSize, vk::BufferUsageFlags bufferUsage, VmaAllocationCreateFlags allocationFlags) {
     vk::BufferCreateInfo bufferInfo{
         .size = bufferSize,
@@ -79,34 +60,6 @@ void VkUtils::destroyBufferVMA(const BufferAlloc& buffer) {
     vmaDestroyBuffer(allocator_,buffer.buffer,buffer.allocation);
 }
 
-VkUtils::BufferWithMemory VkUtils::createBuffer(vk::DeviceSize bufferSize, vk::BufferUsageFlags bufferUsage, vk::MemoryPropertyFlags properties) {
-    vk::raii::Buffer buffer{nullptr};
-    vk::raii::DeviceMemory bufferMemory{nullptr};
-
-    vk::BufferCreateInfo bufferInfo{
-        .size = bufferSize,
-        .usage = bufferUsage,
-        .sharingMode = vk::SharingMode::eExclusive
-    };
-    buffer = vk::raii::Buffer(*device_, bufferInfo);
-
-    vk::MemoryRequirements memRequirements = buffer.getMemoryRequirements();
-    vk::MemoryAllocateInfo allocInfo{
-        .allocationSize = memRequirements.size,
-        .memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties)
-    };
-
-    bufferMemory = vk::raii::DeviceMemory(*device_, allocInfo);
-    buffer.bindMemory(*bufferMemory, 0);
-
-    return BufferWithMemory{
-        .buffer = std::move(buffer),
-        .memory = std::move(bufferMemory)
-    };
-}
-
-
-
 void VkUtils::copyBuffer(const vk::raii::Buffer& srcBuffer, const vk::raii::Buffer& dstBuffer, vk::DeviceSize size) {
 
     vk::BufferCopy region{
@@ -145,8 +98,7 @@ void VkUtils::copyBuffer(const BufferAlloc& srcBuffer, const BufferAlloc& dstBuf
     endSingleTimeCommand(cmdBuf,QueueType::graphics);
 }
 
-void VkUtils::copyBufferToImage(const vk::raii::Buffer& buffer, vk::raii::Image& image, uint32_t width, uint32_t height, vk::raii::CommandBuffer& cmdBuf) {
-
+void VkUtils::copyBufferToImage(const BufferAlloc& buffer, const ImageAlloc& image, uint32_t width, uint32_t height, vk::raii::CommandBuffer& cmdBuf) {
     vk::BufferImageCopy region{
         .bufferOffset = 0,
         .bufferRowLength = 0,
@@ -169,33 +121,7 @@ void VkUtils::copyBufferToImage(const vk::raii::Buffer& buffer, vk::raii::Image&
         }
     };
 
-    cmdBuf.copyBufferToImage(buffer,image,vk::ImageLayout::eTransferDstOptimal,region);
-}
-
-void VkUtils::copyBufferToImage(const vk::Buffer& buffer, vk::Image& image, uint32_t width, uint32_t height, vk::raii::CommandBuffer& cmdBuf) {
-    vk::BufferImageCopy region{
-        .bufferOffset = 0,
-        .bufferRowLength = 0,
-        .bufferImageHeight = 0,
-        .imageSubresource = {
-            .aspectMask = vk::ImageAspectFlagBits::eColor,
-            .mipLevel = 0,
-            .baseArrayLayer = 0,
-            .layerCount = 1,
-        },
-        .imageOffset = {
-            .x = 0,
-            .y = 0,
-            .z = 0
-        },
-        .imageExtent = {
-            .width = width,
-            .height = height,
-            .depth = 1
-        }
-    };
-
-    cmdBuf.copyBufferToImage(buffer,image,vk::ImageLayout::eTransferDstOptimal,region);
+    cmdBuf.copyBufferToImage(buffer.buffer,image.image,vk::ImageLayout::eTransferDstOptimal,region);
 }
 
 

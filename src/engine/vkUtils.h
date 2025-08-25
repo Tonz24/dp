@@ -35,16 +35,6 @@ public:
 
     VkUtils() = delete;
 
-    /**
-     * @brief configures and creates a buffer for given vk::Buffer and vk::DeviceMemory objects
-     * @param bufferSize size of the buffer (in bytes)
-     * @param buffer buffer object
-     * @param bufferUsage what kind of buffer to create
-     * @param bufferMemory memory object for the buffer
-     * @param properties desired memory properties of the buffer
-     */
-    static void createBuffer(vk::DeviceSize bufferSize, vk::raii::Buffer& buffer, vk::BufferUsageFlags bufferUsage, vk::raii::DeviceMemory& bufferMemory, vk::MemoryPropertyFlags properties);
-
     static BufferAlloc createBufferVMA(vk::DeviceSize bufferSize, vk::BufferUsageFlags bufferUsage, VmaAllocationCreateFlags allocationFlags = {});
     static void destroyBufferVMA(const BufferAlloc& buffer);
     static void mapMemory(const BufferAlloc& buffer, void*& ptr);
@@ -53,15 +43,6 @@ public:
 
     static ImageAlloc createImageVMA(const vk::ImageCreateInfo& imageInfo, VmaAllocationCreateFlags allocationFlags = {});
     static void destroyImageVMA(const ImageAlloc& image);
-
-    /**
-     * @brief configures and creates a buffer, returns it alongside its memory
-     * @param bufferSize size of the buffer (in bytes)
-     * @param bufferUsage what kind of buffer to create
-     * @param properties desired memory properties of the buffer
-     * @return BufferWithMemory struct containing vk::Buffer and vk::DeviceMemory objects of the newly created buffer
-     */
-    static BufferWithMemory createBuffer(vk::DeviceSize bufferSize, vk::BufferUsageFlags bufferUsage, vk::MemoryPropertyFlags properties);
 
     /**
      * @brief copies source buffer to dst buffer
@@ -84,16 +65,7 @@ public:
     static void copyBuffer(const BufferAlloc& srcBuffer, const BufferAlloc& dstBuffer, const vk::BufferCopy& region);
 
 
-    /**
-     * @brief Copies a buffer to image
-     * @param buffer buffer to copy from
-     * @param image image to copy to
-     * @param width width of the image
-     * @param height height of the image
-     * @param cmdBuf
-     */
-    static void copyBufferToImage(const vk::raii::Buffer &buffer, vk::raii::Image &image, uint32_t width, uint32_t height, vk::raii::CommandBuffer& cmdBuf);
-    static void copyBufferToImage(const vk::Buffer& buffer, vk::Image &image, uint32_t width, uint32_t height, vk::raii::CommandBuffer& cmdBuf);
+    static void copyBufferToImage(const BufferAlloc& buffer, const ImageAlloc& image, uint32_t width, uint32_t height, vk::raii::CommandBuffer& cmdBuf);
 
     /**
      * @brief allocates and returns a new command buffer

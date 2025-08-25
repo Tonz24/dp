@@ -72,8 +72,8 @@ void Material::updateUBO() const {
 
 void Material::updateUBONow() const {
     for (const auto & materialUBO : Engine::getInstance().getMaterialUBOs()) {
-        const auto ubo = static_cast<uint8_t*>(materialUBO);
-        memcpy(ubo + getCID() * sizeof(uboFormat_),&uboFormat_,sizeof(uboFormat_));
+        uint8_t* dst = materialUBO + getCID() * sizeof(uboFormat_);
+        memcpy(dst,&uboFormat_,sizeof(uboFormat_));
     }
 }
 

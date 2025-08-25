@@ -39,8 +39,8 @@ public:
     void setCameraUBOStorage(const CameraUBOFormat& data);
     void setMaterialUBOStorage(uint32_t updateIndex, const MaterialUBOFormat& data);
 
-    [[nodiscard]] uint8_t* getMaterialUBO() const {return static_cast<uint8_t *>(materialUniformBuffersMapped_[frameInFlightIndex_]);}
-    [[nodiscard]] const std::vector<void*>& getMaterialUBOs() const {return materialUniformBuffersMapped_;}
+    [[nodiscard]] uint8_t* getMaterialUBO() const {return materialUBOsMapped_[frameInFlightIndex_];}
+    [[nodiscard]] const std::vector<uint8_t*>& getMaterialUBOs() const {return materialUBOsMapped_;}
 
 private:
     friend class VkUtils;
@@ -170,13 +170,11 @@ private:
 
     std::vector<vk::raii::Fence> inFlightFences_{};
 
-    std::vector<vk::raii::Buffer> cameraUniformBuffers_{};
-    std::vector<vk::raii::DeviceMemory> cameraUniformBufferMemory_{};
-    std::vector<void*> cameraUniformBuffersMapped_{};
+    std::vector<VkUtils::BufferAlloc> cameraUBOs_{};
+    std::vector<uint8_t*> cameraUBOsMapped_{};
 
-    std::vector<vk::raii::Buffer> materialUniformBuffers_{};
-    std::vector<vk::raii::DeviceMemory> materialUniformBufferMemory_{};
-    std::vector<void*> materialUniformBuffersMapped_{};
+    std::vector<VkUtils::BufferAlloc> materialUBOs_{};
+    std::vector<uint8_t*> materialUBOsMapped_{};
 
     vk::raii::DescriptorPool descriptorPool_{nullptr};
     std::vector<vk::raii::DescriptorSet> descriptorSets_{};
@@ -235,6 +233,8 @@ private:
     void initIdMapImage();
     void configureVkUtils() const;
     void updateUBOs();
+
+    void cleanUBOs();
 
     bool dirtyCameraUBO_{false}, dirtyMaterialUBO_{false};
 

@@ -1062,6 +1062,8 @@ void Engine::cleanup() {
     objectIdMap_.reset();
     dummy_.reset();
 
+    cleanUBOs();
+
     VkUtils::destroy();
     glfwTerminate();
 }
@@ -1138,13 +1140,13 @@ void Engine::initDescriptorSetLayout() {
     for (size_t i = 0; i < maxFramesInFlight; i++) {
 
         vk::DescriptorBufferInfo camBufferInfo{
-            .buffer = cameraUniformBuffers_[i],
+            .buffer = cameraUBOs_[i].buffer,
             .offset = 0,
             .range = sizeof(CameraUBOFormat)
         };
 
         vk::DescriptorBufferInfo matBufferInfo{
-            .buffer = materialUniformBuffers_[i],
+            .buffer = materialUBOs_[i].buffer,
             .offset = 0,
             .range = sizeof(MaterialUBOFormat) * materialLimit
         };
@@ -1172,45 +1174,32 @@ void Engine::initDescriptorSetLayout() {
 }
 
 void Engine::initUniformBuffers() {
-    cameraUniformBuffers_.clear();
-    cameraUniformBufferMemory_.clear();
-    cameraUniformBuffersMapped_.clear();
+    cameraUBOs_.clear();
+    cameraUBOsMapped_.clear();
 
-    materialUniformBuffers_.clear();
-    materialUniformBufferMemory_.clear();
-    materialUniformBuffersMapped_.clear();
-
+    materialUBOs_.clear();
+    materialUBOsMapped_.clear();
 
     // camera UBO
     for (uint32_t i = 0; i < maxFramesInFlight; ++i) {
-
         vk::DeviceSize bufferSize = sizeof(CameraUBOFormat);
-        auto propFlags = vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostVisible;
+        auto allocationCreateFlags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+        auto buffer = VkUtils::createBufferVMA(bufferSize,vk::BufferUsageFlagBits::eUniformBuffer, allocationCreateFlags);
 
-        auto newBuffer = VkUtils::createBuffer(bufferSize,vk::BufferUsageFlagBits::eUniformBuffer,propFlags);
+        cameraUBOsMapped_.emplace_back(static_cast<unsigned char*>(buffer.allocationInfo.pMappedData));
+        cameraUBOs_.emplace_back(std::move(buffer));
 
-        cameraUniformBuffers_.emplace_back(std::move(newBuffer.buffer));
-        cameraUniformBufferMemory_.emplace_back(std::move(newBuffer.memory));
-
-        //  map buffer memory
-        auto mappedMemory = cameraUniformBufferMemory_[i].mapMemory(0,bufferSize);
-        cameraUniformBuffersMapped_.emplace_back(mappedMemory);
     }
 
     // material UBO
     for (uint32_t i = 0; i < maxFramesInFlight; ++i) {
 
         vk::DeviceSize bufferSize = sizeof(MaterialUBOFormat) * materialLimit;
-        auto propFlags = vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostVisible;
+        auto allocationCreateFlags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+        auto buffer = VkUtils::createBufferVMA(bufferSize,vk::BufferUsageFlagBits::eUniformBuffer, allocationCreateFlags);
 
-        auto newBuffer = VkUtils::createBuffer(bufferSize,vk::BufferUsageFlagBits::eUniformBuffer,propFlags);
-
-        materialUniformBuffers_.emplace_back(std::move(newBuffer.buffer));
-        materialUniformBufferMemory_.emplace_back(std::move(newBuffer.memory));
-
-        //  map buffer memory
-        auto mappedMemory = materialUniformBufferMemory_[i].mapMemory(0,bufferSize);
-        materialUniformBuffersMapped_.emplace_back(mappedMemory);
+        materialUBOsMapped_.emplace_back(static_cast<unsigned char*>(buffer.allocationInfo.pMappedData));
+        materialUBOs_.emplace_back(std::move(buffer));
     }
 }
 
@@ -1313,14 +1302,21 @@ void Engine::configureVkUtils() const {
 void Engine::updateUBOs() {
 
     if (dirtyCameraUBO_) {
-        memcpy(cameraUniformBuffersMapped_[frameInFlightIndex_],&cameraUBOStorage_,sizeof(cameraUBOStorage_));
+        memcpy(cameraUBOsMapped_[frameInFlightIndex_],&cameraUBOStorage_,sizeof(cameraUBOStorage_));
         dirtyCameraUBO_ = false;
    }
 
     if (dirtyMaterialUBO_) {
-        uint8_t* dst = static_cast<uint8_t*>(materialUniformBuffersMapped_[frameInFlightIndex_])  + materialUpdateIndex_ * sizeof(materialUBOStorage_);
+        uint8_t* dst = materialUBOsMapped_[frameInFlightIndex_] + materialUpdateIndex_ * sizeof(materialUBOStorage_);
         memcpy(dst, &materialUBOStorage_,sizeof(materialUBOStorage_));
         dirtyMaterialUBO_ = false;
+    }
+}
+
+void Engine::cleanUBOs() {
+    for (uint32_t i = 0; i < maxFramesInFlight; ++i) {
+        VkUtils::destroyBufferVMA(cameraUBOs_[i]);
+        VkUtils::destroyBufferVMA(materialUBOs_[i]);
     }
 }
 

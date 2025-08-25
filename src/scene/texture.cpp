@@ -210,9 +210,6 @@ void Texture::stage(const VkUtils::BufferAlloc& stagingBuffer, void*& dataPtr) {
 
     size_t imageSize = width_ * height_ * pixelSize_;
 
-    /*auto stagingBuffer = VkUtils::createBuffer(imageSize,vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingMemoryFlags);
-
-    void* bufferData = stagingBuffer.memory.mapMemory(0,imageSize);*/
     memcpy(dataPtr,data_.data(),imageSize);
 
     auto cmdBuf = VkUtils::beginSingleTimeCommand();
@@ -228,7 +225,7 @@ void Texture::stage(const VkUtils::BufferAlloc& stagingBuffer, void*& dataPtr) {
         cmdBuf
     );
 
-    VkUtils::copyBufferToImage(stagingBuffer.buffer,imageAlloc_.image,width_,height_, cmdBuf);
+    VkUtils::copyBufferToImage(stagingBuffer,imageAlloc_,width_,height_, cmdBuf);
 
     VkUtils::transitionImageLayout(
        imageAlloc_.image,
