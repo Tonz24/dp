@@ -5,20 +5,19 @@
 #include "texture.h"
 #include <iostream>
 
-#include "engine.h"
+#include "../engine/engine.h"
 #include "../engine/utils.h"
-#include "vkUtils.h"
+#include "../engine/vkUtils.h"
 
-void Texture::initDummy() {
+Texture* Texture::initDummy(const glm::vec<4, uint8_t>& color) {
 
-    dummy_ = new Texture(1,1,4,vk::Format::eB8G8R8A8Unorm, vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
+    auto dummy = new Texture(1,1,4,vk::Format::eB8G8R8A8Unorm, vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-    dummy_->data_[0] = 255;
-    dummy_->data_[1] = 0;
-    dummy_->data_[2] = 255;
-    dummy_->data_[3] = 255;
+    memcpy(dummy->data_.data(),&color[0],sizeof(color));
 
-    dummy_->uploadToDevice();
+    dummy->uploadToDevice();
+
+    return dummy;
 }
 
 
@@ -51,18 +50,20 @@ void Texture::initVkImage() {
         .sharingMode = vk::SharingMode::eExclusive
     };
 
-    const auto& device = Engine::getInstance().getDevice();
+
+    imageAlloc_ = VkUtils::createImageVMA(imageInfo);
 
 
-    vkImage_ = vk::raii::Image(device, imageInfo);
-    auto idMapMemReqs = vkImage_.getMemoryRequirements();
 
-    vk::MemoryAllocateInfo memAllocInfo{
-        .allocationSize = idMapMemReqs.size,
-        .memoryTypeIndex = VkUtils::findMemoryType(idMapMemReqs.memoryTypeBits,memoryPropertyFlags_),
-    };
-    vkImageMemory_ = vk::raii::DeviceMemory(device,memAllocInfo);
-    vkImage_.bindMemory(vkImageMemory_,0);
+    // vkImage_ = vk::raii::Image(device, imageInfo);
+    // auto idMapMemReqs = vkImage_.getMemoryRequirements();
+    //
+    // vk::MemoryAllocateInfo memAllocInfo{
+    //     .allocationSize = idMapMemReqs.size,
+    //     .memoryTypeIndex = VkUtils::findMemoryType(idMapMemReqs.memoryTypeBits,memoryPropertyFlags_),
+    // };
+    // vkImageMemory_ = vk::raii::DeviceMemory(device,memAllocInfo);
+    // vkImage_.bindMemory(vkImageMemory_,0);
 
     vk::ImageAspectFlags aspectFlags{vk::ImageAspectFlagBits::eColor};
     if (imageUsageFlags_ & vk::ImageUsageFlagBits::eDepthStencilAttachment)
@@ -70,7 +71,7 @@ void Texture::initVkImage() {
 
     vk::ImageViewCreateInfo imageViewCreateInfo{
         .flags = vk::ImageViewCreateFlags(),
-        .image = vkImage_,
+        .image = imageAlloc_.image,
         .viewType = vk::ImageViewType::e2D,
         .format = vkFormat_,
         .components = vk::ComponentMapping{
@@ -87,6 +88,8 @@ void Texture::initVkImage() {
             .layerCount = 1
         },
     };
+
+    const auto& device = Engine::getInstance().getDevice();
 
     vkImageView_ = vk::raii::ImageView(device, imageViewCreateInfo);
 
@@ -211,7 +214,7 @@ void Texture::uploadToDevice() {
 
     auto cmdBuf = VkUtils::beginSingleTimeCommand();
     VkUtils::transitionImageLayout(
-        vkImage_,
+        imageAlloc_.image,
         vk::ImageLayout::eUndefined,
         vk::ImageLayout::eTransferDstOptimal,
         vk::PipelineStageFlagBits2::eTopOfPipe,
@@ -222,10 +225,10 @@ void Texture::uploadToDevice() {
         cmdBuf
     );
 
-    VkUtils::copyBufferToImage(stagingBuffer.buffer,vkImage_,width_,height_, cmdBuf);
+    VkUtils::copyBufferToImage(stagingBuffer.buffer,imageAlloc_.image,width_,height_, cmdBuf);
 
     VkUtils::transitionImageLayout(
-       vkImage_,
+       imageAlloc_.image,
        vk::ImageLayout::eTransferDstOptimal,
        vk::ImageLayout::eShaderReadOnlyOptimal,
        vk::PipelineStageFlagBits2::eTransfer,
@@ -266,6 +269,7 @@ void Texture::assignVkFormat() {
     }
 }
 
-void Texture::initImageViewAndSampler() {
-}
 
+Texture::~Texture() {
+    VkUtils::destroyImageVMA(imageAlloc_);
+}

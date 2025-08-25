@@ -134,7 +134,7 @@ std::vector<std::shared_ptr<Mesh>> ModelLoader::loadModel(std::string_view path,
 
     // unmap, destroy staging buffer
     VkUtils::unmapMemory(stagingBuffer);
-    VkUtils::destroyBuffer(stagingBuffer);
+    VkUtils::destroyBufferVMA(stagingBuffer);
 
     return meshes;
 }

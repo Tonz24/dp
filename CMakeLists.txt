@@ -22,8 +22,8 @@ add_executable(dp
         src/engine/observer.h
         src/scene/transform.cpp
         src/scene/transform.h
-        src/engine/texture.cpp
-        src/engine/texture.h
+        src/scene/texture.cpp
+        src/scene/texture.h
         src/scene/material.cpp
         src/scene/material.h
         src/engine/modelLoader.cpp

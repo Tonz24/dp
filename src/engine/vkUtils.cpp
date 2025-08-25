@@ -38,9 +38,37 @@ VkUtils::BufferAlloc VkUtils::createBufferVMA(vk::DeviceSize bufferSize, vk::Buf
     };
 
     BufferAlloc bufferAlloc;
-    vmaCreateBuffer(allocator_,&*bufferInfo,&allocInfo,reinterpret_cast<VkBuffer*>(&bufferAlloc.buffer) ,&bufferAlloc.allocation,nullptr);
+    vk::Result createResult = static_cast<vk::Result>(vmaCreateBuffer(allocator_,&*bufferInfo,&allocInfo,reinterpret_cast<VkBuffer*>(&bufferAlloc.buffer) ,&bufferAlloc.allocation,nullptr));
+
+    if (createResult != vk::Result::eSuccess) {
+        std::cerr << "ERROR: failed to create buffer!" << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
     return bufferAlloc;
+}
+
+VkUtils::ImageAlloc VkUtils::createImageVMA(const vk::ImageCreateInfo& imageInfo, VmaAllocationCreateFlags allocationFlags) {
+
+
+    VmaAllocationCreateInfo allocInfo{
+        .flags = allocationFlags,
+        .usage = VMA_MEMORY_USAGE_AUTO,
+    };
+
+    ImageAlloc imageAlloc;
+    vk::Result createResult = static_cast<vk::Result>(vmaCreateImage(allocator_,&*imageInfo,&allocInfo,reinterpret_cast<VkImage*>(&imageAlloc.image),&imageAlloc.allocation,nullptr));
+
+    if (createResult != vk::Result::eSuccess) {
+        std::cerr << "ERROR: failed to create buffer!" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    return imageAlloc;
+}
+
+void VkUtils::destroyImageVMA(const ImageAlloc& image) {
+    vmaDestroyImage(allocator_,image.image,image.allocation);
 }
 
 void VkUtils::mapMemory(const BufferAlloc& buffer, void*& ptr) {
@@ -51,7 +79,7 @@ void VkUtils::unmapMemory(const BufferAlloc& buffer) {
     vmaUnmapMemory(allocator_,buffer.allocation);
 }
 
-void VkUtils::destroyBuffer(const BufferAlloc& buffer) {
+void VkUtils::destroyBufferVMA(const BufferAlloc& buffer) {
     vmaDestroyBuffer(allocator_,buffer.buffer,buffer.allocation);
 }
 
@@ -123,6 +151,32 @@ void VkUtils::copyBuffer(const BufferAlloc& srcBuffer, const BufferAlloc& dstBuf
 
 void VkUtils::copyBufferToImage(const vk::raii::Buffer& buffer, vk::raii::Image& image, uint32_t width, uint32_t height, vk::raii::CommandBuffer& cmdBuf) {
 
+    vk::BufferImageCopy region{
+        .bufferOffset = 0,
+        .bufferRowLength = 0,
+        .bufferImageHeight = 0,
+        .imageSubresource = {
+            .aspectMask = vk::ImageAspectFlagBits::eColor,
+            .mipLevel = 0,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        },
+        .imageOffset = {
+            .x = 0,
+            .y = 0,
+            .z = 0
+        },
+        .imageExtent = {
+            .width = width,
+            .height = height,
+            .depth = 1
+        }
+    };
+
+    cmdBuf.copyBufferToImage(buffer,image,vk::ImageLayout::eTransferDstOptimal,region);
+}
+
+void VkUtils::copyBufferToImage(const vk::raii::Buffer& buffer, vk::Image& image, uint32_t width, uint32_t height, vk::raii::CommandBuffer& cmdBuf) {
     vk::BufferImageCopy region{
         .bufferOffset = 0,
         .bufferRowLength = 0,

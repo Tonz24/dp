@@ -47,8 +47,10 @@ private:
 
     Engine() = default;
 
-    void initGLFW();
+    static void initGLFW();
     void initImGui();
+
+    void initDummyTexture();
 
     void initVulkan();
     void initVulkanInstance();
@@ -226,6 +228,8 @@ private:
 
     std::shared_ptr<Texture> objectIdMap_{nullptr};
     vk::Format idMapFormat_{vk::Format::eR32Uint};
+
+    std::shared_ptr<Texture> dummy_{nullptr};
 
     void initDepthResources();
     void initIdMapImage();

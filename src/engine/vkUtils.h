@@ -20,6 +20,11 @@ public:
         VmaAllocation allocation{};
     };
 
+    struct ImageAlloc    {
+        vk::Image image{nullptr};
+        VmaAllocation allocation{};
+    };
+
     enum class QueueType : uint8_t {
         graphics = 0,
         present = 1,
@@ -39,10 +44,13 @@ public:
     static void createBuffer(vk::DeviceSize bufferSize, vk::raii::Buffer& buffer, vk::BufferUsageFlags bufferUsage, vk::raii::DeviceMemory& bufferMemory, vk::MemoryPropertyFlags properties);
 
     static BufferAlloc createBufferVMA(vk::DeviceSize bufferSize, vk::BufferUsageFlags bufferUsage, VmaAllocationCreateFlags allocationFlags = {});
+    static void destroyBufferVMA(const BufferAlloc& buffer);
     static void mapMemory(const BufferAlloc& buffer, void*& ptr);
     static void unmapMemory(const BufferAlloc& buffer);
 
-    static void destroyBuffer(const BufferAlloc& buffer);
+
+    static ImageAlloc createImageVMA(const vk::ImageCreateInfo& imageInfo, VmaAllocationCreateFlags allocationFlags = {});
+    static void destroyImageVMA(const ImageAlloc& image);
 
     /**
      * @brief configures and creates a buffer, returns it alongside its memory
@@ -83,6 +91,7 @@ public:
      * @param cmdBuf
      */
     static void copyBufferToImage(const vk::raii::Buffer &buffer, vk::raii::Image &image, uint32_t width, uint32_t height, vk::raii::CommandBuffer& cmdBuf);
+    static void copyBufferToImage(const vk::raii::Buffer &buffer, vk::Image &image, uint32_t width, uint32_t height, vk::raii::CommandBuffer& cmdBuf);
 
     /**
      * @brief allocates and returns a new command buffer
@@ -138,6 +147,8 @@ private:
 
     inline static VmaAllocator allocator_{};
 };
+
+
 
 
 

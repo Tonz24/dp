@@ -5,10 +5,11 @@
 #include "material.h"
 
 #include <imgui/imgui.h>
-
 #include <utility>
+#include <iostream>
 
 #include "../engine/engine.h"
+#include "../engine/managers/resourceManager.h"
 
 std::shared_ptr<Texture> Material::getTexture(TextureMapSlot slot) {
     if (slot == TextureMapSlot::invalidMapSlot){
@@ -43,11 +44,13 @@ void Material::recordDescriptorSet() const {
     imageInfos.reserve(textures_.size());
     descriptorWrites.reserve(textures_.size());
 
+    auto dummy = TextureManager::getInstance()->getResource("dummy");
+
     for (uint32_t i = 0; i < textures_.size(); ++i) {
 
         imageInfos.emplace_back(vk::DescriptorImageInfo{
-            .sampler = textures_[i] ? textures_[i]->getVkSampler() : Texture::getDummy().getVkSampler(),
-            .imageView = textures_[i] ? textures_[i]->getVkImageView() : Texture::getDummy().getVkImageView(),
+            .sampler = textures_[i] ? textures_[i]->getVkSampler() : dummy->getVkSampler(),
+            .imageView = textures_[i] ? textures_[i]->getVkImageView() : dummy->getVkImageView(),
             .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
         });
 

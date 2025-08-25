@@ -7,8 +7,11 @@
 #include <FreeImage.h>
 
 #include <string>
+#include <glm/detail/type_vec4.hpp>
 
-#include "managers/managedResource.h"
+#include "camera.h"
+#include "../engine/vkUtils.h"
+#include "../engine/managers/managedResource.h"
 
 class Texture : public ManagedResource{
 public:
@@ -22,32 +25,30 @@ public:
 
     explicit Texture(std::string_view fileName);
 
+    ~Texture() override;
+
     void expand();
 
     [[nodiscard]] std::string getResourceType() const override;
 
     [[nodiscard]] const vk::raii::ImageView & getVkImageView() const { return vkImageView_; }
     [[nodiscard]] const vk::raii::Sampler & getVkSampler() const { return vkSampler_; }
-    [[nodiscard]] const vk::raii::Image& getVkImage() const { return vkImage_; }
+    [[nodiscard]] const vk::Image& getVkImage() const { return imageAlloc_.image; }
 
     [[nodiscard]] uint32_t getWidth() const { return width_; }
     [[nodiscard]] uint32_t getHeight() const { return height_; }
 
     friend class TextureManager;
 
-    static void initDummy();
+    static Texture* initDummy(const glm::vec<4,uint8_t>& color = {255,0,255,255});
 
-    static Texture& getDummy() {return *dummy_;}
     Texture(uint32_t width, uint32_t height, uint32_t channels, vk::Format format, vk::ImageUsageFlags imageUsage, vk::MemoryPropertyFlags memoryProperties);
-
 
 private:
 
     void initVkImage();
     void uploadToDevice();
-    void initImageViewAndSampler();
     void assignVkFormat();
-
 
     uint32_t width_{};
     uint32_t height_{};
@@ -61,14 +62,12 @@ private:
     FREE_IMAGE_TYPE freeImageType_{};
     vk::Format vkFormat_;
 
-    vk::raii::Image vkImage_{nullptr};
-    vk::raii::DeviceMemory vkImageMemory_{nullptr};
+    VkUtils::ImageAlloc imageAlloc_;
 
     vk::raii::ImageView vkImageView_{nullptr};
-    vk::raii::Sampler   vkSampler_{nullptr};
+    vk::raii::Sampler  vkSampler_{nullptr};
 
     vk::ImageUsageFlags imageUsageFlags_{};
     vk::MemoryPropertyFlags memoryPropertyFlags_{};
 
-   static inline Texture* dummy_{nullptr};
 };

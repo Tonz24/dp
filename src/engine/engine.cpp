@@ -18,7 +18,7 @@
 #include "managers/inputManager.h"
 #include "utils.h"
 #include "vkUtils.h"
-#include "texture.h"
+#include "../scene/texture.h"
 #include "managers/resourceManager.h"
 
 Engine &Engine::getInstance() {
@@ -150,6 +150,11 @@ void Engine::initImGui() {
     ImGui_ImplVulkan_Init(&initInfo);
 }
 
+void Engine::initDummyTexture() {
+    auto dummy = Texture::initDummy();
+    dummy_ = TextureManager::getInstance()->registerResource(dummy,"dummy");
+}
+
 void Engine::initVulkan() {
 
     initVulkanInstance();
@@ -180,8 +185,7 @@ void Engine::initVulkan() {
     initSyncObjects();
 
     initIdMapImage();
-
-    Texture::initDummy();
+    initDummyTexture();
 }
 
 void Engine::initVulkanInstance() {
@@ -1073,6 +1077,10 @@ void Engine::mainLoop() {
 
 void Engine::cleanup() {
     scene_.reset();
+
+    depthTexture_.reset();
+    objectIdMap_.reset();
+    dummy_.reset();
 
     VkUtils::destroy();
     glfwTerminate();

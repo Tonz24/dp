@@ -7,12 +7,10 @@
 #include <array>
 #include <memory>
 
-#include <iostream>
-
 #include <glm/glm.hpp>
 
 #include "../engine/iDrawGui.h"
-#include "../engine/texture.h"
+#include "texture.h"
 #include "../engine/uboFormat.h"
 
 
