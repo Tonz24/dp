@@ -175,10 +175,8 @@ Texture::Texture(std::string_view fileName) : ManagedResource() {
         FreeImage_Unload(bitmap);
 
     }
-    else{
-        std::cerr << "ERROR! Failed to load texture " << fileName << std::endl;
-        exit(EXIT_FAILURE);
-    }
+    else
+        throw std::runtime_error("ERROR! Failed to load texture " + std::string{fileName});
 
     FreeImage_DeInitialise();
 }

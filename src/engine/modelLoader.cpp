@@ -28,10 +28,8 @@ std::vector<std::shared_ptr<Mesh>> ModelLoader::loadModel(std::string_view path,
                                              aiProcess_OptimizeMeshes |
                                              aiProcess_CalcTangentSpace);
 
-    if (scene == nullptr){
-        std::cerr << importer.GetErrorString() << std::endl;
-        exit(EXIT_FAILURE);
-    }
+    if (scene == nullptr)
+        throw std::runtime_error(importer.GetErrorString());
 
     auto lastSlashPos = std::string{ fullPath }.find_last_of('/');
     std::string directory{fullPath};

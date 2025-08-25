@@ -57,11 +57,8 @@ void Window::init() {
     GLFWmonitor * initInFullscreen = fullscreen_ ? glfwGetPrimaryMonitor() : nullptr;
     glfwWindow_ = glfwCreateWindow(static_cast<int>(width_), static_cast<int>(height_), name_.c_str(),  initInFullscreen, nullptr);
     glfwSetInputMode(glfwWindow_, GLFW_CURSOR, static_cast<int>(cursorMode_));
-    if (glfwWindow_ == nullptr) {
-        std::cerr << "ERROR: Failed to create GLFW window!" << std::endl;
-        glfwTerminate();
-        exit(EXIT_FAILURE);
-    }
+    if (glfwWindow_ == nullptr)
+        throw std::runtime_error("ERROR: Failed to create GLFW window!");
 
 }
 

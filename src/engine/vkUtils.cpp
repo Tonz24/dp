@@ -40,10 +40,8 @@ VkUtils::BufferAlloc VkUtils::createBufferVMA(vk::DeviceSize bufferSize, vk::Buf
     BufferAlloc bufferAlloc;
     vk::Result createResult = static_cast<vk::Result>(vmaCreateBuffer(allocator_,&*bufferInfo,&allocInfo,reinterpret_cast<VkBuffer*>(&bufferAlloc.buffer) ,&bufferAlloc.allocation,&bufferAlloc.allocationInfo));
 
-    if (createResult != vk::Result::eSuccess) {
-        std::cerr << "ERROR: failed to create buffer!" << std::endl;
-        exit(EXIT_FAILURE);
-    }
+    if (createResult != vk::Result::eSuccess)
+        throw std::runtime_error("ERROR: failed to create buffer!");
 
     return bufferAlloc;
 }
@@ -59,10 +57,8 @@ VkUtils::ImageAlloc VkUtils::createImageVMA(const vk::ImageCreateInfo& imageInfo
     ImageAlloc imageAlloc;
     vk::Result createResult = static_cast<vk::Result>(vmaCreateImage(allocator_,&*imageInfo,&allocInfo,reinterpret_cast<VkImage*>(&imageAlloc.image),&imageAlloc.allocation,&imageAlloc.allocationInfo));
 
-    if (createResult != vk::Result::eSuccess) {
-        std::cerr << "ERROR: failed to create buffer!" << std::endl;
-        exit(EXIT_FAILURE);
-    }
+    if (createResult != vk::Result::eSuccess)
+        throw std::runtime_error("ERROR: failed to create buffer!");
 
     return imageAlloc;
 }
@@ -208,8 +204,7 @@ uint32_t VkUtils::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags pr
         if (typeFilter & (1 << i) && (memoryProperties_.memoryTypes[i].propertyFlags & properties) == properties)
             return i;
     }
-    std::cerr << "ERROR: Failed to find suitable memory type!";
-    exit(EXIT_FAILURE);
+    throw std::runtime_error("ERROR: Failed to find suitable memory type!");
 }
 
 void VkUtils::init(const vk::raii::Device* device, const vk::raii::PhysicalDevice* physicalDevice, const vk::raii::Instance* instance, const std::vector<const vk::raii::Queue*>&& queueHandles, const vk::

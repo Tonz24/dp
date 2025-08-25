@@ -43,10 +43,8 @@ public:
 
     virtual std::shared_ptr<T> registerResource(T* mesh, std::string_view resourceName) {
 
-        if (getResource(resourceName) != nullptr) {
-            std::cerr << "ERROR: Resource with name " << resourceName << " is already registered!" << std::endl;
-            exit(EXIT_FAILURE);
-        }
+        if (getResource(resourceName) != nullptr)
+            throw std::runtime_error("ERROR: Resource with name " + std::string{resourceName} + " is already registered!");
 
         auto newResource = std::shared_ptr<T>(mesh, ResourceDeleter{});
 
@@ -74,10 +72,8 @@ public:
         std::lock_guard<std::mutex> lock(cidMutex_);
         uint32_t newId = ++cidCounter_;
 
-        if (newId == std::numeric_limits<uint32_t>::min()){
-            std::cerr << "ERROR: invalid CID reached!" << std::endl;
-            exit(EXIT_FAILURE);
-        }
+        if (newId == std::numeric_limits<uint32_t>::min())
+            throw std::runtime_error("ERROR: invalid CID reached!");
 
         return newId;
     }

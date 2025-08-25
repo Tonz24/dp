@@ -77,15 +77,11 @@ bool Engine::drawGUI() {
 
 void Engine::initGLFW() {
 
-    if (!glfwInit()){
-        std::cerr << "ERROR: Failed to initialize GLFW!" << std::endl;
-        exit(EXIT_FAILURE);
-    }
+    if (!glfwInit())
+        throw std::runtime_error("ERROR: Failed to initialize GLFW!");
 
-    if (!glfwVulkanSupported()){
-        std::cerr << "ERROR: Vulkan not supported by GLFW!" << std::endl;
-        exit(EXIT_FAILURE);
-    }
+    if (!glfwVulkanSupported())
+        throw std::runtime_error("ERROR: Vulkan not supported by GLFW!");
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 }
@@ -213,10 +209,9 @@ void Engine::initVulkanInstance() {
 
 void Engine::initSurface() {
     VkSurfaceKHR surface;
-    if (glfwCreateWindowSurface(*vkInstance,window->getGlfwWindow(),nullptr,&surface) != 0) {
-        std::cerr <<  "ERROR: Failed to create window surface!" << std::endl;
-        exit(EXIT_FAILURE);
-    }
+    if (glfwCreateWindowSurface(*vkInstance,window->getGlfwWindow(),nullptr,&surface) != 0)
+        throw std::runtime_error("ERROR: Failed to create window surface!");
+
     surface_ = vk::raii::SurfaceKHR(vkInstance, surface);
 }
 
@@ -249,15 +244,11 @@ Engine::QueueFamilyIndices Engine::initQueueFamilyIndices() const {
         }
     }
 
-    if (graphicsFamilyIndices.empty()) {
-        std::cerr << "ERROR: selected device doesn't have a graphics capable queue family!" << std::endl;
-        exit(EXIT_FAILURE);
-    }
+    if (graphicsFamilyIndices.empty())
+        throw std::runtime_error("ERROR: selected device doesn't have a graphics capable queue family!");
 
-    if (presentFamilyIndices.empty()) {
-        std::cerr << "ERROR: selected device doesn't have a presentation capable queue family!" << std::endl;
-        exit(EXIT_FAILURE);
-    }
+    if (presentFamilyIndices.empty())
+        throw std::runtime_error("ERROR: selected device doesn't have a presentation capable queue family!");
 
     // if there is a single family that supports both graphics and presentation, return its indices
     for (const auto &graphicsFamilyIndex: graphicsFamilyIndices){
@@ -280,10 +271,8 @@ Engine::QueueFamilyIndices Engine::initQueueFamilyIndices() const {
 void Engine::initPhysicalDevice() {
     auto devices = vkInstance.enumeratePhysicalDevices();
 
-    if (devices.empty()) {
-        std::cerr << "ERROR: Failed to find GPUs with Vulkan support!" << std::endl;
-        exit(EXIT_FAILURE);
-    }
+    if (devices.empty())
+        throw std::runtime_error("ERROR: Failed to find GPUs with Vulkan support!");
 
     uint32_t selectedDeviceIndex{};
 
@@ -318,10 +307,8 @@ void Engine::initPhysicalDevice() {
         }
     }
 
-    if (!deviceFound){
-        std::cerr << "ERROR: Failed to locate device supporting required extensions!" << std::endl;
-        exit(EXIT_FAILURE);
-    }
+    if (!deviceFound)
+        throw std::runtime_error("ERROR: Failed to locate device supporting required extensions!");
 
     physicalDevice = vk::raii::PhysicalDevice(devices[selectedDeviceIndex]);
     deviceLimits = physicalDevice.getProperties().limits;
@@ -503,11 +490,8 @@ std::vector<const char*> Engine::initRequiredInstanceExtensions() {
                 break;
             }
         }
-        if (!isRequiredExtensionSupported) {
-            std::cerr << "ERROR: extension_ required by instance (" << requiredExtension
-                      << ") not supported by this Vulkan implementation!" << std::endl;
-            exit(EXIT_FAILURE);
-        }
+        if (!isRequiredExtensionSupported)
+            throw std::runtime_error("ERROR: extension_ required by instance (" + std::string{requiredExtension} + ") not supported by this Vulkan implementation!");
     }
 
     return requiredExtensions;
@@ -881,11 +865,9 @@ std::vector<const char *> Engine::initValidationLayers() {
                 break;
             }
         }
-        if (!isRequiredLayerSupported) {
-            std::cerr << "ERROR: Required validation layer (" << requiredLayer
-                      << ") not supported by this Vulkan implementation!" << std::endl;
-            exit(EXIT_FAILURE);
-        }
+
+        if (!isRequiredLayerSupported)
+            throw std::runtime_error("ERROR: Required validation layer (" + std::string{requiredLayer} + ") not supported by this Vulkan implementation!");
     }
 
     return requiredLayers;
@@ -978,10 +960,9 @@ void Engine::drawFrame() {
         recreateSwapchain();
         return;
     }
-    if (result != vk::Result::eSuccess && result != vk::Result::eSuboptimalKHR){
-        std::cerr << "ERROR: Failed to acquire swap chain image!" << std::endl;
-        exit(EXIT_FAILURE);
-    }
+    if (result != vk::Result::eSuccess && result != vk::Result::eSuboptimalKHR)
+        throw std::runtime_error("ERROR: Failed to acquire swap chain image!");
+
     device_.resetFences(*frameFence);
 
     vk::raii::Semaphore& submitSemaphore = submitSemaphores_[imageIndex];
@@ -1022,15 +1003,14 @@ void Engine::drawFrame() {
     catch (const vk::OutOfDateKHRError& e) {
         result = vk::Result::eErrorOutOfDateKHR;
     }
-    catch (const vk::Error& e){
-        std::cerr << "ERROR: Failed to acquire swap chain image! " << "(" << e.what() << ")" << std::endl;
-        exit(EXIT_FAILURE);
-    }
+    catch (const vk::Error& e)
+        throw std::runtime_error("ERROR: Failed to acquire swap chain image! (" + std::string{e.what()} + ")");
 
     if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || framebufferResized_) {
         framebufferResized_ = false;
         recreateSwapchain();
         return;
+
     }
 
     currentFrameIndex_ += 1;

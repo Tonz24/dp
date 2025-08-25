@@ -9,10 +9,8 @@
 std::vector<char> Utils::readFile(const std::string &filename) {
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
-    if (!file.is_open()) {
-        std::cerr << "failed to open file!" << std::endl;
-        exit(EXIT_FAILURE);
-    }
+    if (!file.is_open())
+        throw std::runtime_error("failed to open file!");
 
     size_t fileSize = file.tellg();
     std::vector<char> fileBuf(fileSize);

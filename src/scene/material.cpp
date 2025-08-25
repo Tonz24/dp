@@ -12,20 +12,17 @@
 #include "../engine/managers/resourceManager.h"
 
 std::shared_ptr<Texture> Material::getTexture(TextureMapSlot slot) {
-    if (slot == TextureMapSlot::invalidMapSlot){
-        std::cerr << "ERROR: trying to get texture at invalid slot offset!" << std::endl;
-        exit(EXIT_FAILURE);
-    }
+    if (slot == TextureMapSlot::invalidMapSlot)
+        throw std::runtime_error("ERROR: trying to get texture at invalid slot offset!");
+
     return textures_[static_cast<uint8_t>(slot)];
 }
 
 void Material::setTexture(std::shared_ptr<Texture> texture, TextureMapSlot slot) {
-    if (slot == TextureMapSlot::invalidMapSlot){
-        std::cerr << "ERROR: trying to set texture at invalid slot offset!" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-    textures_[static_cast<uint8_t>(slot)] = std::move(texture);
+    if (slot == TextureMapSlot::invalidMapSlot)
+        throw std::runtime_error("ERROR: trying to set texture at invalid slot offset!");
 
+    textures_[static_cast<uint8_t>(slot)] = std::move(texture);
 
     if (slot == TextureMapSlot::diffuseMapSlot)
         uboFormat_.diffuseAlbedoMapHandle = 1;
