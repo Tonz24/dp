@@ -18,11 +18,13 @@ public:
     struct BufferAlloc {
         vk::Buffer buffer{nullptr};
         VmaAllocation allocation{};
+        VmaAllocationInfo allocationInfo;
     };
 
     struct ImageAlloc    {
         vk::Image image{nullptr};
         VmaAllocation allocation{};
+        VmaAllocationInfo allocationInfo;
     };
 
     enum class QueueType : uint8_t {
@@ -91,7 +93,7 @@ public:
      * @param cmdBuf
      */
     static void copyBufferToImage(const vk::raii::Buffer &buffer, vk::raii::Image &image, uint32_t width, uint32_t height, vk::raii::CommandBuffer& cmdBuf);
-    static void copyBufferToImage(const vk::raii::Buffer &buffer, vk::Image &image, uint32_t width, uint32_t height, vk::raii::CommandBuffer& cmdBuf);
+    static void copyBufferToImage(const vk::Buffer& buffer, vk::Image &image, uint32_t width, uint32_t height, vk::raii::CommandBuffer& cmdBuf);
 
     /**
      * @brief allocates and returns a new command buffer

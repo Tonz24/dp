@@ -4,6 +4,7 @@
 
 #include "modelLoader.h"
 #include <iostream>
+#include <set>
 #include <thread>
 
 #include <assimp/Importer.hpp>
@@ -143,15 +144,19 @@ void ModelLoader::loadMaterials(const std::string& directory, const aiScene& sce
                                 std::vector<std::shared_ptr<Material> >& materials) {
 
 
+    // used to identify textures for staging
+    std::set<std::string> textureNames{};
+    uint32_t stagingBufferSize{0};
+
+    //first load material data into ram
     for (uint32_t i = startIndex; i < startIndex + materialCount && i < scene.mNumMaterials; ++i){
         const aiMaterial* const assimpMaterial = scene.mMaterials[i];
 
         aiString name;
 
-        //skip material_ if it doesn't have a name
+        //skip material if it doesn't have a name
         if (assimpMaterial->Get(AI_MATKEY_NAME, name) != aiReturn_SUCCESS)
             continue;
-
 
         std::shared_ptr<Material> mat = MaterialManager::getInstance()->getResource(name.C_Str());
 
@@ -194,6 +199,7 @@ void ModelLoader::loadMaterials(const std::string& directory, const aiScene& sce
         //====================================================
         //textures
         aiString texName;
+
         for (uint32_t j = 0; j < textureTypes.size(); ++j) {
             auto texType = ModelLoader::textureTypes[j];
             auto slot = ModelLoader::slots[j];
@@ -206,12 +212,18 @@ void ModelLoader::loadMaterials(const std::string& directory, const aiScene& sce
                 if (!t) {
                     auto tex = new Texture(fullName);
                     t  = TextureManager::getInstance()->registerResource(tex,fullName);
-                }
 
+                    //  this is a new texture, so mark it for staging
+                    textureNames.insert(t->getResourceName());
+                }
                 mat->setTexture(t,slot);
+
+                uint32_t texSize = t->getTotalSize();
+                if (texSize > stagingBufferSize) stagingBufferSize = texSize;
             }
         }
 
+        // finish material setup
         mat->recordDescriptorSet();
         mat->updateUBONow();
 
@@ -219,5 +231,23 @@ void ModelLoader::loadMaterials(const std::string& directory, const aiScene& sce
             std::lock_guard<std::mutex> lockGuard(materialVectorMutex_);
             materials.emplace_back(mat);
         }
+    }
+
+    // stage only if there are actual textures within the material
+    if (stagingBufferSize != 0) {
+
+        VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(stagingBufferSize,vk::BufferUsageFlagBits::eTransferSrc,VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+        void* data{nullptr};
+        VkUtils::mapMemory(stagingBuffer,data);
+
+        //  now stage all marked textures
+        for (const auto & textureName : textureNames) {
+            auto texture = TextureManager::getInstance()->getResource(textureName);
+            texture->stage(stagingBuffer, data);
+        }
+
+        // unmap, destroy staging buffer
+        VkUtils::unmapMemory(stagingBuffer);
+        VkUtils::destroyBufferVMA(stagingBuffer);
     }
 }

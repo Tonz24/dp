@@ -15,7 +15,14 @@ Texture* Texture::initDummy(const glm::vec<4, uint8_t>& color) {
 
     memcpy(dummy->data_.data(),&color[0],sizeof(color));
 
-    dummy->uploadToDevice();
+    VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(dummy->getTotalSize(),vk::BufferUsageFlagBits::eTransferSrc,VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+    void* data{nullptr};
+    VkUtils::mapMemory(stagingBuffer,data);
+
+    dummy->stage(stagingBuffer, data);
+
+    VkUtils::unmapMemory(stagingBuffer);
+    VkUtils::destroyBufferVMA(stagingBuffer);
 
     return dummy;
 }
@@ -163,7 +170,6 @@ Texture::Texture(std::string_view fileName) : ManagedResource() {
 
                 assignVkFormat();
                 initVkImage();
-                uploadToDevice();
             }
         }
         FreeImage_Unload(bitmap);
@@ -202,15 +208,14 @@ void Texture::expand() {
     }
 }
 
-void Texture::uploadToDevice() {
+void Texture::stage(const VkUtils::BufferAlloc& stagingBuffer, void*& dataPtr) {
 
     size_t imageSize = width_ * height_ * pixelSize_;
 
-    auto stagingBuffer = VkUtils::createBuffer(imageSize,vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingMemoryFlags);
+    /*auto stagingBuffer = VkUtils::createBuffer(imageSize,vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingMemoryFlags);
 
-    void* bufferData = stagingBuffer.memory.mapMemory(0,imageSize);
-    memcpy(bufferData,data_.data(),imageSize);
-    stagingBuffer.memory.unmapMemory(); //  put image pixel data into the mapped staging buffer
+    void* bufferData = stagingBuffer.memory.mapMemory(0,imageSize);*/
+    memcpy(dataPtr,data_.data(),imageSize);
 
     auto cmdBuf = VkUtils::beginSingleTimeCommand();
     VkUtils::transitionImageLayout(

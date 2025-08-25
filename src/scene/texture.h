@@ -44,10 +44,12 @@ public:
 
     Texture(uint32_t width, uint32_t height, uint32_t channels, vk::Format format, vk::ImageUsageFlags imageUsage, vk::MemoryPropertyFlags memoryProperties);
 
+    uint32_t getTotalSize() const {return data_.size() * sizeof(data_[0]);}
+    void stage(const VkUtils::BufferAlloc& stagingBuffer, void*& dataPtr);
+
 private:
 
     void initVkImage();
-    void uploadToDevice();
     void assignVkFormat();
 
     uint32_t width_{};

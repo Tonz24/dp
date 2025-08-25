@@ -38,7 +38,7 @@ VkUtils::BufferAlloc VkUtils::createBufferVMA(vk::DeviceSize bufferSize, vk::Buf
     };
 
     BufferAlloc bufferAlloc;
-    vk::Result createResult = static_cast<vk::Result>(vmaCreateBuffer(allocator_,&*bufferInfo,&allocInfo,reinterpret_cast<VkBuffer*>(&bufferAlloc.buffer) ,&bufferAlloc.allocation,nullptr));
+    vk::Result createResult = static_cast<vk::Result>(vmaCreateBuffer(allocator_,&*bufferInfo,&allocInfo,reinterpret_cast<VkBuffer*>(&bufferAlloc.buffer) ,&bufferAlloc.allocation,&bufferAlloc.allocationInfo));
 
     if (createResult != vk::Result::eSuccess) {
         std::cerr << "ERROR: failed to create buffer!" << std::endl;
@@ -57,7 +57,7 @@ VkUtils::ImageAlloc VkUtils::createImageVMA(const vk::ImageCreateInfo& imageInfo
     };
 
     ImageAlloc imageAlloc;
-    vk::Result createResult = static_cast<vk::Result>(vmaCreateImage(allocator_,&*imageInfo,&allocInfo,reinterpret_cast<VkImage*>(&imageAlloc.image),&imageAlloc.allocation,nullptr));
+    vk::Result createResult = static_cast<vk::Result>(vmaCreateImage(allocator_,&*imageInfo,&allocInfo,reinterpret_cast<VkImage*>(&imageAlloc.image),&imageAlloc.allocation,&imageAlloc.allocationInfo));
 
     if (createResult != vk::Result::eSuccess) {
         std::cerr << "ERROR: failed to create buffer!" << std::endl;
@@ -176,7 +176,7 @@ void VkUtils::copyBufferToImage(const vk::raii::Buffer& buffer, vk::raii::Image&
     cmdBuf.copyBufferToImage(buffer,image,vk::ImageLayout::eTransferDstOptimal,region);
 }
 
-void VkUtils::copyBufferToImage(const vk::raii::Buffer& buffer, vk::Image& image, uint32_t width, uint32_t height, vk::raii::CommandBuffer& cmdBuf) {
+void VkUtils::copyBufferToImage(const vk::Buffer& buffer, vk::Image& image, uint32_t width, uint32_t height, vk::raii::CommandBuffer& cmdBuf) {
     vk::BufferImageCopy region{
         .bufferOffset = 0,
         .bufferRowLength = 0,
