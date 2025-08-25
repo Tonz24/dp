@@ -1003,9 +1003,9 @@ void Engine::drawFrame() {
     catch (const vk::OutOfDateKHRError& e) {
         result = vk::Result::eErrorOutOfDateKHR;
     }
-    catch (const vk::Error& e)
+    catch (const vk::Error& e) {
         throw std::runtime_error("ERROR: Failed to acquire swap chain image! (" + std::string{e.what()} + ")");
-
+    }
     if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || framebufferResized_) {
         framebufferResized_ = false;
         recreateSwapchain();
