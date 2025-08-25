@@ -37,15 +37,10 @@ VkUtils::BufferAlloc VkUtils::createBufferVMA(vk::DeviceSize bufferSize, vk::Buf
         .usage = VMA_MEMORY_USAGE_AUTO,
     };
 
-    VkBuffer rawBuffer;
-    VmaAllocation allocation;
-    vmaCreateBuffer(allocator_,&*bufferInfo,&allocInfo, &rawBuffer,&allocation,nullptr);
+    BufferAlloc bufferAlloc;
+    vmaCreateBuffer(allocator_,&*bufferInfo,&allocInfo,reinterpret_cast<VkBuffer*>(&bufferAlloc.buffer) ,&bufferAlloc.allocation,nullptr);
 
-    vk::raii::Buffer buffer{*device_,rawBuffer};
-    return {
-        std::move(buffer),
-        std::move(allocation)
-    };
+    return bufferAlloc;
 }
 
 void VkUtils::mapMemory(const BufferAlloc& buffer, void*& ptr) {
@@ -57,7 +52,7 @@ void VkUtils::unmapMemory(const BufferAlloc& buffer) {
 }
 
 void VkUtils::destroyBuffer(const BufferAlloc& buffer) {
-    vmaDestroyBuffer(allocator_,*buffer.buffer,buffer.allocation);
+    vmaDestroyBuffer(allocator_,buffer.buffer,buffer.allocation);
 }
 
 VkUtils::BufferWithMemory VkUtils::createBuffer(vk::DeviceSize bufferSize, vk::BufferUsageFlags bufferUsage, vk::MemoryPropertyFlags properties) {
@@ -88,7 +83,7 @@ VkUtils::BufferWithMemory VkUtils::createBuffer(vk::DeviceSize bufferSize, vk::B
 
 
 
-void VkUtils::copyBuffer(vk::raii::Buffer& srcBuffer, vk::raii::Buffer& dstBuffer, vk::DeviceSize size) {
+void VkUtils::copyBuffer(const vk::raii::Buffer& srcBuffer, const vk::raii::Buffer& dstBuffer, vk::DeviceSize size) {
 
     vk::BufferCopy region{
         .srcOffset = 0,
@@ -100,12 +95,30 @@ void VkUtils::copyBuffer(vk::raii::Buffer& srcBuffer, vk::raii::Buffer& dstBuffe
 }
 
 
-void VkUtils::copyBuffer(vk::raii::Buffer& srcBuffer, vk::raii::Buffer& dstBuffer, vk::BufferCopy region) {
+void VkUtils::copyBuffer(const vk::raii::Buffer& srcBuffer, const vk::raii::Buffer& dstBuffer, const vk::BufferCopy& region) {
     auto cmdBuf = VkUtils::beginSingleTimeCommand();
 
     cmdBuf.copyBuffer(srcBuffer,dstBuffer,region);
 
     endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
+}
+
+void VkUtils::copyBuffer(const BufferAlloc& srcBuffer, const BufferAlloc& dstBuffer, vk::DeviceSize size) {
+    vk::BufferCopy region{
+        .srcOffset = 0,
+        .dstOffset = 0,
+        .size = size
+    };
+
+    copyBuffer(srcBuffer,dstBuffer, region);
+}
+
+void VkUtils::copyBuffer(const BufferAlloc& srcBuffer, const BufferAlloc& dstBuffer, const vk::BufferCopy& region) {
+    auto cmdBuf = beginSingleTimeCommand();
+
+    cmdBuf.copyBuffer(srcBuffer.buffer,dstBuffer.buffer,region);
+
+    endSingleTimeCommand(cmdBuf,QueueType::graphics);
 }
 
 void VkUtils::copyBufferToImage(const vk::raii::Buffer& buffer, vk::raii::Image& image, uint32_t width, uint32_t height, vk::raii::CommandBuffer& cmdBuf) {

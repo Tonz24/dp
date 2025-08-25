@@ -60,6 +60,9 @@ std::vector<std::shared_ptr<Mesh>> ModelLoader::loadModel(std::string_view path,
     else
         loadMaterials(directory, *scene, 0, scene->mNumMaterials, materials);
 
+    //  in mesh
+    uint32_t stagingBufferSize{0};
+
     for (uint32_t i = 0; i < scene->mNumMeshes; ++i) {
         const auto& mesh = scene->mMeshes[i];
 
@@ -103,30 +106,25 @@ std::vector<std::shared_ptr<Mesh>> ModelLoader::loadModel(std::string_view path,
         //load material
         std::shared_ptr<Material> material = materials.at(mesh->mMaterialIndex);
 
-
         std::shared_ptr<Mesh> parsedMesh = MeshManager::getInstance()->getResource(mesh->mName.C_Str());
         if (!parsedMesh) {
             auto mm = new Mesh(std::move(vertices),std::move(indices),material);
             parsedMesh = MeshManager::getInstance()->registerResource(mm,mesh->mName.C_Str());
         }
 
+        //  if this mesh is larger than current largest mesh, update the value so that the staging buffer can later contain all the data
+        uint32_t verticesSize = parsedMesh->getVertices().size() * sizeof(parsedMesh->getVertices()[0]);
+        uint32_t indicesSize = parsedMesh->getIndices().size() * sizeof(parsedMesh->getIndices()[0]);
+        if (verticesSize > stagingBufferSize)
+            stagingBufferSize = verticesSize;
+        if (indicesSize > stagingBufferSize)
+            stagingBufferSize = indicesSize;
+
+
         meshes.emplace_back(parsedMesh);
     }
 
-    auto size = std::ranges::max_element(meshes,[](const std::shared_ptr<Mesh>& a, const std::shared_ptr<Mesh>& b) {
-        const uint32_t aV = a->getVertices().size() * sizeof(Vertex);
-        const uint32_t aI = a->getIndices().size() * sizeof(uint32_t);
-        const uint32_t aa = aV > aI ? aV : aI;
-
-        const uint32_t bV = b->getVertices().size() * sizeof(Vertex);
-        const uint32_t bI = b->getIndices().size() * sizeof(uint32_t);
-        const uint32_t bb = bV > bI ? bV : bI;
-
-        return aa < bb;
-    });
-    vk::DeviceSize bufferSize = size->get()->getIndices().size() * sizeof(uint32_t) > size->get()->getVertices().size() * sizeof(Vertex) ? size->get()->getIndices().size() * sizeof(uint32_t) : size->get()->getVertices().size() * sizeof(Vertex);
-
-    VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(bufferSize,vk::BufferUsageFlagBits::eTransferSrc,VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+    VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(stagingBufferSize,vk::BufferUsageFlagBits::eTransferSrc,VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
     void* data{nullptr};
     VkUtils::mapMemory(stagingBuffer,data);
 

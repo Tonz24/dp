@@ -23,13 +23,13 @@ public:
     [[nodiscard]] const std::vector<uint32_t >& getIndices() const { return indices_; }
     [[nodiscard]] Transform& getTransform() { return transform_;}
     std::string getResourceType() const override { return "Mesh"; }
-    [[nodiscard]] const vk::raii::Buffer & getVertexBuffer() const { return vertexBuffer_.buffer; }
-    [[nodiscard]] const vk::raii::Buffer & getIndexBuffer() const { return indexBuffer_.buffer; }
+    [[nodiscard]] const vk::Buffer & getVertexBuffer() const { return vertexBuffer_.buffer; }
+    [[nodiscard]] const vk::Buffer & getIndexBuffer() const { return indexBuffer_.buffer; }
     std::shared_ptr<Material> getMaterial() const {return material_;}
 
     bool drawGUI() override;
 
-    void stage(VkUtils::BufferAlloc& stagingBuffer, void*& dataPtr);
+    void stage(const VkUtils::BufferAlloc& stagingBuffer, void*& dataPtr) const;
 
     void recordDrawCommands(vk::raii::CommandBuffer& cmdBuf, const vk::raii::PipelineLayout& pipelineLayout) const;
 

@@ -16,7 +16,7 @@ public:
     };
 
     struct BufferAlloc {
-        vk::raii::Buffer buffer{nullptr};
+        vk::Buffer buffer{nullptr};
         VmaAllocation allocation{};
     };
 
@@ -59,7 +59,7 @@ public:
      * @param dstBuffer destination buffer (to)
      * @param size size of data to copy
      */
-    static void copyBuffer(vk::raii::Buffer& srcBuffer, vk::raii::Buffer& dstBuffer, vk::DeviceSize size);
+    static void copyBuffer(const vk::raii::Buffer& srcBuffer, const vk::raii::Buffer& dstBuffer, vk::DeviceSize size);
 
     /**
      * @brief copies source buffer to dst buffer
@@ -67,7 +67,12 @@ public:
      * @param dstBuffer destination buffer (to)
      * @param region offsets and size of data
      */
-    static void copyBuffer(vk::raii::Buffer& srcBuffer, vk::raii::Buffer& dstBuffer, vk::BufferCopy region);
+    static void copyBuffer(const vk::raii::Buffer& srcBuffer, const vk::raii::Buffer& dstBuffer, const vk::BufferCopy& region);
+
+
+    static void copyBuffer(const BufferAlloc& srcBuffer, const BufferAlloc& dstBuffer, vk::DeviceSize size);
+    static void copyBuffer(const BufferAlloc& srcBuffer, const BufferAlloc& dstBuffer, const vk::BufferCopy& region);
+
 
     /**
      * @brief Copies a buffer to image
@@ -112,6 +117,7 @@ public:
 
 
     static uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties);
+
 
     static constexpr vk::MemoryPropertyFlags stagingMemoryFlags{vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent};
 

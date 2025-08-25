@@ -30,9 +30,9 @@ bool Mesh::drawGUI() {
     return false;
 }
 
-void Mesh::stage(VkUtils::BufferAlloc& stagingBuffer, void*& dataPtr) {
+void Mesh::stage(const VkUtils::BufferAlloc& stagingBuffer, void*& dataPtr) const {
 
-    //  determine staging buffer size (big enough for holding both vertices and indices)
+
     auto vertexBufferSize = sizeof(vertices_[0]) * vertices_.size();
     auto indexBufferSize = sizeof(indices_[0]) * indices_.size();
 
@@ -40,17 +40,17 @@ void Mesh::stage(VkUtils::BufferAlloc& stagingBuffer, void*& dataPtr) {
     memcpy(dataPtr,vertices_.data(),vertexBufferSize);
 
     //  copy from staging buffer to vertex buffer
-    VkUtils::copyBuffer(stagingBuffer.buffer,vertexBuffer_.buffer,vertexBufferSize);
+    VkUtils::copyBuffer(stagingBuffer,vertexBuffer_,vertexBufferSize);
 
     // copy from indices vector to staging buffer
     memcpy(dataPtr,indices_.data(), indexBufferSize);
 
     // copy from staging buffer to indices buffer
-    VkUtils::copyBuffer(stagingBuffer.buffer,indexBuffer_.buffer,indexBufferSize);
+    VkUtils::copyBuffer(stagingBuffer,indexBuffer_,indexBufferSize);
 }
 
 void Mesh::recordDrawCommands(vk::raii::CommandBuffer& cmdBuf, const vk::raii::PipelineLayout& pipelineLayout) const {
-    cmdBuf.bindVertexBuffers(0,*vertexBuffer_.buffer,{0});
+    cmdBuf.bindVertexBuffers(0,vertexBuffer_.buffer,{0});
     cmdBuf.bindIndexBuffer(indexBuffer_.buffer,0,vk::IndexType::eUint32);
     //  bind per mesh descriptor set
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 1, *getMaterial()->getDescriptorSet(), nullptr);
