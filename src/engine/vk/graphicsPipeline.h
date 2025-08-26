@@ -5,8 +5,9 @@
 #pragma once
 #include <vulkan/vulkan_raii.hpp>
 
+#include "vkUtils.h"
+#include "../utils.h"
 #include "../uboFormat.h"
-#include "../../scene/vertex.h"
 
 template<typename T>
 concept VertexType = requires {
@@ -14,10 +15,49 @@ concept VertexType = requires {
     { T::getAttributeDescriptions()};
 };
 
-
+template <VertexType V>
 class GraphicsPipeline {
 public:
-    GraphicsPipeline(std::string_view vShaderPath,std::string_view fShaderPath, const std::vector<vk::DescriptorSetLayout>& descriptorSetLayouts, const std::vector<vk::Format>& colorAttachmentFormats, vk::Format depthFormat = vk::Format::eUndefined);
+    GraphicsPipeline(std::string_view vShaderPath,std::string_view fShaderPath, const std::vector<vk::DescriptorSetLayout>& descriptorSetLayouts, std::span<vk::Format> colorAttachmentFormats, vk::Format depthFormat = vk::Format::eUndefined) {
+        initShaders(vShaderPath,fShaderPath);
+
+        vk::PipelineLayoutCreateInfo pipelineLayoutInfo{
+            .setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size()),
+            .pSetLayouts =  descriptorSetLayouts.data(),
+            .pushConstantRangeCount = 1,
+            .pPushConstantRanges = &pcsTest
+        };
+
+        pipelineLayout_ = vk::raii::PipelineLayout( VkUtils::getDevice(), pipelineLayoutInfo );
+
+
+        pipelineRenderingCreateInfo_ = vk::PipelineRenderingCreateInfo{
+            .colorAttachmentCount = static_cast<uint32_t>(colorAttachmentFormats.size()),
+            .pColorAttachmentFormats = colorAttachmentFormats.data(),
+            .depthAttachmentFormat = depthFormat,
+        };
+
+
+        //  put all the info together and create the pipeline
+        vk::GraphicsPipelineCreateInfo pipelineInfo{
+            .pNext = &pipelineRenderingCreateInfo_,
+            .stageCount = static_cast<uint32_t>(shaderStages_.size()),
+            .pStages = shaderStages_.data(),
+            .pVertexInputState = &vertexInputInfo,
+            .pInputAssemblyState = &inputAssembly,
+            .pViewportState = &viewportState,
+            .pRasterizationState = &rasterizer,
+            .pMultisampleState = &multisampling,
+            .pDepthStencilState = &depthStencilCreateInfo,
+            .pColorBlendState = &colorBlending,
+            .pDynamicState = &dynamicState,
+            .layout = pipelineLayout_,
+            .renderPass = nullptr,
+            .basePipelineHandle = nullptr,
+            .basePipelineIndex = -1,
+        };
+        graphicsPipeline_ = vk::raii::Pipeline(VkUtils::getDevice(), nullptr, pipelineInfo);
+    }
     GraphicsPipeline() = default;
 
     [[nodiscard]] const vk::raii::Pipeline& getGraphicsPipeline() const { return graphicsPipeline_; }
@@ -32,9 +72,34 @@ private:
     vk::PipelineRenderingCreateInfo pipelineRenderingCreateInfo_{};
     std::array<vk::PipelineShaderStageCreateInfo,2> shaderStages_{};
 
-    void initShaders(std::string_view vShaderPath, std::string_view fShaderPath);
+    void initShaders(std::string_view vShaderPath, std::string_view fShaderPath) {
+        auto vertexShaderCode = Utils::readFile(vShaderPath);
+        auto fragmentShaderCode = Utils::readFile(fShaderPath);
 
-    static vk::raii::ShaderModule createShaderModule(const std::vector<char> &code);
+        vShaderModule_ = createShaderModule(vertexShaderCode);
+        fShaderModule_ = createShaderModule(fragmentShaderCode);
+
+        shaderStages_ = {
+            vk::PipelineShaderStageCreateInfo{// vertex shader comes first
+                .stage = vk::ShaderStageFlagBits::eVertex,
+                .module = vShaderModule_,
+                .pName = "main"
+            },
+            vk::PipelineShaderStageCreateInfo{// followed by the fragment shader
+                .stage = vk::ShaderStageFlagBits::eFragment,
+                .module = fShaderModule_,
+                .pName = "main"
+            }
+        };
+    }
+
+    static vk::raii::ShaderModule createShaderModule(const std::vector<char> &code) {
+        vk::ShaderModuleCreateInfo createInfo{
+            .codeSize = code.size() * sizeof(char),
+            .pCode = reinterpret_cast<const uint32_t*>(code.data())
+        };
+        return vk::raii::ShaderModule{VkUtils::getDevice(), createInfo};
+    }
 
     static constexpr std::array dynamicStates = {
         vk::DynamicState::eViewport,
@@ -91,21 +156,21 @@ private:
         .pAttachments =  blendAttachments.data()
     };
 
-    //  try to set one push constant for model matrix
+
     static constexpr vk::PushConstantRange pcsTest{
         .stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
         .offset = 0,
         .size = static_cast<uint32_t>(sizeof(PushConstants))
     };
 
-    static constexpr auto bindingDescription = Vertex::getBindingDescription();
-    static constexpr auto attributeDescription = Vertex::getAttributeDescriptions();
+    static constexpr auto bindingDescription = V::getBindingDescription();
+    static constexpr auto attributeDescriptions = V::getAttributeDescriptions();
 
     static constexpr vk::PipelineVertexInputStateCreateInfo vertexInputInfo{
         .vertexBindingDescriptionCount = 1,
         .pVertexBindingDescriptions = &bindingDescription,
-        .vertexAttributeDescriptionCount = attributeDescription.size(),
-        .pVertexAttributeDescriptions = attributeDescription.data()
+        .vertexAttributeDescriptionCount = attributeDescriptions.size(),
+        .pVertexAttributeDescriptions = attributeDescriptions.data()
     };
 
     static constexpr vk::PipelineDepthStencilStateCreateInfo depthStencilCreateInfo{
@@ -115,9 +180,4 @@ private:
         .depthBoundsTestEnable = vk::False,
         .stencilTestEnable = vk::False,
     };
-
-
-
 };
-
-

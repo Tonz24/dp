@@ -5,7 +5,7 @@
 #pragma once
 #include <vector>
 
-#include "vertex.h"
+#include "Vertex.h"
 #include "material.h"
 #include "transform.h"
 #include "../engine/iDrawGui.h"
@@ -15,11 +15,11 @@ class Mesh : public ManagedResource, public IDrawGui {
 public:
 
 
-    Mesh(std::vector<Vertex>&& vertexList, std::vector<uint32_t >&& indexList, std::shared_ptr<Material> material);
+    Mesh(std::vector<Vertex3D>&& vertexList, std::vector<uint32_t >&& indexList, std::shared_ptr<Material> material);
 
     ~Mesh() override;
 
-    [[nodiscard]] const std::vector<Vertex>& getVertices() const {return vertices_;}
+    [[nodiscard]] const std::vector<Vertex3D>& getVertices() const {return vertices_;}
     [[nodiscard]] const std::vector<uint32_t >& getIndices() const { return indices_; }
     [[nodiscard]] Transform& getTransform() { return transform_;}
     std::string getResourceType() const override { return "Mesh"; }
@@ -35,7 +35,7 @@ public:
 
     friend class MeshManager;
 private:
-    std::vector<Vertex> vertices_{};
+    std::vector<Vertex3D> vertices_{};
     std::vector<uint32_t> indices_{};
     std::shared_ptr<Material> material_{nullptr};
 
@@ -45,5 +45,4 @@ private:
     Transform transform_{};
 
     void initBuffers();
-
 };

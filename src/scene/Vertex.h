@@ -8,7 +8,7 @@
 
 #include <array>
 
-struct Vertex{
+struct Vertex3D{
     glm::vec3 position{};
     glm::vec3 normal{};
     glm::vec3 tangent{};
@@ -18,7 +18,7 @@ struct Vertex{
     static constexpr vk::VertexInputBindingDescription getBindingDescription(){
         return vk::VertexInputBindingDescription{
             .binding = 0,
-            .stride = sizeof(Vertex),
+            .stride = sizeof(Vertex3D),
             .inputRate = vk::VertexInputRate::eVertex
         };
     }
@@ -29,25 +29,25 @@ struct Vertex{
                 .location = 0,
                 .binding = 0,
                 .format = vk::Format::eR32G32B32Sfloat,
-                .offset = static_cast<uint32_t>(offsetof(Vertex, position))
+                .offset = static_cast<uint32_t>(offsetof(Vertex3D, position))
             },
             vk::VertexInputAttributeDescription{ // normal
                 .location = 1,
                 .binding = 0,
                 .format = vk::Format::eR32G32B32Sfloat,
-                .offset = static_cast<uint32_t>(offsetof(Vertex, normal))
+                .offset = static_cast<uint32_t>(offsetof(Vertex3D, normal))
             },
             vk::VertexInputAttributeDescription{ // tangent
                 .location = 2,
                 .binding = 0,
                 .format = vk::Format::eR32G32B32Sfloat,
-                .offset = static_cast<uint32_t>(offsetof(Vertex, tangent))
+                .offset = static_cast<uint32_t>(offsetof(Vertex3D, tangent))
             },
             vk::VertexInputAttributeDescription{ // texCoord
                 .location = 3,
                 .binding = 0,
                 .format = vk::Format::eR32G32Sfloat,
-                .offset = static_cast<uint32_t>(offsetof(Vertex, texCoord))
+                .offset = static_cast<uint32_t>(offsetof(Vertex3D, texCoord))
             }
         };
     }

@@ -8,7 +8,7 @@
 
 #include "../engine/engine.h"
 
-Mesh::Mesh(std::vector<Vertex> &&vertexList, std::vector<uint32_t> &&indexList, std::shared_ptr<Material> material):
+Mesh::Mesh(std::vector<Vertex3D> &&vertexList, std::vector<uint32_t> &&indexList, std::shared_ptr<Material> material):
     vertices_(std::move(vertexList)), indices_(std::move(indexList)), material_(std::move(material)) {
 
     initBuffers();

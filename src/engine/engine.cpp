@@ -176,6 +176,16 @@ void Engine::initVulkan() {
 
     initIdMapImage();
     initDummyTexture();
+
+    auto vData = vertexData;
+    auto iData = indexData;
+    mat_ = std::make_shared<Material>();
+    mat_->recordDescriptorSet();
+    skyMesh_ = MeshManager::getInstance()->registerResource(new Mesh(std::move(vData),std::move(iData),mat_),"fullscreenQuad");
+
+    VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(vertexData.size() * sizeof(vertexData[0]),vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingAllocFlagsVMA);
+    skyMesh_->stage(stagingBuffer);
+    VkUtils::destroyBufferVMA(stagingBuffer);
 }
 
 void Engine::initVulkanInstance() {
@@ -522,7 +532,10 @@ void Engine::initImageViews() {
 void Engine::initGraphicsPipeline() {
     std::vector descriptorSetLayouts = {*descriptorSetLayoutFrame_, *descriptorSetLayoutMaterial_};
     std::vector colorAttachmentFormats = {swapChainImageFormat, idMapFormat_};
-    rasterPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/shader_frag.spv",descriptorSetLayouts,colorAttachmentFormats,depthFormat_};
+
+    std::span colorAttachmentFormatsSky{colorAttachmentFormats.begin(),1};
+    rasterPipeline_ = GraphicsPipeline<Vertex3D>{"shaders/shader_vert.spv","shaders/shader_frag.spv",descriptorSetLayouts,colorAttachmentFormats,depthFormat_};
+    skyboxPipeline_ = GraphicsPipeline<Vertex2D>{"shaders/shader_vert.spv","shaders/shader_frag.spv",descriptorSetLayouts,colorAttachmentFormatsSky};
 }
 
 void Engine::initCommandPool() {
@@ -641,6 +654,7 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
     for (const auto &mesh : scene_->getMeshes()) {
         mesh->recordDrawCommands(cmdBuf, rasterPipeline_.getPipelineLayout());
     }
+    skyMesh_->recordDrawCommands(cmdBuf, rasterPipeline_.getPipelineLayout());
     cmdBuf.endRendering();
 
     // prepare GUI render pass
@@ -900,6 +914,7 @@ void Engine::cleanup() {
     depthTexture_.reset();
     objectIdMap_.reset();
     dummy_.reset();
+    skyMesh_.reset();
 
     cleanUBOs();
 

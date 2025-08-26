@@ -158,8 +158,8 @@ private:
     vk::raii::DescriptorSetLayout descriptorSetLayoutFrame_{nullptr};
     vk::raii::DescriptorSetLayout descriptorSetLayoutMaterial_{nullptr};
 
-    GraphicsPipeline rasterPipeline_;
-    GraphicsPipeline skyboxPipeline_;
+    GraphicsPipeline<Vertex3D> rasterPipeline_{};
+    GraphicsPipeline<Vertex2D> skyboxPipeline_{};
 
     vk::raii::CommandPool graphicsCommandPool_{nullptr};
 
@@ -243,16 +243,19 @@ private:
     MaterialUBOFormat materialUBOStorage_{};
     uint32_t materialUpdateIndex_{};
 
-    static constexpr float vertexData[20] = {
-        /*                            x		y	  z		u  v */
-        /* top right*/		    1.0f,       1.0f, 0.0f,	1, 1,
-        /* bottom right*/	    1.0f,   -1.0f, 0.0f,  1, -1,
-        /* bottom left*/        -1.0f,  -1.0f, 0.0f,  -1, -1,
-        /* top left*/	        -1.0f,   1.0f, 0.0f,  -1, 1
+     std::vector<Vertex3D> vertexData = {
+/*                                          x		y	  z		                                                    u  v */
+        /* top right*/		    {{1.0f,1.0f, 0.0f},	{}, {},{1,1}},
+        /* bottom right*/	    {{1.0f,-1.0f, 0.0f},	{}, {},{1, -1}},
+        /* bottom left*/  	    {{-1.0f,-1.0f, 0.0f},	{}, {},{-1, -1}},
+        /* top left*/		    {{-1.0f, 1.0f, 0.0f},	{}, {},{-1, 1}}
     };
 
-    static constexpr unsigned int indexData[6] = {
+    std::vector<uint32_t> indexData = {
         3, 1, 0,
         3, 2, 1
     };
+
+    std::shared_ptr<Mesh> skyMesh_{nullptr};
+    std::shared_ptr<Material> mat_{nullptr};
 };

@@ -84,6 +84,8 @@ public:
 
     static constexpr VmaAllocationCreateFlags stagingAllocFlagsVMA{VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT};
 
+    static const vk::raii::Device& getDevice() {return *device_;}
+
 private:
     friend class Engine;
 

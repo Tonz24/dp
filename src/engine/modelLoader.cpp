@@ -66,7 +66,7 @@ std::vector<std::shared_ptr<Mesh>> ModelLoader::loadModel(std::string_view path,
         const auto& mesh = scene->mMeshes[i];
 
         //  load vertices
-        std::vector<Vertex> vertices{};
+        std::vector<Vertex3D> vertices{};
         vertices.reserve(mesh->mNumVertices);
         for (uint32_t j = 0; j < mesh->mNumVertices; ++j) {
             aiVector3D position_{}, normal_{}, tangent_{}, texCoord_{};
