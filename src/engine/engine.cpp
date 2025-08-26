@@ -177,11 +177,11 @@ void Engine::initVulkan() {
     initIdMapImage();
     initDummyTexture();
 
-    auto vData = vertexData;
+    auto vData = vertexData2D;
     auto iData = indexData;
     mat_ = std::make_shared<Material>();
     mat_->recordDescriptorSet();
-    skyMesh_ = MeshManager::getInstance()->registerResource(new Mesh<Vertex3D>(std::move(vData),std::move(iData),mat_),"fullscreenQuad");
+    skyMesh_ = std::make_shared<Mesh<Vertex2D>>(std::move(vData),std::move(iData),mat_);
 
     VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(vertexData.size() * sizeof(vertexData[0]),vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingAllocFlagsVMA);
     skyMesh_->stage(stagingBuffer);

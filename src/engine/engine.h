@@ -252,12 +252,20 @@ private:
         /* top left*/		    {{-1.0f, 1.0f, 0.0f},	{}, {},{-1, 1}}
     };
 
+
+    std::vector<Vertex2D> vertexData2D = {
+        {{1.0f,1.0f},{1,1}},
+        {{1.0f,-1.0f},{1,-1}},
+        {{1.0f,-1.0f},{-1,-1}},
+        {{-1.0f, 1.0f},{-1,1}}
+    };
+
     std::vector<uint32_t> indexData = {
         3, 1, 0,
         3, 2, 1
     };
 
-    std::shared_ptr<Mesh<Vertex3D>> skyMesh_{nullptr};
+    std::shared_ptr<Mesh<Vertex2D>> skyMesh_{nullptr};
     std::shared_ptr<Material> mat_{nullptr};
     vk::raii::DescriptorSetLayout descriptorSetLayoutSky_{nullptr};
 };
