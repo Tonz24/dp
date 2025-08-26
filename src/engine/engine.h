@@ -15,6 +15,7 @@
 #include "../scene/camera.h"
 #include "../scene/mesh.h"
 #include "../scene/scene.h"
+#include "vk/graphicsPipeline.h"
 
 class Engine : public IDrawGui {
 public:
@@ -157,8 +158,8 @@ private:
     vk::raii::DescriptorSetLayout descriptorSetLayoutFrame_{nullptr};
     vk::raii::DescriptorSetLayout descriptorSetLayoutMaterial_{nullptr};
 
-    vk::raii::PipelineLayout pipelineLayout{nullptr};
-    vk::raii::Pipeline graphicsPipeline{nullptr};
+    GraphicsPipeline rasterPipeline_;
+    GraphicsPipeline skyboxPipeline_;
 
     vk::raii::CommandPool graphicsCommandPool_{nullptr};
 
@@ -237,8 +238,6 @@ private:
     void cleanUBOs();
 
     bool dirtyCameraUBO_{false}, dirtyMaterialUBO_{false};
-
-    static constexpr uint32_t pcsSize{sizeof(glm::mat4) * 2 + sizeof(uint32_t) * 2};
 
     CameraUBOFormat cameraUBOStorage_{};
     MaterialUBOFormat materialUBOStorage_{};

@@ -12,7 +12,7 @@
 class Utils {
 public:
     Utils() = delete; //static class
-    static std::vector<char> readFile(const std::string& filename);
+    static std::vector<char> readFile(std::string_view filename);
 
     static glm::vec3 expand(const glm::vec3& u){
         return {expand(u.x), expand(u.y), expand(u.z)};

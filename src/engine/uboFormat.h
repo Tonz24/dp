@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include <glm/glm.hpp>
 
 template <typename T>
 class UBOFormat {
@@ -38,4 +39,11 @@ struct MaterialUBOFormat {
     uint32_t normalMapHandle{0};
     float padding;
     float padding2;
+};
+
+struct PushConstants {
+    glm::mat4 modelMat{};
+    glm::mat4 normalMat{};
+    uint32_t materialId{};
+    uint32_t meshId{};
 };

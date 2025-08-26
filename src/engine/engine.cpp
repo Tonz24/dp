@@ -520,163 +520,9 @@ void Engine::initImageViews() {
 }
 
 void Engine::initGraphicsPipeline() {
-
-    //====================PROGRAMMABLE FUNCTIONS====================
-    //  default shaders test
-    //  get shader spv bytecode
-    auto vertexShaderCode = Utils::readFile("shaders/shader_vert.spv");
-    auto fragmentShaderCode = Utils::readFile("shaders/shader_frag.spv");
-
-    //  put shader spv bytecode to shader modules
-    vk::raii::ShaderModule vertexShaderModule = createShaderModule(vertexShaderCode);
-    vk::raii::ShaderModule fragmentShaderModule = createShaderModule(fragmentShaderCode);
-
-    //  describe the programmable shader stages - their pipeline stage, shader code and entry point
-    vk::PipelineShaderStageCreateInfo shaderStages[2] = {
-        {// vertex shader comes first
-            .stage = vk::ShaderStageFlagBits::eVertex,
-            .module = vertexShaderModule,
-            .pName = "main"
-        },
-        {// followed by the fragment shader
-            .stage = vk::ShaderStageFlagBits::eFragment,
-            .module = fragmentShaderModule,
-            .pName = "main"
-        }
-    };
-    //==============================================================
-
-
-    //=======================FIXED FUNCTIONS========================
-    //  specify dynamic states (works when using dynamic rendering):
-    //  -   these values will be specified each frame during command buffer creation
-    std::vector<vk::DynamicState> dynamicStates = {
-        vk::DynamicState::eViewport,
-        vk::DynamicState::eScissor,
-    };
-
-    //  create the dynamic state info structure
-    vk::PipelineDynamicStateCreateInfo dynamicState{
-        .dynamicStateCount = static_cast<uint32_t>(dynamicStates.size()),
-        .pDynamicStates = dynamicStates.data()
-    };
-
-    //  specify how to assembly input vertex data into primitive shapes (TRIANGLE LIST)
-    vk::PipelineInputAssemblyStateCreateInfo inputAssembly{
-        .topology = vk::PrimitiveTopology::eTriangleList
-    };
-
-    //  set viewports and scissor regions as nullptr - will be submitted dynamically when recording the command buffer
-    vk::PipelineViewportStateCreateInfo viewportState{
-        .viewportCount = 1,
-        .pViewports = nullptr,
-        .scissorCount = 1,
-        .pScissors = nullptr
-    };
-
-    //  set rasterizer settings (leave be for now)
-    vk::PipelineRasterizationStateCreateInfo rasterizer{
-        .depthClampEnable = vk::False,
-        .rasterizerDiscardEnable = vk::False,
-        .polygonMode = vk::PolygonMode::eFill,
-        .cullMode = vk::CullModeFlagBits::eBack,
-        .frontFace = vk::FrontFace::eCounterClockwise,
-        .depthBiasEnable = vk::False,
-        .depthBiasSlopeFactor = 1.0f,
-        .lineWidth = 1.0f
-    };
-
-    //  set multisampling settings (leave be for now)
-    vk::PipelineMultisampleStateCreateInfo multisampling{
-        .rasterizationSamples = vk::SampleCountFlagBits::e1,
-        .sampleShadingEnable = vk::False
-    };
-
-    // set blend settings (disable altogether for now)
-    vk::PipelineColorBlendAttachmentState colorBlendAttachment{
-        .blendEnable = vk::False,
-        .colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA
-    };
-
-    std::array blendAttachments = {colorBlendAttachment, colorBlendAttachment};
-    vk::PipelineColorBlendStateCreateInfo colorBlending{
-        .logicOpEnable = vk::False,
-        .logicOp =  vk::LogicOp::eCopy,
-        .attachmentCount = static_cast<uint32_t>(blendAttachments.size()),
-        .pAttachments =  blendAttachments.data()
-    };
-
-
-    //  try to set one push constant for model matrix
-    vk::PushConstantRange pcsTest{
-        .stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
-        .offset = 0,
-        .size = pcsSize
-    };
-
-    std::array descriptorSetLayouts = {*descriptorSetLayoutFrame_, *descriptorSetLayoutMaterial_};
-
-    vk::PipelineLayoutCreateInfo pipelineLayoutInfo{
-        .setLayoutCount = 2,
-        .pSetLayouts =  descriptorSetLayouts.data(),
-        .pushConstantRangeCount = 1,
-        .pPushConstantRanges = &pcsTest
-    };
-
-    pipelineLayout = vk::raii::PipelineLayout( device_, pipelineLayoutInfo );
-
-
-    std::array colorAttachmentFormats = {swapChainImageFormat, idMapFormat_};
-
-    //  set the number of color attachments to render to and their formats
-    vk::PipelineRenderingCreateInfo pipelineRenderingCreateInfo{
-        .colorAttachmentCount = colorAttachmentFormats.size(),
-        .pColorAttachmentFormats = colorAttachmentFormats.data(),
-        .depthAttachmentFormat = depthFormat_,
-    };
-    //==============================================================
-
-
-
-    //=======================VERTEX INFO============================
-    const auto bindingDescription = Vertex::getBindingDescription();
-    const auto attributeDescription = Vertex::getAttributeDescriptions();
-
-    vk::PipelineVertexInputStateCreateInfo vertexInputInfo{
-        .vertexBindingDescriptionCount = 1,
-        .pVertexBindingDescriptions = &bindingDescription,
-        .vertexAttributeDescriptionCount = attributeDescription.size(),
-        .pVertexAttributeDescriptions = attributeDescription.data()
-    };
-    //==============================================================
-
-    vk::PipelineDepthStencilStateCreateInfo depthStencilCreateInfo{
-        .depthTestEnable = vk::True,
-        .depthWriteEnable = vk::True,
-        .depthCompareOp = vk::CompareOp::eLess,
-        .depthBoundsTestEnable = vk::False,
-        .stencilTestEnable = vk::False,
-    };
-
-    //  put all the info together and create the pipeline
-    vk::GraphicsPipelineCreateInfo pipelineInfo{
-        .pNext = &pipelineRenderingCreateInfo,
-        .stageCount = 2,
-        .pStages = shaderStages,
-        .pVertexInputState = &vertexInputInfo,
-        .pInputAssemblyState = &inputAssembly,
-        .pViewportState = &viewportState,
-        .pRasterizationState = &rasterizer,
-        .pMultisampleState = &multisampling,
-        .pDepthStencilState = &depthStencilCreateInfo,
-        .pColorBlendState = &colorBlending,
-        .pDynamicState = &dynamicState,
-        .layout = pipelineLayout,
-        .renderPass = nullptr,
-        .basePipelineHandle = nullptr,
-        .basePipelineIndex = -1,
-    };
-    graphicsPipeline = vk::raii::Pipeline(device_, nullptr, pipelineInfo);
+    std::vector descriptorSetLayouts = {*descriptorSetLayoutFrame_, *descriptorSetLayoutMaterial_};
+    std::vector colorAttachmentFormats = {swapChainImageFormat, idMapFormat_};
+    rasterPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/shader_frag.spv",descriptorSetLayouts,colorAttachmentFormats,depthFormat_};
 }
 
 void Engine::initCommandPool() {
@@ -789,11 +635,11 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
     cmdBuf.setScissor(0, scissor);
 
     //  bind graphics pipeline and global descriptor set
-    cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, graphicsPipeline);
-    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, *descriptorSets_[frameInFlightIndex], nullptr);
+    cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, rasterPipeline_.getGraphicsPipeline());
+    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, rasterPipeline_.getPipelineLayout(), 0, *descriptorSets_[frameInFlightIndex], nullptr);
 
     for (const auto &mesh : scene_->getMeshes()) {
-        mesh->recordDrawCommands(cmdBuf, pipelineLayout);
+        mesh->recordDrawCommands(cmdBuf, rasterPipeline_.getPipelineLayout());
     }
     cmdBuf.endRendering();
 

@@ -9,14 +9,13 @@
 #include <array>
 
 struct Vertex{
-
     glm::vec3 position{};
     glm::vec3 normal{};
     glm::vec3 tangent{};
 
     glm::vec2 texCoord{};
 
-    static vk::VertexInputBindingDescription getBindingDescription(){
+    static constexpr vk::VertexInputBindingDescription getBindingDescription(){
         return vk::VertexInputBindingDescription{
             .binding = 0,
             .stride = sizeof(Vertex),
@@ -24,7 +23,7 @@ struct Vertex{
         };
     }
 
-    static std::array<vk::VertexInputAttributeDescription, 4> getAttributeDescriptions() {
+    static constexpr std::array<vk::VertexInputAttributeDescription, 4> getAttributeDescriptions() {
         return {
             vk::VertexInputAttributeDescription{ // position
                 .location = 0,
@@ -49,6 +48,29 @@ struct Vertex{
                 .binding = 0,
                 .format = vk::Format::eR32G32Sfloat,
                 .offset = static_cast<uint32_t>(offsetof(Vertex, texCoord))
+            }
+        };
+    }
+};
+
+struct Vertex2D{
+    glm::vec2 position{};
+
+    static constexpr vk::VertexInputBindingDescription getBindingDescription(){
+        return vk::VertexInputBindingDescription{
+            .binding = 0,
+            .stride = sizeof(Vertex2D),
+            .inputRate = vk::VertexInputRate::eVertex
+        };
+    }
+
+    static constexpr std::array<vk::VertexInputAttributeDescription, 1> getAttributeDescriptions() {
+        return {
+            vk::VertexInputAttributeDescription{ // position
+                .location = 0,
+                .binding = 0,
+                .format = vk::Format::eR32G32B32Sfloat,
+                .offset = static_cast<uint32_t>(offsetof(Vertex2D, position))
             }
         };
     }

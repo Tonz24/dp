@@ -33,13 +33,6 @@ public:
 
     void recordDrawCommands(vk::raii::CommandBuffer& cmdBuf, const vk::raii::PipelineLayout& pipelineLayout) const;
 
-    struct PushConstants {
-        glm::mat4 modelMat{};
-        glm::mat4 normalMat{};
-        uint32_t materialId{};
-        uint32_t meshId{};
-    };
-
     friend class MeshManager;
 private:
     std::vector<Vertex> vertices_{};
