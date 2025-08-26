@@ -8,6 +8,12 @@
 #include "../uboFormat.h"
 #include "../../scene/vertex.h"
 
+template<typename T>
+concept VertexType = requires {
+    { T::getBindingDescription() } -> std::same_as<vk::VertexInputBindingDescription>;
+    { T::getAttributeDescriptions()};
+};
+
 
 class GraphicsPipeline {
 public:
