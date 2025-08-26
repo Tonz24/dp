@@ -164,6 +164,7 @@ void Engine::initVulkan() {
     initDescriptorPool();
     initUniformBuffers();
     initDescriptorSetLayout();
+    initDescriptorSetLayout2();
 
     initCommandPool();
     initCommandBuffers();
@@ -533,8 +534,10 @@ void Engine::initGraphicsPipeline() {
     std::vector colorAttachmentFormats = {swapChainImageFormat, idMapFormat_};
 
     std::span colorAttachmentFormatsSky{colorAttachmentFormats.begin(),1};
+
+    std::vector descriptorSetLayoutsSky = {*descriptorSetLayoutFrame_, *descriptorSetLayoutSky_};
     rasterPipeline_ = GraphicsPipeline<Vertex3D>{"shaders/shader_vert.spv","shaders/shader_frag.spv",descriptorSetLayouts,colorAttachmentFormats,depthFormat_};
-    skyboxPipeline_ = GraphicsPipeline<Vertex2D>{"shaders/shader_vert.spv","shaders/shader_frag.spv",descriptorSetLayouts,colorAttachmentFormatsSky};
+    skyboxPipeline_ = GraphicsPipeline<Vertex2D>{"shaders/skypass_vert.spv","shaders/skypass_frag.spv",descriptorSetLayoutsSky,colorAttachmentFormatsSky};
 }
 
 void Engine::initCommandPool() {
@@ -942,7 +945,7 @@ void Engine::initDescriptorSetLayout() {
             .binding = 0,
             .descriptorType = vk::DescriptorType::eUniformBuffer,
             .descriptorCount = 1,
-            .stageFlags = vk::ShaderStageFlagBits::eVertex
+            .stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment
         },
         vk::DescriptorSetLayoutBinding { // material UBO
             .binding = 1,
@@ -953,7 +956,6 @@ void Engine::initDescriptorSetLayout() {
     };
 
     vk::DescriptorSetLayoutCreateInfo frameLayoutInfo{
-        .flags = {},
         .bindingCount = static_cast<uint32_t>(frameDescriptorBindings.size()),
         .pBindings = frameDescriptorBindings.data()
     };
@@ -975,7 +977,6 @@ void Engine::initDescriptorSetLayout() {
 
 
     vk::DescriptorSetLayoutCreateInfo materialLayoutInfo{
-        .flags = {},
         .bindingCount = static_cast<uint32_t>(materialBindings.size()),
         .pBindings = materialBindings.data()
     };
@@ -1024,6 +1025,23 @@ void Engine::initDescriptorSetLayout() {
 
         device_.updateDescriptorSets({writeDescriptorSetCam, writeDescriptorSetMat},{});
     }
+}
+
+void Engine::initDescriptorSetLayout2() {
+
+    vk::DescriptorSetLayoutBinding skyBinding{
+        .binding = 0,
+        .descriptorType = vk::DescriptorType::eCombinedImageSampler,
+        .descriptorCount = 1,
+        .stageFlags = vk::ShaderStageFlagBits::eFragment,
+    };
+
+    vk::DescriptorSetLayoutCreateInfo skyLayoutInfo{
+        .bindingCount = 1,
+        .pBindings = &skyBinding
+    };
+
+    descriptorSetLayoutSky_ = vk::raii::DescriptorSetLayout(device_,skyLayoutInfo);
 }
 
 void Engine::initUniformBuffers() {

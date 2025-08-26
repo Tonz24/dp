@@ -83,6 +83,7 @@ private:
     void initSyncObjects();
 
     void initDescriptorSetLayout();
+    void initDescriptorSetLayout2();
     void initUniformBuffers();
     void initDescriptorPool();
 
@@ -258,4 +259,5 @@ private:
 
     std::shared_ptr<Mesh<Vertex3D>> skyMesh_{nullptr};
     std::shared_ptr<Material> mat_{nullptr};
+    vk::raii::DescriptorSetLayout descriptorSetLayoutSky_{nullptr};
 };

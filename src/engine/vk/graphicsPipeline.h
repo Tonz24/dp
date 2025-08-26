@@ -13,7 +13,7 @@
 template <VertexType V>
 class GraphicsPipeline {
 public:
-    GraphicsPipeline(std::string_view vShaderPath,std::string_view fShaderPath, const std::vector<vk::DescriptorSetLayout>& descriptorSetLayouts, std::span<vk::Format> colorAttachmentFormats, vk::Format depthFormat = vk::Format::eUndefined) {
+    GraphicsPipeline(std::string_view vShaderPath,std::string_view fShaderPath, std::span<vk::DescriptorSetLayout> descriptorSetLayouts, std::span<vk::Format> colorAttachmentFormats, vk::Format depthFormat = vk::Format::eUndefined) {
         initShaders(vShaderPath,fShaderPath);
 
         vk::PipelineLayoutCreateInfo pipelineLayoutInfo{
@@ -25,11 +25,35 @@ public:
 
         pipelineLayout_ = vk::raii::PipelineLayout( VkUtils::getDevice(), pipelineLayoutInfo );
 
+        vk::Bool32 depthTestEnable = depthFormat == vk::Format::eUndefined ? vk::False : vk::True;
+
+        vk::PipelineDepthStencilStateCreateInfo depthStencilCreateInfo{
+            .depthTestEnable = depthTestEnable,
+            .depthWriteEnable = depthTestEnable,
+            .depthCompareOp = vk::CompareOp::eLess,
+            .depthBoundsTestEnable = vk::False,
+            .stencilTestEnable = vk::False,
+        };
 
         pipelineRenderingCreateInfo_ = vk::PipelineRenderingCreateInfo{
             .colorAttachmentCount = static_cast<uint32_t>(colorAttachmentFormats.size()),
             .pColorAttachmentFormats = colorAttachmentFormats.data(),
             .depthAttachmentFormat = depthFormat,
+        };
+
+
+        vk::PipelineColorBlendAttachmentState colorBlendAttachment{
+            .blendEnable = vk::False,
+            .colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA
+        };
+
+        std::vector blendAttachments{colorAttachmentFormats.size(),colorBlendAttachment};
+
+        vk::PipelineColorBlendStateCreateInfo colorBlending{
+            .logicOpEnable = vk::False,
+            .logicOp =  vk::LogicOp::eCopy,
+            .attachmentCount = static_cast<uint32_t>(blendAttachments.size()),
+            .pAttachments =  blendAttachments.data()
         };
 
 
@@ -138,19 +162,6 @@ private:
         .sampleShadingEnable = vk::False
     };
 
-    static constexpr vk::PipelineColorBlendAttachmentState colorBlendAttachment{
-        .blendEnable = vk::False,
-        .colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA
-    };
-
-    static constexpr std::array blendAttachments = {colorBlendAttachment, colorBlendAttachment};
-    static constexpr vk::PipelineColorBlendStateCreateInfo colorBlending{
-        .logicOpEnable = vk::False,
-        .logicOp =  vk::LogicOp::eCopy,
-        .attachmentCount = static_cast<uint32_t>(blendAttachments.size()),
-        .pAttachments =  blendAttachments.data()
-    };
-
 
     static constexpr vk::PushConstantRange pcsTest{
         .stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
@@ -166,13 +177,5 @@ private:
         .pVertexBindingDescriptions = &bindingDescription,
         .vertexAttributeDescriptionCount = attributeDescriptions.size(),
         .pVertexAttributeDescriptions = attributeDescriptions.data()
-    };
-
-    static constexpr vk::PipelineDepthStencilStateCreateInfo depthStencilCreateInfo{
-        .depthTestEnable = vk::True,
-        .depthWriteEnable = vk::True,
-        .depthCompareOp = vk::CompareOp::eLess,
-        .depthBoundsTestEnable = vk::False,
-        .stencilTestEnable = vk::False,
     };
 };
