@@ -177,6 +177,8 @@ void Engine::initVulkan() {
     initIdMapImage();
     initDummyTexture();
 
+
+    sky_ = TextureManager::getInstance()->registerResource(new Texture("../assets/sky/lebombo_4k.exr"),"sky");
     auto vData = vertexData2D;
     auto iData = indexData;
     mat_ = std::make_shared<Material>();
@@ -186,6 +188,24 @@ void Engine::initVulkan() {
     VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(vertexData.size() * sizeof(vertexData[0]),vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingAllocFlagsVMA);
     skyMesh_->stage(stagingBuffer);
     VkUtils::destroyBufferVMA(stagingBuffer);
+
+
+    vk::DescriptorImageInfo descInfo{
+            .sampler = sky_->getVkSampler(),
+            .imageView = sky_->getVkImageView(),
+            .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
+    };
+
+    vk::WriteDescriptorSet writeDescriptorSet{
+        .dstSet = skyDescriptorSet_,
+        .dstBinding = 0,
+        .dstArrayElement = 0,
+        .descriptorCount = 1,
+        .descriptorType = vk::DescriptorType::eCombinedImageSampler,
+        .pImageInfo = &descInfo
+    };
+
+    device_.updateDescriptorSets(writeDescriptorSet,{});
 }
 
 void Engine::initVulkanInstance() {
@@ -999,8 +1019,69 @@ void Engine::initDescriptorPool() {
     descriptorPool_ = vk::raii::DescriptorPool(device_,poolInfo);
 }
 
-void Engine::renderSky(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex) {
-    skyMesh_->recordDrawCommands(cmdBuf, rasterPipeline_.getPipelineLayout());
+void Engine::renderSky(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uint32_t frameInFlightIndex) {
+
+    vk::ClearValue clearColor = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
+    vk::RenderingAttachmentInfo colorAttachmentInfo = {
+        .imageView = swapChainImageViews[imageIndex],
+        .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+        .loadOp = vk::AttachmentLoadOp::eClear,
+        .storeOp = vk::AttachmentStoreOp::eStore,
+        .clearValue = clearColor
+    };
+
+    vk::RenderingInfo renderingInfo{
+        .renderArea = {
+            .offset = {
+                .x = 0,
+                .y = 0
+            },
+            .extent = swapChainExtent
+    },
+    .layerCount = 1,
+    .colorAttachmentCount = 1,
+    .pColorAttachments = &colorAttachmentInfo,
+    };
+
+    //begin rendering with the specified info
+    cmdBuf.beginRendering(renderingInfo);
+
+    //  set dynamic rendering state values
+    const vk::Viewport viewport{
+        .x = 0,
+        .y = static_cast<float>(swapChainExtent.height),
+        .width = static_cast<float>(swapChainExtent.width),
+        .height = -static_cast<float>(swapChainExtent.height),
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f
+    };
+
+    const vk::Rect2D scissor{
+        .offset = vk::Offset2D{
+            .x = 0,
+            .y = 0
+        },
+        .extent =  swapChainExtent
+    };
+
+    cmdBuf.setViewport(0, viewport);
+    cmdBuf.setScissor(0, scissor);
+
+    //  bind graphics pipeline and global descriptor set
+    cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, skyboxPipeline_.getGraphicsPipeline());
+
+
+    cmdBuf.bindVertexBuffers(0,skyMesh_->getVertexBuffer(),{0});
+    cmdBuf.bindIndexBuffer(skyMesh_->getIndexBuffer(),0,vk::IndexType::eUint32);
+    //  bind per mesh descriptor set
+    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, skyboxPipeline_.getPipelineLayout(), 0, *descriptorSets_[frameInFlightIndex], nullptr);
+    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, skyboxPipeline_.getPipelineLayout(), 1, skyDescriptorSet_, nullptr);
+
+    const PushConstants pcs = { };
+
+    cmdBuf.pushConstants(skyboxPipeline_.getPipelineLayout(),vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const PushConstants>{pcs});
+
+    cmdBuf.drawIndexed(6, 1, 0, 0, 0);
 }
 
 void Engine::renderScene(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uint32_t frameInFlightIndex) {

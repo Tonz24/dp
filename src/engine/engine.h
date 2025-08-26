@@ -87,7 +87,7 @@ private:
     void initUniformBuffers();
     void initDescriptorPool();
 
-    void renderSky(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex);
+    void renderSky(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uint32_t frameInFlightIndex);
     void renderScene(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uint32_t frameInFlightIndex);
     void renderGUI(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex);
 
@@ -126,6 +126,7 @@ private:
 
     static inline Engine* engineInstance{nullptr};
     std::unique_ptr<Window> window{nullptr};
+
 
     static inline const std::vector<const char*> requiredValidationLayers = {
             "VK_LAYER_KHRONOS_validation"
@@ -272,4 +273,6 @@ private:
     std::shared_ptr<Mesh<Vertex2D>> skyMesh_{nullptr};
     std::shared_ptr<Material> mat_{nullptr};
     vk::raii::DescriptorSetLayout descriptorSetLayoutSky_{nullptr};
+    vk::DescriptorSet skyDescriptorSet_;
+    std::shared_ptr<Texture> sky_;
 };
