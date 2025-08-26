@@ -115,11 +115,11 @@ private:
     static VKAPI_ATTR vk::Bool32 VKAPI_CALL debugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::DebugUtilsMessageTypeFlagsEXT type, const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData, void*);
 
 
-#ifdef NDEBUG
+    #ifdef NDEBUG
     static constexpr bool ENABLE_VALIDATION_LAYERS{false};
-#else
+    #else
     static constexpr bool ENABLE_VALIDATION_LAYERS{true};
-#endif
+    #endif
 
     static constexpr uint32_t maxFramesInFlight{1};
     static constexpr uint32_t materialLimit{100};
@@ -129,18 +129,18 @@ private:
 
 
     static inline const std::vector<const char*> requiredValidationLayers = {
-            "VK_LAYER_KHRONOS_validation"
-    };
+        "VK_LAYER_KHRONOS_validation"
+};
 
     //https://nvpro-samples.github.io/vk_raytracing_tutorial_KHR/
     static inline const std::vector<const char*> requiredDeviceExtensions = {
-            vk::KHRSwapchainExtensionName,
-            vk::KHRAccelerationStructureExtensionName,
-            vk::KHRRayTracingPipelineExtensionName,
-            vk::KHRDeferredHostOperationsExtensionName,
-            vk::EXTPageableDeviceLocalMemoryExtensionName,
-            vk::EXTMemoryPriorityExtensionName
-    };
+        vk::KHRSwapchainExtensionName,
+        vk::KHRAccelerationStructureExtensionName,
+        vk::KHRRayTracingPipelineExtensionName,
+        vk::KHRDeferredHostOperationsExtensionName,
+        vk::EXTPageableDeviceLocalMemoryExtensionName,
+        vk::EXTMemoryPriorityExtensionName
+};
 
     vk::raii::Context vkContext;
     vk::raii::Instance vkInstance{nullptr};
@@ -249,8 +249,8 @@ private:
     MaterialUBOFormat materialUBOStorage_{};
     uint32_t materialUpdateIndex_{};
 
-     std::vector<Vertex3D> vertexData = {
-/*                                          x		y	  z		                                                    u  v */
+    std::vector<Vertex3D> vertexData = {
+        /*                                          x		y	  z		                                                    u  v */
         /* top right*/		    {{1.0f,1.0f, 0.0f},	{}, {},{1,1}},
         /* bottom right*/	    {{1.0f,-1.0f, 0.0f},	{}, {},{1, -1}},
         /* bottom left*/  	    {{-1.0f,-1.0f, 0.0f},	{}, {},{-1, -1}},
@@ -273,6 +273,6 @@ private:
     std::shared_ptr<Mesh<Vertex2D>> skyMesh_{nullptr};
     std::shared_ptr<Material> mat_{nullptr};
     vk::raii::DescriptorSetLayout descriptorSetLayoutSky_{nullptr};
-    vk::DescriptorSet skyDescriptorSet_;
+    vk::raii::DescriptorSet skyDescriptorSet_{nullptr};
     std::shared_ptr<Texture> sky_;
 };

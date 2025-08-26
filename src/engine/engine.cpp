@@ -185,15 +185,22 @@ void Engine::initVulkan() {
     mat_->recordDescriptorSet();
     skyMesh_ = std::make_shared<Mesh<Vertex2D>>(std::move(vData),std::move(iData),mat_);
 
-    VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(vertexData.size() * sizeof(vertexData[0]),vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingAllocFlagsVMA);
+    VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(sky_->getTotalSize(),vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingAllocFlagsVMA);
     skyMesh_->stage(stagingBuffer);
+    sky_->stage(stagingBuffer);
     VkUtils::destroyBufferVMA(stagingBuffer);
 
+    vk::DescriptorSetAllocateInfo allocInfo{
+        .descriptorPool = descriptorPool_,
+        .descriptorSetCount = 1,
+        .pSetLayouts = &*descriptorSetLayoutSky_
+    };
+    skyDescriptorSet_ = std::move(device_.allocateDescriptorSets(allocInfo).front());
 
     vk::DescriptorImageInfo descInfo{
-            .sampler = sky_->getVkSampler(),
-            .imageView = sky_->getVkImageView(),
-            .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
+        .sampler = sky_->getVkSampler(),
+        .imageView = sky_->getVkImageView(),
+        .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
     };
 
     vk::WriteDescriptorSet writeDescriptorSet{
@@ -603,7 +610,7 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
 
 
 
-    //renderSky(cmdBuf,imageIndex);
+    renderSky(cmdBuf,imageIndex, frameInFlightIndex);
     renderScene(cmdBuf,imageIndex, frameInFlightIndex);
     renderGUI(cmdBuf, imageIndex);
 
@@ -1001,17 +1008,17 @@ void Engine::initDescriptorPool() {
     std::array poolSize{
         vk::DescriptorPoolSize {
             .type = vk::DescriptorType::eUniformBuffer,
-            .descriptorCount = 100
+            .descriptorCount = 1000
         },
         vk::DescriptorPoolSize {
             .type = vk::DescriptorType::eCombinedImageSampler,
-            .descriptorCount = 100
+            .descriptorCount = 1000
         }
     };
 
     vk::DescriptorPoolCreateInfo poolInfo{
         .flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
-        .maxSets = 100,
+        .maxSets = 1000,
         .poolSizeCount = poolSize.size(),
         .pPoolSizes = poolSize.data()
     };
@@ -1075,13 +1082,14 @@ void Engine::renderSky(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uin
     cmdBuf.bindIndexBuffer(skyMesh_->getIndexBuffer(),0,vk::IndexType::eUint32);
     //  bind per mesh descriptor set
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, skyboxPipeline_.getPipelineLayout(), 0, *descriptorSets_[frameInFlightIndex], nullptr);
-    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, skyboxPipeline_.getPipelineLayout(), 1, skyDescriptorSet_, nullptr);
+    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, skyboxPipeline_.getPipelineLayout(), 1, *skyDescriptorSet_, nullptr);
 
     const PushConstants pcs = { };
 
     cmdBuf.pushConstants(skyboxPipeline_.getPipelineLayout(),vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const PushConstants>{pcs});
 
     cmdBuf.drawIndexed(6, 1, 0, 0, 0);
+    cmdBuf.endRendering();
 }
 
 void Engine::renderScene(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uint32_t frameInFlightIndex) {
@@ -1090,7 +1098,7 @@ void Engine::renderScene(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, u
     vk::RenderingAttachmentInfo colorAttachmentInfo = {
         .imageView = swapChainImageViews[imageIndex],
         .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-        .loadOp = vk::AttachmentLoadOp::eClear,
+        .loadOp = vk::AttachmentLoadOp::eLoad,
         .storeOp = vk::AttachmentStoreOp::eStore,
         .clearValue = clearColor
     };
