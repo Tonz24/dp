@@ -8,12 +8,7 @@
 #include "vkUtils.h"
 #include "../utils.h"
 #include "../uboFormat.h"
-
-template<typename T>
-concept VertexType = requires {
-    { T::getBindingDescription() } -> std::same_as<vk::VertexInputBindingDescription>;
-    { T::getAttributeDescriptions()};
-};
+#include "../concepts.h"
 
 template <VertexType V>
 class GraphicsPipeline {

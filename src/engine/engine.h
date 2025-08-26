@@ -256,6 +256,6 @@ private:
         3, 2, 1
     };
 
-    std::shared_ptr<Mesh> skyMesh_{nullptr};
+    std::shared_ptr<Mesh<Vertex3D>> skyMesh_{nullptr};
     std::shared_ptr<Material> mat_{nullptr};
 };

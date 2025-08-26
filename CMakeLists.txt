@@ -41,8 +41,6 @@ add_executable(dp
         src/scene/camera.h
         src/scene/scene.cpp
         src/scene/scene.h
-        src/scene/model.cpp
-        src/scene/model.h
 
         ${IMGUI_DIR}/imgui.cpp
         ${IMGUI_DIR}/imgui_draw.cpp
@@ -61,6 +59,7 @@ add_executable(dp
         src/engine/vk/vmaUsage.h
         src/engine/vk/graphicsPipeline.cpp
         src/engine/vk/graphicsPipeline.h
+        src/engine/concepts.h
 )
 
 # add shader compilation as a build step

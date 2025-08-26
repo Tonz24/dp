@@ -103,13 +103,11 @@ protected:
     std::unordered_map<std::string,uint32_t> nameToIdMap_{};
 };
 
-
-class Mesh;
 class Texture;
 class Material;
 
-class MeshManager : public ResourceManager<Mesh, MeshManager> {
-    friend class ResourceManager<Mesh, MeshManager>;
+class MeshManager : public ResourceManager<Mesh<Vertex3D>, MeshManager> {
+    friend class ResourceManager<Mesh<Vertex3D>, MeshManager>;
     MeshManager() = default;
 };
 

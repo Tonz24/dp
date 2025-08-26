@@ -15,7 +15,7 @@
 
 #include "managers/resourceManager.h"
 
-std::vector<std::shared_ptr<Mesh>> ModelLoader::loadModel(std::string_view path, bool multithread) {
+std::vector<std::shared_ptr<Mesh<Vertex3D>>> ModelLoader::loadModel(std::string_view path, bool multithread) {
     std::string fullPath{ModelLoader::modelPathPrefix + std::string{path}};
 
     Assimp::Importer importer;
@@ -36,7 +36,7 @@ std::vector<std::shared_ptr<Mesh>> ModelLoader::loadModel(std::string_view path,
     directory = directory.substr(0, lastSlashPos + 1);
 
 
-    std::vector<std::shared_ptr<Mesh>> meshes{};
+    std::vector<std::shared_ptr<Mesh<Vertex3D>>> meshes{};
     std::vector<std::shared_ptr<Material>> materials{};
 
     uint32_t workerCount = std::thread::hardware_concurrency();
@@ -105,7 +105,7 @@ std::vector<std::shared_ptr<Mesh>> ModelLoader::loadModel(std::string_view path,
         //load material
         std::shared_ptr<Material> material = materials.at(mesh->mMaterialIndex);
 
-        std::shared_ptr<Mesh> parsedMesh = MeshManager::getInstance()->getResource(mesh->mName.C_Str());
+        std::shared_ptr<Mesh<Vertex3D>> parsedMesh = MeshManager::getInstance()->getResource(mesh->mName.C_Str());
         if (!parsedMesh) {
             auto mm = new Mesh(std::move(vertices),std::move(indices),material);
             parsedMesh = MeshManager::getInstance()->registerResource(mm,mesh->mName.C_Str());

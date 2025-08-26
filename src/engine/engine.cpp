@@ -16,7 +16,6 @@
 #include <imgui/imgui_impl_vulkan.h>
 
 #include "managers/inputManager.h"
-#include "utils.h"
 #include "vk/vkUtils.h"
 #include "../scene/texture.h"
 #include "managers/resourceManager.h"
@@ -181,7 +180,7 @@ void Engine::initVulkan() {
     auto iData = indexData;
     mat_ = std::make_shared<Material>();
     mat_->recordDescriptorSet();
-    skyMesh_ = MeshManager::getInstance()->registerResource(new Mesh(std::move(vData),std::move(iData),mat_),"fullscreenQuad");
+    skyMesh_ = MeshManager::getInstance()->registerResource(new Mesh<Vertex3D>(std::move(vData),std::move(iData),mat_),"fullscreenQuad");
 
     VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(vertexData.size() * sizeof(vertexData[0]),vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingAllocFlagsVMA);
     skyMesh_->stage(stagingBuffer);
