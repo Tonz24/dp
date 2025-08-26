@@ -582,107 +582,10 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
                                    cmdBuf);
 
 
-    //set up the color attachment
-    vk::ClearValue clearColor = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
-    vk::RenderingAttachmentInfo colorAttachmentInfo = {
-        .imageView = swapChainImageViews[imageIndex],
-        .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-        .loadOp = vk::AttachmentLoadOp::eClear,
-        .storeOp = vk::AttachmentStoreOp::eStore,
-        .clearValue = clearColor
-    };
 
-    vk::RenderingAttachmentInfo idMapAttachmentInfo = {
-        .imageView = objectIdMap_->getVkImageView(),
-        .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-        .loadOp = vk::AttachmentLoadOp::eClear,
-        .storeOp = vk::AttachmentStoreOp::eStore,
-        .clearValue = clearColor
-    };
-
-    std::array colorAttachmentInfos = {colorAttachmentInfo,idMapAttachmentInfo};
-
-    vk::ClearValue depthClearColor = vk::ClearDepthStencilValue(1.0f,0);
-    vk::RenderingAttachmentInfo depthAttachmentInfo = {
-        .imageView = depthTexture_->getVkImageView(),
-        .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
-        .loadOp = vk::AttachmentLoadOp::eClear,
-        .storeOp = vk::AttachmentStoreOp::eStore,
-        .clearValue = depthClearColor
-    };
-
-    vk::RenderingInfo renderingInfo{
-        .renderArea = {
-                .offset = {
-                    .x = 0,
-                    .y = 0
-                },
-                .extent = swapChainExtent
-        },
-        .layerCount = 1,
-        .colorAttachmentCount = colorAttachmentInfos.size(),
-        .pColorAttachments = colorAttachmentInfos.data(),
-        .pDepthAttachment = &depthAttachmentInfo,
-    };
-
-    //begin rendering with the specified info
-    cmdBuf.beginRendering(renderingInfo);
-
-    //  set dynamic rendering state values
-    const vk::Viewport viewport{
-        .x = 0,
-        .y = static_cast<float>(swapChainExtent.height),
-        .width = static_cast<float>(swapChainExtent.width),
-        .height = -static_cast<float>(swapChainExtent.height),
-        .minDepth = 0.0f,
-        .maxDepth = 1.0f
-    };
-
-    const vk::Rect2D scissor{
-        .offset = vk::Offset2D{
-            .x = 0,
-            .y = 0
-        },
-        .extent =  swapChainExtent
-    };
-
-    cmdBuf.setViewport(0, viewport);
-    cmdBuf.setScissor(0, scissor);
-
-    //  bind graphics pipeline and global descriptor set
-    cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, rasterPipeline_.getGraphicsPipeline());
-    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, rasterPipeline_.getPipelineLayout(), 0, *descriptorSets_[frameInFlightIndex], nullptr);
-
-    for (const auto &mesh : scene_->getMeshes()) {
-        mesh->recordDrawCommands(cmdBuf, rasterPipeline_.getPipelineLayout());
-    }
-    skyMesh_->recordDrawCommands(cmdBuf, rasterPipeline_.getPipelineLayout());
-    cmdBuf.endRendering();
-
-    // prepare GUI render pass
-    vk::RenderingAttachmentInfo guiAttachmentInfo = {
-        .imageView = swapChainImageViews[imageIndex],
-        .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-        .loadOp = vk::AttachmentLoadOp::eLoad,
-        .storeOp = vk::AttachmentStoreOp::eStore,
-    };
-
-    vk::RenderingInfo guiRenderingInfo{
-        .renderArea = {
-            .offset = { .x = 0, .y = 0 },
-            .extent = swapChainExtent
-        },
-        .layerCount = 1,
-        .colorAttachmentCount = 1,
-        .pColorAttachments = &guiAttachmentInfo,
-        .pDepthAttachment = nullptr,
-    };
-
-    // render GUI separately
-    cmdBuf.beginRendering(guiRenderingInfo);
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(),*cmdBuf);
-    cmdBuf.endRendering();
-
+    //renderSky(cmdBuf,imageIndex);
+    renderScene(cmdBuf,imageIndex, frameInFlightIndex);
+    renderGUI(cmdBuf, imageIndex);
 
     //  the old layout is attachment optimal
     //  the new layout is color present src
@@ -1094,6 +997,114 @@ void Engine::initDescriptorPool() {
     };
 
     descriptorPool_ = vk::raii::DescriptorPool(device_,poolInfo);
+}
+
+void Engine::renderSky(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex) {
+    skyMesh_->recordDrawCommands(cmdBuf, rasterPipeline_.getPipelineLayout());
+}
+
+void Engine::renderScene(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uint32_t frameInFlightIndex) {
+    //set up the color attachment
+    vk::ClearValue clearColor = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
+    vk::RenderingAttachmentInfo colorAttachmentInfo = {
+        .imageView = swapChainImageViews[imageIndex],
+        .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+        .loadOp = vk::AttachmentLoadOp::eClear,
+        .storeOp = vk::AttachmentStoreOp::eStore,
+        .clearValue = clearColor
+    };
+
+    vk::RenderingAttachmentInfo idMapAttachmentInfo = {
+        .imageView = objectIdMap_->getVkImageView(),
+        .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+        .loadOp = vk::AttachmentLoadOp::eClear,
+        .storeOp = vk::AttachmentStoreOp::eStore,
+        .clearValue = clearColor
+    };
+
+    std::array colorAttachmentInfos = {colorAttachmentInfo,idMapAttachmentInfo};
+
+    vk::ClearValue depthClearColor = vk::ClearDepthStencilValue(1.0f,0);
+    vk::RenderingAttachmentInfo depthAttachmentInfo = {
+        .imageView = depthTexture_->getVkImageView(),
+        .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
+        .loadOp = vk::AttachmentLoadOp::eClear,
+        .storeOp = vk::AttachmentStoreOp::eStore,
+        .clearValue = depthClearColor
+    };
+
+    vk::RenderingInfo renderingInfo{
+        .renderArea = {
+                .offset = {
+                    .x = 0,
+                    .y = 0
+                },
+                .extent = swapChainExtent
+        },
+        .layerCount = 1,
+        .colorAttachmentCount = colorAttachmentInfos.size(),
+        .pColorAttachments = colorAttachmentInfos.data(),
+        .pDepthAttachment = &depthAttachmentInfo,
+    };
+
+    //begin rendering with the specified info
+    cmdBuf.beginRendering(renderingInfo);
+
+    //  set dynamic rendering state values
+    const vk::Viewport viewport{
+        .x = 0,
+        .y = static_cast<float>(swapChainExtent.height),
+        .width = static_cast<float>(swapChainExtent.width),
+        .height = -static_cast<float>(swapChainExtent.height),
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f
+    };
+
+    const vk::Rect2D scissor{
+        .offset = vk::Offset2D{
+            .x = 0,
+            .y = 0
+        },
+        .extent =  swapChainExtent
+    };
+
+    cmdBuf.setViewport(0, viewport);
+    cmdBuf.setScissor(0, scissor);
+
+    //  bind graphics pipeline and global descriptor set
+    cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, rasterPipeline_.getGraphicsPipeline());
+    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, rasterPipeline_.getPipelineLayout(), 0, *descriptorSets_[frameInFlightIndex], nullptr);
+
+    for (const auto &mesh : scene_->getMeshes()) {
+        mesh->recordDrawCommands(cmdBuf, rasterPipeline_.getPipelineLayout());
+    }
+    cmdBuf.endRendering();
+}
+
+void Engine::renderGUI(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex) {
+    // prepare GUI render pass
+    vk::RenderingAttachmentInfo guiAttachmentInfo = {
+        .imageView = swapChainImageViews[imageIndex],
+        .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+        .loadOp = vk::AttachmentLoadOp::eLoad,
+        .storeOp = vk::AttachmentStoreOp::eStore,
+    };
+
+    vk::RenderingInfo guiRenderingInfo{
+        .renderArea = {
+            .offset = { .x = 0, .y = 0 },
+            .extent = swapChainExtent
+        },
+        .layerCount = 1,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &guiAttachmentInfo,
+        .pDepthAttachment = nullptr,
+    };
+
+    // render GUI separately
+    cmdBuf.beginRendering(guiRenderingInfo);
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(),*cmdBuf);
+    cmdBuf.endRendering();
 }
 
 

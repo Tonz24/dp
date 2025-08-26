@@ -87,6 +87,10 @@ private:
     void initUniformBuffers();
     void initDescriptorPool();
 
+    void renderSky(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex);
+    void renderScene(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uint32_t frameInFlightIndex);
+    void renderGUI(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex);
+
     void recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightIndex, vk::raii::CommandBuffer &cmdBuf);
 
     void drawFrame();
