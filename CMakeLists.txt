@@ -59,7 +59,6 @@ add_executable(dp
         src/engine/vk/vmaUsage.h
         src/engine/vk/graphicsPipeline.cpp
         src/engine/vk/graphicsPipeline.h
-        src/engine/concepts.h
 )
 
 # add shader compilation as a build step

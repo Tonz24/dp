@@ -7,8 +7,7 @@
 
 
 #include "../engine/engine.h"
-
-/*Mesh::Mesh(std::vector<Vertex3D> &&vertexList, std::vector<uint32_t> &&indexList, std::shared_ptr<Material> material):
+Mesh::Mesh(std::vector<Vertex3D>&& vertexList, std::vector<uint32_t>&& indexList, std::shared_ptr<Material> material):
     vertices_(std::move(vertexList)), indices_(std::move(indexList)), material_(std::move(material)) {
 
     initBuffers();
@@ -28,9 +27,9 @@ bool Mesh::drawGUI() {
     }
 
     return false;
-}*/
+}
 
-/*void Mesh::stage(const VkUtils::BufferAlloc& stagingBuffer) const {
+void Mesh::stage(const VkUtils::BufferAlloc& stagingBuffer) const {
 
     if (stagingBuffer.allocationInfo.pMappedData == nullptr)
         throw std::runtime_error("ERROR: Mapped pointer points to NULL!");
@@ -75,4 +74,4 @@ void Mesh::initBuffers() {
 
     vk::DeviceSize indexBufferSize = sizeof(indices_[0]) * indices_.size();
     indexBuffer_ = VkUtils::createBufferVMA(indexBufferSize,vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst);
-}*/
+}
