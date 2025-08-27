@@ -114,8 +114,6 @@ Texture::Texture(std::string_view fileName) : ManagedResource() {
     fileName_ = correctFileName.substr(0,extensionSeparator);
     extension_ = correctFileName.substr(extensionSeparator, correctFileName.size() - extensionSeparator);
 
-    resourceName_ = correctFileName;
-
     FREE_IMAGE_FORMAT fif = FreeImage_GetFileType(correctFileName.c_str(), 0);
     if (fif == FIF_UNKNOWN)
         fif = FreeImage_GetFIFFromFilename(correctFileName.c_str());
