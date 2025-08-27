@@ -16,10 +16,17 @@ vec2 positions[4] = vec2[](
     vec2(-1.0f, 1.0f)
 );
 
-void main() {
-    gl_Position = vec4(inPosition,0,1);
-    //outTexCoord = inPosition;
-    outTexCoord = positions[gl_VertexIndex];
+vec2 positions2[6] = vec2[](
+    vec2(-1.0f, 1.0f),
+    vec2(1.0f,-1.0f),
+    vec2(1.0f,1.0f),
 
-    //outTexCoord = vec2(gl_VertexIndex, gl_VertexIndex) / 4.0;
+    vec2(-1.0f, 1.0f),
+    vec2(-1.0f,-1.0f),
+    vec2(1.0f,-1.0f)
+);
+
+void main() {
+    outTexCoord = positions2[gl_VertexIndex];
+    gl_Position = vec4(outTexCoord,0,1);
 }

@@ -1077,8 +1077,8 @@ void Engine::renderSky(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uin
     cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, skyboxPipeline_.getGraphicsPipeline());
 
 
-    cmdBuf.bindVertexBuffers(0,skyMesh_->getVertexBuffer(),{0});
-    cmdBuf.bindIndexBuffer(skyMesh_->getIndexBuffer(),0,vk::IndexType::eUint32);
+    //cmdBuf.bindVertexBuffers(0,skyMesh_->getVertexBuffer(),{0});
+    //cmdBuf.bindIndexBuffer(skyMesh_->getIndexBuffer(),0,vk::IndexType::eUint32);
     //  bind per mesh descriptor set
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, skyboxPipeline_.getPipelineLayout(), 0, *descriptorSets_[frameInFlightIndex], nullptr);
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, skyboxPipeline_.getPipelineLayout(), 1, *skyDescriptorSet_, nullptr);
@@ -1087,7 +1087,8 @@ void Engine::renderSky(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uin
 
     cmdBuf.pushConstants(skyboxPipeline_.getPipelineLayout(),vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const PushConstants>{pcs});
 
-    cmdBuf.drawIndexed(6, 1, 0, 0, 0);
+    //cmdBuf.drawIndexed(6, 1, 0, 0, 0);
+    cmdBuf.draw(6, 1, 0, 0);
     cmdBuf.endRendering();
 }
 
