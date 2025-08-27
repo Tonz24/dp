@@ -4,9 +4,11 @@
 
 #include "graphicsPipeline.h"
 
+#include "../../scene/Vertex.h"
+
 
 GraphicsPipeline::GraphicsPipeline(std::string_view vShaderPath, std::string_view fShaderPath,
-    std::span<vk::DescriptorSetLayout> descriptorSetLayouts, std::span<vk::Format> colorAttachmentFormats, bool hasVertexLayout, vk::Format depthFormat) {
+                                   std::span<vk::DescriptorSetLayout> descriptorSetLayouts, std::span<vk::Format> colorAttachmentFormats, bool hasVertexLayout, vk::Format depthFormat) {
     initShaders(vShaderPath,fShaderPath);
 
     vk::PipelineLayoutCreateInfo pipelineLayoutInfo{

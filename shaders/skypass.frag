@@ -1,6 +1,6 @@
 #version 450
 
-layout(location = 0) in vec2 texCoord;
+layout(location = 0) in vec2 inNDCxy;
 
 layout(location = 0) out vec4 fragColor;
 
@@ -21,17 +21,12 @@ vec3 sampleSphericalMap(vec3 dir, sampler2D sphericalTex){
     return texture(sphericalTex,uv).xyz;
 }
 
-
-
 void main() {
-    vec4 ndc = vec4(texCoord,-1,1);
-    vec4 camRay = vec4(cameraUBO.matInvVP * vec4(ndc.xy,1,1));
+    vec4 camRay = vec4(cameraUBO.matInvVP * vec4(inNDCxy,1,1));
     vec3 dir = normalize(camRay.xyz / camRay.w - cameraUBO.posWS);
 
     vec3 envMapColor = sampleSphericalMap(dir, skyTexture);
     envMapColor = aces(envMapColor);
 
     fragColor = vec4(envMapColor,1.0);
-
-    //fragColor = vec4(texCoord,0,1);
 }

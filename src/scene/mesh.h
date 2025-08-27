@@ -4,13 +4,14 @@
 
 #pragma once
 #include <vector>
-#include <imgui/imgui.h>
+
 
 #include "material.h"
 #include "transform.h"
+#include "Vertex.h"
 #include "../engine/iDrawGui.h"
 #include "../engine/vk/vkUtils.h"
-#include "../engine/concepts.h"
+
 
 class Mesh : public ManagedResource, public IDrawGui {
 public:

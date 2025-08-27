@@ -8,7 +8,6 @@
 #include "vkUtils.h"
 #include "../utils.h"
 #include "../uboFormat.h"
-#include "../concepts.h"
 
 class GraphicsPipeline {
 public:

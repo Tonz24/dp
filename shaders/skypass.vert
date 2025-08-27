@@ -1,6 +1,6 @@
 #version 450
 
-layout(location = 0) out vec2 outTexCoord;
+layout(location = 0) out vec2 outNDCxy;
 
 #include "common.glsl"
 
@@ -15,6 +15,6 @@ vec2 positions[6] = vec2[](
 );
 
 void main() {
-    outTexCoord = positions[gl_VertexIndex];
-    gl_Position = vec4(outTexCoord,0,1);
+    outNDCxy = positions[gl_VertexIndex];
+    gl_Position = vec4(outNDCxy,0,1);
 }
