@@ -178,14 +178,8 @@ void Engine::initVulkan() {
 
 
     sky_ = TextureManager::getInstance()->registerResource("sky", "../assets/sky/lebombo_4k.exr");
-    auto vData = vertexData2D;
-    auto iData = indexData;
-    mat_ = std::make_shared<Material>();
-    mat_->recordDescriptorSet();
-    skyMesh_ = std::make_shared<Mesh<Vertex2D>>(std::move(vData),std::move(iData),mat_);
 
     VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(sky_->getTotalSize(),vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingAllocFlagsVMA);
-    skyMesh_->stage(stagingBuffer);
     sky_->stage(stagingBuffer);
     VkUtils::destroyBufferVMA(stagingBuffer);
 
@@ -562,8 +556,8 @@ void Engine::initGraphicsPipeline() {
     std::span colorAttachmentFormatsSky{colorAttachmentFormats.begin(),1};
 
     std::vector descriptorSetLayoutsSky = {*descriptorSetLayoutFrame_, *descriptorSetLayoutSky_};
-    rasterPipeline_ = GraphicsPipeline<Vertex3D>{"shaders/shader_vert.spv","shaders/shader_frag.spv",descriptorSetLayouts,colorAttachmentFormats,depthFormat_};
-    skyboxPipeline_ = GraphicsPipeline<Vertex2D>{"shaders/skypass_vert.spv","shaders/skypass_frag.spv",descriptorSetLayoutsSky,colorAttachmentFormatsSky};
+    rasterPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/shader_frag.spv",descriptorSetLayouts,colorAttachmentFormats,true, depthFormat_};
+    skyboxPipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/skypass_frag.spv",descriptorSetLayoutsSky,colorAttachmentFormatsSky, false};
 }
 
 void Engine::initCommandPool() {
@@ -845,7 +839,7 @@ void Engine::cleanup() {
     depthTexture_.reset();
     objectIdMap_.reset();
     dummy_.reset();
-    skyMesh_.reset();
+
 
     cleanUBOs();
 
@@ -1076,18 +1070,17 @@ void Engine::renderSky(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uin
     //  bind graphics pipeline and global descriptor set
     cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, skyboxPipeline_.getGraphicsPipeline());
 
-
-    //cmdBuf.bindVertexBuffers(0,skyMesh_->getVertexBuffer(),{0});
-    //cmdBuf.bindIndexBuffer(skyMesh_->getIndexBuffer(),0,vk::IndexType::eUint32);
-    //  bind per mesh descriptor set
+    //  bind global descriptor set
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, skyboxPipeline_.getPipelineLayout(), 0, *descriptorSets_[frameInFlightIndex], nullptr);
+
+    //  bind per mesh descriptor set
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, skyboxPipeline_.getPipelineLayout(), 1, *skyDescriptorSet_, nullptr);
 
     const PushConstants pcs = { };
 
     cmdBuf.pushConstants(skyboxPipeline_.getPipelineLayout(),vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const PushConstants>{pcs});
 
-    //cmdBuf.drawIndexed(6, 1, 0, 0, 0);
+    // draw six vertices making up the screen quad
     cmdBuf.draw(6, 1, 0, 0);
     cmdBuf.endRendering();
 }

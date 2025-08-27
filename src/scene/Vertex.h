@@ -52,33 +52,3 @@ struct Vertex3D{
         };
     }
 };
-
-struct Vertex2D{
-    glm::vec2 position{};
-    glm::vec2 texCoord{};
-
-    static constexpr vk::VertexInputBindingDescription getBindingDescription(){
-        return vk::VertexInputBindingDescription{
-            .binding = 0,
-            .stride = sizeof(Vertex2D),
-            .inputRate = vk::VertexInputRate::eVertex
-        };
-    }
-
-    static constexpr std::array<vk::VertexInputAttributeDescription, 2> getAttributeDescriptions() {
-        return {
-            vk::VertexInputAttributeDescription{ // position
-                .location = 0,
-                .binding = 0,
-                .format = vk::Format::eR32G32Sfloat,
-                .offset = static_cast<uint32_t>(offsetof(Vertex2D, position))
-            },
-            vk::VertexInputAttributeDescription{ // position
-                .location = 1,
-                .binding = 0,
-                .format = vk::Format::eR32G32Sfloat,
-                .offset = static_cast<uint32_t>(offsetof(Vertex2D, texCoord))
-            }
-        };
-    }
-};

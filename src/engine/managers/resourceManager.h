@@ -125,8 +125,8 @@ protected:
 };
 
 
-class MeshManager : public ResourceManager<Mesh<Vertex3D>, MeshManager> {
-    friend class ResourceManager<Mesh<Vertex3D>, MeshManager>;
+class MeshManager : public ResourceManager<Mesh, MeshManager> {
+    friend class ResourceManager<Mesh, MeshManager>;
     MeshManager() = default;
 };
 

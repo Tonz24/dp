@@ -13,7 +13,7 @@
 
 class ModelLoader {
 public:
-    static std::vector<std::shared_ptr<Mesh<Vertex3D>>> loadModel(std::string_view path, bool multithread = true);
+    static std::vector<std::shared_ptr<Mesh>> loadModel(std::string_view path, bool multithread = true);
 
 private:
     static void loadMaterials(const std::string& directory, const aiScene& scene, uint32_t startIndex, uint32_t materialCount,

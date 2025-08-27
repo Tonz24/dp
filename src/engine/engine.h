@@ -164,8 +164,8 @@ private:
     vk::raii::DescriptorSetLayout descriptorSetLayoutFrame_{nullptr};
     vk::raii::DescriptorSetLayout descriptorSetLayoutMaterial_{nullptr};
 
-    GraphicsPipeline<Vertex3D> rasterPipeline_{};
-    GraphicsPipeline<Vertex2D> skyboxPipeline_{};
+    GraphicsPipeline rasterPipeline_{};
+    GraphicsPipeline skyboxPipeline_{};
 
     vk::raii::CommandPool graphicsCommandPool_{nullptr};
 
@@ -249,29 +249,6 @@ private:
     MaterialUBOFormat materialUBOStorage_{};
     uint32_t materialUpdateIndex_{};
 
-    std::vector<Vertex3D> vertexData = {
-        /*                                          x		y	  z		                                                    u  v */
-        /* top right*/		    {{1.0f,1.0f, 0.0f},	{}, {},{1,1}},
-        /* bottom right*/	    {{1.0f,-1.0f, 0.0f},	{}, {},{1, -1}},
-        /* bottom left*/  	    {{-1.0f,-1.0f, 0.0f},	{}, {},{-1, -1}},
-        /* top left*/		    {{-1.0f, 1.0f, 0.0f},	{}, {},{-1, 1}}
-    };
-
-
-    std::vector<Vertex2D> vertexData2D = {
-        {{1.0f,1.0f},{1,1}},
-        {{1.0f,-1.0f},{1,-1}},
-        {{-1.0f,-1.0f},{-1,-1}},
-        {{-1.0f, 1.0f},{-1,1}}
-    };
-
-    std::vector<uint32_t> indexData = {
-        3, 1, 0,
-        3, 2, 1
-    };
-
-    std::shared_ptr<Mesh<Vertex2D>> skyMesh_{nullptr};
-    std::shared_ptr<Material> mat_{nullptr};
     vk::raii::DescriptorSetLayout descriptorSetLayoutSky_{nullptr};
     vk::raii::DescriptorSet skyDescriptorSet_{nullptr};
     std::shared_ptr<Texture> sky_;

@@ -10,73 +10,11 @@
 #include "../uboFormat.h"
 #include "../concepts.h"
 
-template <VertexType V>
 class GraphicsPipeline {
 public:
-    GraphicsPipeline(std::string_view vShaderPath,std::string_view fShaderPath, std::span<vk::DescriptorSetLayout> descriptorSetLayouts, std::span<vk::Format> colorAttachmentFormats, vk::Format depthFormat = vk::Format::eUndefined) {
-        initShaders(vShaderPath,fShaderPath);
+    GraphicsPipeline(std::string_view vShaderPath, std::string_view fShaderPath, std::span<vk::DescriptorSetLayout> descriptorSetLayouts,
+                     std::span<vk::Format> colorAttachmentFormats, bool hasVertexLayout, vk::Format depthFormat = vk::Format::eUndefined);
 
-        vk::PipelineLayoutCreateInfo pipelineLayoutInfo{
-            .setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size()),
-            .pSetLayouts =  descriptorSetLayouts.data(),
-            .pushConstantRangeCount = 1,
-            .pPushConstantRanges = &pcsTest
-        };
-
-        pipelineLayout_ = vk::raii::PipelineLayout( VkUtils::getDevice(), pipelineLayoutInfo );
-
-        vk::Bool32 depthTestEnable = depthFormat == vk::Format::eUndefined ? vk::False : vk::True;
-
-        vk::PipelineDepthStencilStateCreateInfo depthStencilCreateInfo{
-            .depthTestEnable = depthTestEnable,
-            .depthWriteEnable = depthTestEnable,
-            .depthCompareOp = vk::CompareOp::eLess,
-            .depthBoundsTestEnable = vk::False,
-            .stencilTestEnable = vk::False,
-        };
-
-        pipelineRenderingCreateInfo_ = vk::PipelineRenderingCreateInfo{
-            .colorAttachmentCount = static_cast<uint32_t>(colorAttachmentFormats.size()),
-            .pColorAttachmentFormats = colorAttachmentFormats.data(),
-            .depthAttachmentFormat = depthFormat,
-        };
-
-
-        vk::PipelineColorBlendAttachmentState colorBlendAttachment{
-            .blendEnable = vk::False,
-            .colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA
-        };
-
-        std::vector blendAttachments{colorAttachmentFormats.size(),colorBlendAttachment};
-
-        vk::PipelineColorBlendStateCreateInfo colorBlending{
-            .logicOpEnable = vk::False,
-            .logicOp =  vk::LogicOp::eCopy,
-            .attachmentCount = static_cast<uint32_t>(blendAttachments.size()),
-            .pAttachments =  blendAttachments.data()
-        };
-
-
-        //  put all the info together and create the pipeline
-        vk::GraphicsPipelineCreateInfo pipelineInfo{
-            .pNext = &pipelineRenderingCreateInfo_,
-            .stageCount = static_cast<uint32_t>(shaderStages_.size()),
-            .pStages = shaderStages_.data(),
-            .pVertexInputState = &vertexInputInfo,
-            .pInputAssemblyState = &inputAssembly,
-            .pViewportState = &viewportState,
-            .pRasterizationState = &rasterizer,
-            .pMultisampleState = &multisampling,
-            .pDepthStencilState = &depthStencilCreateInfo,
-            .pColorBlendState = &colorBlending,
-            .pDynamicState = &dynamicState,
-            .layout = pipelineLayout_,
-            .renderPass = nullptr,
-            .basePipelineHandle = nullptr,
-            .basePipelineIndex = -1,
-        };
-        graphicsPipeline_ = vk::raii::Pipeline(VkUtils::getDevice(), nullptr, pipelineInfo);
-    }
     GraphicsPipeline() = default;
 
     [[nodiscard]] const vk::raii::Pipeline& getGraphicsPipeline() const { return graphicsPipeline_; }
@@ -167,15 +105,5 @@ private:
         .stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
         .offset = 0,
         .size = static_cast<uint32_t>(sizeof(PushConstants))
-    };
-
-    static constexpr auto bindingDescription = V::getBindingDescription();
-    static constexpr auto attributeDescriptions = V::getAttributeDescriptions();
-
-    static constexpr vk::PipelineVertexInputStateCreateInfo vertexInputInfo{
-        .vertexBindingDescriptionCount = 1,
-        .pVertexBindingDescriptions = &bindingDescription,
-        .vertexAttributeDescriptionCount = attributeDescriptions.size(),
-        .pVertexAttributeDescriptions = attributeDescriptions.data()
     };
 };
