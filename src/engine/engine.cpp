@@ -178,7 +178,7 @@ void Engine::initVulkan() {
     initDummyTexture();
 
 
-    sky_ = TextureManager::getInstance()->registerResource(new Texture("../assets/sky/lebombo_4k.exr"),"sky");
+    sky_ = TextureManager::getInstance()->registerResource("sky", "../assets/sky/lebombo_4k.exr");
     auto vData = vertexData2D;
     auto iData = indexData;
     mat_ = std::make_shared<Material>();

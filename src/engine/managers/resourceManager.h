@@ -41,7 +41,7 @@ public:
         return nullptr;
     }
 
-    virtual std::shared_ptr<T> registerResource(T* resource, std::string_view resourceName) {
+    std::shared_ptr<T> registerResource(T* resource, std::string_view resourceName) {
 
         if (getResource(resourceName) != nullptr)
             throw std::runtime_error("ERROR: Resource with name " + std::string{resourceName} + " is already registered!");
@@ -61,7 +61,28 @@ public:
         return newResource;
     }
 
-    virtual void deleterFunction(const T& resource) {
+    template <typename... Args>
+    std::shared_ptr<T> registerResource(std::string_view resourceName, Args&&... args) {
+
+        if (getResource(resourceName) != nullptr)
+            throw std::runtime_error("ERROR: Resource with name " + std::string{resourceName} + " is already registered!");
+
+        auto newResource = std::shared_ptr<T>(new T(std::forward<Args>(args)...), ResourceDeleter{});
+
+        uint32_t newCId = assignCategoryId();
+        uint32_t newGId = ResourceManagerBase::getInstance()->assignGlobalId();
+        newResource->categoryId_ = newCId;
+        newResource->globalId_ = newGId;
+        newResource->resourceName_ = resourceName;
+        newResource->isRegistered_ = true;
+
+        nameToIdMap_[std::string{resourceName}] = newCId;
+        idToResourceMap_[newCId] = newResource;
+
+        return newResource;
+    }
+
+    void deleterFunction(const T& resource) {
 
         std::cout << "Resource [" << resource.getResourceType() << "]: " << resource.getResourceName() << " (cID: " << resource.getCID() << " | gID: " << resource.getGID()  << ")" << " freed" << std::endl;
         nameToIdMap_.erase(resource.getResourceName());
@@ -103,8 +124,6 @@ protected:
     std::unordered_map<std::string,uint32_t> nameToIdMap_{};
 };
 
-class Texture;
-class Material;
 
 class MeshManager : public ResourceManager<Mesh<Vertex3D>, MeshManager> {
     friend class ResourceManager<Mesh<Vertex3D>, MeshManager>;
