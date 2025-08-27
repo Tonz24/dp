@@ -48,13 +48,10 @@ public:
 
         auto newResource = std::shared_ptr<T>(resource, ResourceDeleter{});
 
-        uint32_t newCID = assignCID();
+        uint32_t newCID = assignCategoryId();
         uint32_t newGID = ResourceManagerBase::getInstance()->assignGlobalId();
-        //newResource->setCID(newCID);
         newResource->categoryId_ = newCID;
-        //newResource->setGID(newGID);
         newResource->globalId_ = newGID;
-        //newResource->setResourceName(resourceName);
         newResource->resourceName_ = resourceName;
         newResource->isRegistered_ = true;
 
@@ -71,7 +68,7 @@ public:
         idToResourceMap_.erase(resource.getCID());
     }
 
-    uint32_t assignCID() {
+    uint32_t assignCategoryId() {
         std::lock_guard<std::mutex> lock(cidMutex_);
         uint32_t newId = ++cidCounter_;
 
