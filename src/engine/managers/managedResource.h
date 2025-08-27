@@ -22,16 +22,8 @@ public:
         return categoryId_;
     };
 
-    virtual void setCID(uint32_t newId) {
-        categoryId_ = newId;
-    };
-
     [[nodiscard]] virtual uint32_t getGID() const {
         return globalId_;
-    };
-
-    void setGID(uint32_t newId) {
-        globalId_ = newId;
     };
 
     [[nodiscard]] virtual std::string getFullFileName() const {
@@ -42,14 +34,9 @@ public:
         return resourceName_;
     };
 
-    void setResourceName(std::string_view resourceName){
-        resourceName_ = resourceName;
-    }
-
 
     [[nodiscard]] bool isValid() const{
-        //return globalId_ != 0 && categoryId_ != 0 && fileName_ != "" && extension_ != "";
-        return  categoryId_ != 0 && !resourceName_.empty();
+        return  categoryId_ != 0 && !resourceName_.empty() && globalId_ != 0;
     }
 
     [[nodiscard]] virtual std::string getResourceType() const = 0;

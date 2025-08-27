@@ -41,18 +41,21 @@ public:
         return nullptr;
     }
 
-    virtual std::shared_ptr<T> registerResource(T* mesh, std::string_view resourceName) {
+    virtual std::shared_ptr<T> registerResource(T* resource, std::string_view resourceName) {
 
         if (getResource(resourceName) != nullptr)
             throw std::runtime_error("ERROR: Resource with name " + std::string{resourceName} + " is already registered!");
 
-        auto newResource = std::shared_ptr<T>(mesh, ResourceDeleter{});
+        auto newResource = std::shared_ptr<T>(resource, ResourceDeleter{});
 
         uint32_t newCID = assignCID();
         uint32_t newGID = ResourceManagerBase::getInstance()->assignGlobalId();
-        newResource->setCID(newCID);
-        newResource->setGID(newGID);
-        newResource->setResourceName(resourceName);
+        //newResource->setCID(newCID);
+        newResource->categoryId_ = newCID;
+        //newResource->setGID(newGID);
+        newResource->globalId_ = newGID;
+        //newResource->setResourceName(resourceName);
+        newResource->resourceName_ = resourceName;
         newResource->isRegistered_ = true;
 
         nameToIdMap_[std::string{resourceName}] = newCID;
