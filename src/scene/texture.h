@@ -40,7 +40,7 @@ public:
 
     friend class TextureManager;
 
-    static Texture* initDummy(const glm::vec<4, uint8_t>& color = {255, 0, 255, 255});
+    static std::shared_ptr<Texture> createDummy(std::string_view name,  const glm::vec<4, uint8_t>& color = {255, 0, 255, 255});
 
     Texture(uint32_t width, uint32_t height, uint32_t channels, vk::Format format, vk::ImageUsageFlags imageUsage, vk::MemoryPropertyFlags memoryProperties);
 

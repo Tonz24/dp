@@ -106,10 +106,9 @@ std::vector<std::shared_ptr<Mesh<Vertex3D>>> ModelLoader::loadModel(std::string_
         std::shared_ptr<Material> material = materials.at(mesh->mMaterialIndex);
 
         std::shared_ptr<Mesh<Vertex3D>> parsedMesh = MeshManager::getInstance()->getResource(mesh->mName.C_Str());
-        if (!parsedMesh) {
-            auto mm = new Mesh(std::move(vertices),std::move(indices),material);
-            parsedMesh = MeshManager::getInstance()->registerResource(mm,mesh->mName.C_Str());
-        }
+
+        if (parsedMesh == nullptr)
+            parsedMesh = MeshManager::getInstance()->registerResource(mesh->mName.C_Str(), std::move(vertices),std::move(indices),material);
 
         //  if this mesh is larger than current largest mesh, update the value so that the staging buffer can later contain all the data
         uint32_t verticesSize = parsedMesh->getVertices().size() * sizeof(parsedMesh->getVertices()[0]);
@@ -154,10 +153,8 @@ void ModelLoader::loadMaterials(const std::string& directory, const aiScene& sce
 
         std::shared_ptr<Material> mat = MaterialManager::getInstance()->getResource(name.C_Str());
 
-        if (!mat) {
-            auto mm = new Material();
-            mat = MaterialManager::getInstance()->registerResource(mm,name.C_Str());
-        }
+        if (mat == nullptr)
+            mat = MaterialManager::getInstance()->registerResource(name.C_Str());
 
         //====================================================
         //gamma correctable values first
@@ -201,18 +198,17 @@ void ModelLoader::loadMaterials(const std::string& directory, const aiScene& sce
             if (assimpMaterial->Get(AI_MATKEY_TEXTURE(texType, 0), texName) == AI_SUCCESS){
 
                 std::string fullName{ directory + std::string{texName.C_Str()}};
-                std::shared_ptr<Texture> t = TextureManager::getInstance()->getResource(fullName);
+                auto texture = TextureManager::getInstance()->getResource(fullName);
 
-                if (!t) {
-                    auto tex = new Texture(fullName);
-                    t  = TextureManager::getInstance()->registerResource(tex,fullName);
+                if (texture == nullptr) {
+                    texture  = TextureManager::getInstance()->registerResource(fullName, fullName);
 
                     //  this is a new texture, so mark it for staging
-                    textureNames.insert(t->getResourceName());
+                    textureNames.insert(texture->getResourceName());
                 }
-                mat->setTexture(t,slot);
+                mat->setTexture(texture,slot);
 
-                uint32_t texSize = t->getTotalSize();
+                uint32_t texSize = texture->getTotalSize();
                 if (texSize > stagingBufferSize) stagingBufferSize = texSize;
             }
         }

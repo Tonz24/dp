@@ -5,19 +5,20 @@
 #include "texture.h"
 #include <iostream>
 
+#include "Vertex.h"
 #include "../engine/engine.h"
 #include "../engine/utils.h"
+#include "../engine/managers/resourceManager.h"
 
-::Texture* Texture::initDummy(const glm::vec<4, uint8_t>& color) {
+std::shared_ptr<Texture> Texture::createDummy(std::string_view name,  const glm::vec<4, uint8_t>& color) {
 
-    auto dummy = new Texture(1,1,4,vk::Format::eB8G8R8A8Unorm, vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
+    vk::ImageUsageFlags usageFlags = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
+    auto dummy = TextureManager::getInstance()->registerResource(name,1,1,4,vk::Format::eB8G8R8A8Unorm, usageFlags, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
     memcpy(dummy->data_.data(),&color[0],sizeof(color));
 
     VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(dummy->getTotalSize(),vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingAllocFlagsVMA);
-
     dummy->stage(stagingBuffer);
-
     VkUtils::destroyBufferVMA(stagingBuffer);
 
     return dummy;

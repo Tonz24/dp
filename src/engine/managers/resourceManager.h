@@ -139,3 +139,4 @@ class MaterialManager : public ResourceManager<Material, MaterialManager> {
     friend class ResourceManager<Material, MaterialManager>;
     MaterialManager() = default;
 };
+

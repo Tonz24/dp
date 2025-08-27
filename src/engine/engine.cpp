@@ -140,8 +140,7 @@ void Engine::initImGui() {
 }
 
 void Engine::initDummyTexture() {
-    auto dummy = Texture::initDummy();
-    dummy_ = TextureManager::getInstance()->registerResource(dummy,"dummy");
+    dummy_ = Texture::createDummy("dummy");
 }
 
 void Engine::initVulkan() {
@@ -1225,8 +1224,7 @@ void Engine::initDepthResources() {
     int width{},height{};
     glfwGetFramebufferSize(window->getGlfwWindow(),&width,&height);
 
-    Texture* depthTexture = new Texture(width, height, 1,depthFormat_, vk::ImageUsageFlagBits::eDepthStencilAttachment,vk::MemoryPropertyFlagBits::eDeviceLocal);
-    depthTexture_ = TextureManager::getInstance()->registerResource(depthTexture,"Depth texture");
+    depthTexture_ = TextureManager::getInstance()->registerResource("depth_texture",width, height, 1,depthFormat_, vk::ImageUsageFlagBits::eDepthStencilAttachment,vk::MemoryPropertyFlagBits::eDeviceLocal);
 
     auto cmdBuf = VkUtils::beginSingleTimeCommand();
 
@@ -1247,8 +1245,7 @@ void Engine::initIdMapImage() {
     int width{},height{};
     glfwGetFramebufferSize(window->getGlfwWindow(),&width,&height);
 
-    Texture* objectIdMapTexture = new Texture(width, height, 1,idMapFormat_, vk::ImageUsageFlagBits::eColorAttachment,vk::MemoryPropertyFlagBits::eDeviceLocal);
-    objectIdMap_ = TextureManager::getInstance()->registerResource(objectIdMapTexture,"Object id map texure");
+    objectIdMap_ = TextureManager::getInstance()->registerResource("id_map_texture", width, height, 1,idMapFormat_, vk::ImageUsageFlagBits::eColorAttachment,vk::MemoryPropertyFlagBits::eDeviceLocal);
 
     auto cmdBuf = VkUtils::beginSingleTimeCommand();
 
