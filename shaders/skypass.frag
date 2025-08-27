@@ -32,4 +32,6 @@ void main() {
     envMapColor = aces(envMapColor);
 
     fragColor = vec4(envMapColor,1.0);
+
+    //fragColor = vec4(texCoord,0,1);
 }
