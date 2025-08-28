@@ -1336,5 +1336,5 @@ void Engine::clickSceneObject(const glm::vec<2,double>& cursorPos) const {
 
     // id 0 is reserved as invalid
     if (clickedObjectId != 0)
-        scene_->setSelectedObjectIndex(clickedObjectId);
+        scene_->setSelectedObject(clickedObjectId);
 }

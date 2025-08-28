@@ -8,6 +8,7 @@
 #include "mesh.h"
 #include "camera.h"
 #include "../engine/iDrawGui.h"
+#include "../engine/managers/resourceManager.h"
 
 class Scene : public IDrawGui {
 public:
@@ -24,12 +25,12 @@ public:
 
     bool drawGUI() override;
 
-    void setSelectedObjectIndex(uint32_t newIndex) {
+    void setSelectedObject(uint32_t objectCId) {
+        selectedObject_ = MeshManager::getInstance()->getResource(objectCId);
+    }
 
-        if (newIndex > meshes_.size() - 1 )
-            throw std::runtime_error("ERROR: new selected object index out of bounds!");
-
-        selectedObjectIndex_ = newIndex;
+    void setSelectedObject(std::shared_ptr<Mesh> object) {
+        selectedObject_ = std::move(object);
     }
 
 private:
@@ -37,5 +38,7 @@ private:
     std::shared_ptr<Camera> camera_{};
     std::shared_ptr<Texture> sky_{};
 
+
+    std::shared_ptr<Mesh> selectedObject_{};
     uint32_t selectedObjectIndex_{0};
 };

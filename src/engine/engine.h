@@ -10,6 +10,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 #include <glm/glm.hpp>
+#include <imgui/imgui.h>
 
 #include "window.h"
 #include "../scene/camera.h"
@@ -227,7 +228,7 @@ private:
     static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods){
         const auto app = static_cast<Engine*>(glfwGetWindowUserPointer(window));
 
-        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS && app->window->getCursorMode() == Window::CursorMode::normal)
+        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS && app->window->getCursorMode() == Window::CursorMode::normal && !ImGui::GetIO().WantCaptureMouse)
             app->clickSceneObject(app->cursorPos_);
     }
 
