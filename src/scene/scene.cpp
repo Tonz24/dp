@@ -12,9 +12,8 @@ bool Scene::drawGUI() {
 
     if (ImGui::CollapsingHeader("Scene")) {
         ImGui::Indent();
-        ImGui::Text("Selected mesh ");
+        ImGui::Text("Selected mesh: ");
         ImGui::SameLine();
-
 
         if (selectedObject_ != nullptr) {
             ImGui::Text(selectedObject_->getResourceName().c_str());

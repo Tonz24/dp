@@ -22,7 +22,7 @@ vec3 sampleSphericalMap(vec3 dir, sampler2D sphericalTex){
 }
 
 void main() {
-    vec4 camRay = vec4(cameraUBO.matInvVP * vec4(inNDCxy,1,1));
+    vec4 camRay = cameraUBO.matInvVP * vec4(inNDCxy,1,1);
     vec3 dir = normalize(camRay.xyz / camRay.w - cameraUBO.posWS);
 
     vec3 envMapColor = sampleSphericalMap(dir, skyTexture);

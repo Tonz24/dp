@@ -19,7 +19,7 @@ void main() {
     Material mat = materialUBO.materials[pcs.matIndex];
 
     vec3 diffColor = mat.diffuseAlbedo;
-    diffColor = texture(diffAlbedoMap, texCoord).xyz;
+    //diffColor = texture(diffAlbedoMap, texCoord).xyz;
 
 
     //outColor = vec4(diffColor, 1.0);
