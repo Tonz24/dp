@@ -41,13 +41,6 @@ void Engine::init() {
         return;
 
     initGLFW();
-    window = std::make_unique<Window>("DP",1280,720,false);
-
-    glfwSetWindowUserPointer(window->getGlfwWindow(),this);
-    glfwSetFramebufferSizeCallback(window->getGlfwWindow(),framebufferResizeCallback);
-    glfwSetCursorPosCallback(window->getGlfwWindow(),mouseMovementCallback);
-    glfwSetKeyCallback(window->getGlfwWindow(),InputManager::keyCallback);
-
     initVulkan();
     initImGui();
 
@@ -77,6 +70,14 @@ void Engine::initGLFW() {
         throw std::runtime_error("ERROR: Vulkan not supported by GLFW!");
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+
+    window = std::make_unique<Window>("DP",1280,720,false);
+
+    glfwSetWindowUserPointer(window->getGlfwWindow(),this);
+    glfwSetFramebufferSizeCallback(window->getGlfwWindow(),framebufferResizeCallback);
+    glfwSetCursorPosCallback(window->getGlfwWindow(),mouseMovementCallback);
+    glfwSetKeyCallback(window->getGlfwWindow(),InputManager::keyCallback);
+    glfwSetMouseButtonCallback(window->getGlfwWindow(),mouseButtonCallback);
 }
 
 void Engine::initImGui() {
@@ -995,6 +996,9 @@ void Engine::initUniformBuffers() {
         materialUBOsMapped_.emplace_back(static_cast<unsigned char*>(buffer.allocationInfo.pMappedData));
         materialUBOs_.emplace_back(std::move(buffer));
     }
+
+    auto allocationCreateFlags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+    idMapTransferBuffer_ = VkUtils::createBufferVMA(sizeof(uint32_t),vk::BufferUsageFlagBits::eTransferDst, allocationCreateFlags);
 }
 
 void Engine::initDescriptorPool() {
@@ -1222,7 +1226,7 @@ void Engine::initDepthResources() {
 
     auto cmdBuf = VkUtils::beginSingleTimeCommand();
 
-    VkUtils::transitionImageLayout(depthTexture_->getVkImage(),
+    VkUtils::transitionImageLayout(depthTexture_->getVkImage().image,
                                    vk::ImageLayout::eUndefined,
                                    vk::ImageLayout::eDepthAttachmentOptimal,
                                    vk::PipelineStageFlagBits2::eTopOfPipe,
@@ -1239,11 +1243,12 @@ void Engine::initIdMapImage() {
     int width{},height{};
     glfwGetFramebufferSize(window->getGlfwWindow(),&width,&height);
 
-    objectIdMap_ = TextureManager::getInstance()->registerResource("id_map_texture", width, height, 1,idMapFormat_, vk::ImageUsageFlagBits::eColorAttachment,vk::MemoryPropertyFlagBits::eDeviceLocal);
+    vk::ImageUsageFlags flags = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc;
+    objectIdMap_ = TextureManager::getInstance()->registerResource("id_map_texture", width, height, 1,idMapFormat_, flags,vk::MemoryPropertyFlagBits::eDeviceLocal);
 
     auto cmdBuf = VkUtils::beginSingleTimeCommand();
 
-    VkUtils::transitionImageLayout(objectIdMap_->getVkImage(),
+    VkUtils::transitionImageLayout(objectIdMap_->getVkImage().image,
                                    vk::ImageLayout::eUndefined,
                                    vk::ImageLayout::eColorAttachmentOptimal,
                                    vk::PipelineStageFlagBits2::eTopOfPipe,
@@ -1282,6 +1287,7 @@ void Engine::cleanUBOs() {
     }
 }
 
+
 void Engine::setCameraUBOStorage(const CameraUBOFormat& data) {
     dirtyCameraUBO_ = true;
     cameraUBOStorage_ = data;
@@ -1293,3 +1299,42 @@ void Engine::setMaterialUBOStorage(uint32_t updateIndex, const MaterialUBOFormat
     materialUBOStorage_ = data;
 }
 
+void Engine::clickSceneObject(const glm::vec<2,double>& cursorPos) const {
+    auto xPos = static_cast<int32_t>(glm::floor(cursorPos.x));
+    auto yPos = static_cast<int32_t>(glm::floor(cursorPos.y));
+
+    auto cmdBuf = VkUtils::beginSingleTimeCommand();
+
+    VkUtils::transitionImageLayout(objectIdMap_->getVkImage().image,
+                                   vk::ImageLayout::eColorAttachmentOptimal,
+                                   vk::ImageLayout::eTransferSrcOptimal,
+                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                                   vk::AccessFlagBits2::eColorAttachmentWrite,
+                                   vk::PipelineStageFlagBits2::eTransfer,
+                                   vk::AccessFlagBits2::eTransferRead,
+                                   vk::ImageAspectFlagBits::eColor,
+                                   cmdBuf);
+
+    VkUtils::copyImageToBuffer(objectIdMap_->getVkImage(),idMapTransferBuffer_,xPos,1,yPos,1,cmdBuf);
+
+
+    VkUtils::transitionImageLayout(objectIdMap_->getVkImage().image,
+                                   vk::ImageLayout::eTransferSrcOptimal,
+                                   vk::ImageLayout::eColorAttachmentOptimal,
+                                   vk::PipelineStageFlagBits2::eTransfer,
+                                   vk::AccessFlagBits2::eTransferRead,
+                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                                   vk::AccessFlagBits2::eColorAttachmentWrite,
+                                   vk::ImageAspectFlagBits::eColor,
+                                   cmdBuf);
+
+    VkUtils::endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
+
+    uint32_t clickedObjectId = *static_cast<uint32_t*>(idMapTransferBuffer_.allocationInfo.pMappedData);
+
+    std::cout << clickedObjectId << std::endl;
+
+    // id 0 is reserved as invalid
+    if (clickedObjectId != 0)
+        scene_->setSelectedObjectIndex(clickedObjectId);
+}

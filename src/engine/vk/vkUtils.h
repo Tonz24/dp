@@ -50,6 +50,7 @@ public:
 
 
     static void copyBufferToImage(const BufferAlloc& buffer, const ImageAlloc& image, uint32_t width, uint32_t height, vk::raii::CommandBuffer& cmdBuf);
+    static void copyImageToBuffer(const ImageAlloc& image, const BufferAlloc& buffer, int32_t offsetX, uint32_t width, int32_t offsetY, uint32_t height, vk::raii::CommandBuffer& cmdBuf);
 
     /**
      * @brief allocates and returns a new command buffer

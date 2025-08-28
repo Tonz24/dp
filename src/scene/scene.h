@@ -24,6 +24,14 @@ public:
 
     bool drawGUI() override;
 
+    void setSelectedObjectIndex(uint32_t newIndex) {
+
+        if (newIndex > meshes_.size() - 1 )
+            throw std::runtime_error("ERROR: new selected object index out of bounds!");
+
+        selectedObjectIndex_ = newIndex;
+    }
+
 private:
     std::vector<std::shared_ptr<Mesh>> meshes_{};
     std::shared_ptr<Camera> camera_{};

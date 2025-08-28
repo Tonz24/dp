@@ -48,7 +48,7 @@ private:
 
     Engine() = default;
 
-    static void initGLFW();
+    void initGLFW();
     void initImGui();
 
     void initDummyTexture();
@@ -223,10 +223,17 @@ private:
             app->scene_->getCamera().updateOrientation(delta.x,delta.y);
     }
 
+
+    static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods){
+        const auto app = static_cast<Engine*>(glfwGetWindowUserPointer(window));
+
+        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS && app->window->getCursorMode() == Window::CursorMode::normal)
+            app->clickSceneObject(app->cursorPos_);
+    }
+
     std::shared_ptr<Scene> scene_{};
 
     vk::raii::DescriptorPool uiPool_{nullptr};
-
 
     std::shared_ptr<Texture> depthTexture_{nullptr};
     vk::Format depthFormat_{vk::Format::eD32Sfloat};
@@ -252,4 +259,7 @@ private:
     vk::raii::DescriptorSetLayout descriptorSetLayoutSky_{nullptr};
     vk::raii::DescriptorSet skyDescriptorSet_{nullptr};
     std::shared_ptr<Texture> sky_;
+
+    VkUtils::BufferAlloc idMapTransferBuffer_{};
+    void clickSceneObject(const glm::vec<2,double>& cursorPos) const;
 };

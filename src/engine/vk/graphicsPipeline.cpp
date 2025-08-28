@@ -52,12 +52,12 @@ GraphicsPipeline::GraphicsPipeline(std::string_view vShaderPath, std::string_vie
     };
 
 
-    vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
+    vk::PipelineVertexInputStateCreateInfo vertexInputInfo{};
+
+    auto bindingDescription = Vertex3D::getBindingDescription();
+    auto attributeDescriptions = Vertex3D::getAttributeDescriptions();
 
     if (hasVertexLayout) {
-        auto bindingDescription = Vertex3D::getBindingDescription();
-        auto attributeDescriptions = Vertex3D::getAttributeDescriptions();
-
         vertexInputInfo = {
             .vertexBindingDescriptionCount = 1,
             .pVertexBindingDescriptions = &bindingDescription,

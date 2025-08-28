@@ -80,7 +80,7 @@ void VkUtils::copyBuffer(const BufferAlloc& srcBuffer, const BufferAlloc& dstBuf
 }
 
 void VkUtils::copyBufferToImage(const BufferAlloc& buffer, const ImageAlloc& image, uint32_t width, uint32_t height, vk::raii::CommandBuffer& cmdBuf) {
-    vk::BufferImageCopy region{
+    vk::BufferImageCopy region {
         .bufferOffset = 0,
         .bufferRowLength = 0,
         .bufferImageHeight = 0,
@@ -103,6 +103,34 @@ void VkUtils::copyBufferToImage(const BufferAlloc& buffer, const ImageAlloc& ima
     };
 
     cmdBuf.copyBufferToImage(buffer.buffer,image.image,vk::ImageLayout::eTransferDstOptimal,region);
+}
+
+void VkUtils::copyImageToBuffer(const ImageAlloc& image, const BufferAlloc& buffer, int32_t offsetX, uint32_t width,
+                                int32_t offsetY, uint32_t height, vk::raii::CommandBuffer& cmdBuf)
+{
+    vk::BufferImageCopy region {
+        .bufferOffset = 0,
+        .bufferRowLength = 0,
+        .bufferImageHeight = 0,
+        .imageSubresource = {
+            .aspectMask = vk::ImageAspectFlagBits::eColor,
+            .mipLevel = 0,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        },
+        .imageOffset = {
+            .x = offsetX,
+            .y = offsetY,
+            .z = 0
+        },
+        .imageExtent = {
+            .width = width,
+            .height = height,
+            .depth = 1
+        }
+    };
+
+    cmdBuf.copyImageToBuffer(image.image,vk::ImageLayout::eTransferSrcOptimal,buffer.buffer,region);
 }
 
 
@@ -167,9 +195,8 @@ void VkUtils::endSingleTimeCommand(const vk::raii::CommandBuffer& cmdBuf, QueueT
 }
 
 void VkUtils::transitionImageLayout(const vk::Image& image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, vk::PipelineStageFlags2 srcStageMask,
-                                    vk::AccessFlags2 srcAccessMask, vk::PipelineStageFlags2 dstStageMask, vk::AccessFlags2 dstAccessMask, vk::ImageAspectFlags imageAspectFlags, vk::raii::CommandBuffer& cmdBuf) {
-
-
+                                    vk::AccessFlags2 srcAccessMask, vk::PipelineStageFlags2 dstStageMask, vk::AccessFlags2 dstAccessMask,
+                                    vk::ImageAspectFlags imageAspectFlags, vk::raii::CommandBuffer& cmdBuf) {
 
     vk::ImageMemoryBarrier2 barrier{
         .srcStageMask = srcStageMask,

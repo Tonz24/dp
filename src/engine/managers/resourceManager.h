@@ -7,7 +7,6 @@
 #include <string>
 #include <unordered_map>
 #include <iostream>
-#include <type_traits>
 
 #include "managedResource.h"
 #include "resourceManagerBase.h"
