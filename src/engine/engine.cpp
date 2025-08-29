@@ -124,7 +124,7 @@ void Engine::initImGui() {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
             .colorAttachmentCount = 1,
             .pColorAttachmentFormats = &format,
-            .depthAttachmentFormat = static_cast<VkFormat>(depthFormat_),
+            .depthAttachmentFormat = static_cast<VkFormat>(GBuffer::depthMapVkFormat),
         },
     };
 
@@ -165,12 +165,10 @@ void Engine::initVulkan() {
     initCommandPool();
     initCommandBuffers();
 
-    initDepthResources();
     initGraphicsPipeline();
 
     initSyncObjects();
 
-    initIdMapImage();
     initDummyTexture();
 
     gBuffer_ = GBufferManager::getInstance()->registerResource("gbuffer_test",1280,720);
@@ -517,13 +515,13 @@ void Engine::initImageViews() {
 
 void Engine::initGraphicsPipeline() {
     std::vector descriptorSetLayouts = {*descriptorSetLayoutFrame_, *descriptorSetLayoutMaterial_};
-    std::vector colorAttachmentFormats = {swapChainImageFormat, idMapFormat_};
+    std::vector colorAttachmentFormats = {swapChainImageFormat, GBuffer::idMapVkFormat};
 
     std::span colorAttachmentFormatsSky{colorAttachmentFormats.begin(),1};
 
     std::vector descriptorSetLayoutsSky = {*descriptorSetLayoutFrame_, *Scene::getDescriptorSetLayout()};
-    rasterPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/shader_frag.spv",descriptorSetLayouts,colorAttachmentFormats,true, depthFormat_};
-    gBufferPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/shader_frag.spv",descriptorSetLayouts,colorAttachmentFormats,true, depthFormat_};
+    rasterPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/shader_frag.spv",descriptorSetLayouts,colorAttachmentFormats,true, GBuffer::depthMapVkFormat};
+    gBufferPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/shader_frag.spv",descriptorSetLayouts,colorAttachmentFormats,true, GBuffer::depthMapVkFormat};
     skyboxPipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/skypass_frag.spv",descriptorSetLayoutsSky,colorAttachmentFormatsSky, false};
 }
 
@@ -803,8 +801,6 @@ void Engine::mainLoop() {
 void Engine::cleanup() {
     scene_.reset();
 
-    depthTexture_.reset();
-    objectIdMap_.reset();
     dummy_.reset();
     gBuffer_.reset();
 
@@ -1055,7 +1051,7 @@ void Engine::renderScene(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, u
     };
 
     vk::RenderingAttachmentInfo idMapAttachmentInfo = {
-        .imageView = objectIdMap_->getVkImageView(),
+        .imageView = gBuffer_->getObjectIdMap().getVkImageView(),
         .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
         .loadOp = vk::AttachmentLoadOp::eClear,
         .storeOp = vk::AttachmentStoreOp::eStore,
@@ -1066,7 +1062,7 @@ void Engine::renderScene(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, u
 
     vk::ClearValue depthClearColor = vk::ClearDepthStencilValue(1.0f,0);
     vk::RenderingAttachmentInfo depthAttachmentInfo = {
-        .imageView = depthTexture_->getVkImageView(),
+        .imageView = gBuffer_->getDepthMap().getVkImageView(),
         .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
         .loadOp = vk::AttachmentLoadOp::eClear,
         .storeOp = vk::AttachmentStoreOp::eStore,
@@ -1163,8 +1159,7 @@ void Engine::recreateSwapchain() {
     cleanupSwapchain();
     initSwapchain();
     initImageViews();
-    initDepthResources();
-    initIdMapImage();
+    //TODO: recreate g buffer
 }
 
 void Engine::cleanupSwapchain() {
@@ -1172,48 +1167,6 @@ void Engine::cleanupSwapchain() {
     swapChain = nullptr;
 }
 
-void Engine::initDepthResources() {
-    int width{},height{};
-    glfwGetFramebufferSize(window->getGlfwWindow(),&width,&height);
-
-    depthTexture_ = TextureManager::getInstance()->registerResource("depth_texture",width, height, 1,depthFormat_, vk::ImageUsageFlagBits::eDepthStencilAttachment);
-
-    auto cmdBuf = VkUtils::beginSingleTimeCommand();
-
-    VkUtils::transitionImageLayout(depthTexture_->getVkImage().image,
-                                   vk::ImageLayout::eUndefined,
-                                   vk::ImageLayout::eDepthAttachmentOptimal,
-                                   vk::PipelineStageFlagBits2::eTopOfPipe,
-                                   vk::AccessFlagBits2::eNone,
-                                   vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
-                                   vk::AccessFlagBits2::eDepthStencilAttachmentWrite | vk::AccessFlagBits2::eDepthStencilAttachmentRead,
-                                   vk::ImageAspectFlagBits::eDepth,
-                                   cmdBuf);
-
-    VkUtils::endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
-}
-
-void Engine::initIdMapImage() {
-    int width{},height{};
-    glfwGetFramebufferSize(window->getGlfwWindow(),&width,&height);
-
-    vk::ImageUsageFlags flags = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc;
-    objectIdMap_ = TextureManager::getInstance()->registerResource("id_map_texture", width, height, 1,idMapFormat_, flags);
-
-    auto cmdBuf = VkUtils::beginSingleTimeCommand();
-
-    VkUtils::transitionImageLayout(objectIdMap_->getVkImage().image,
-                                   vk::ImageLayout::eUndefined,
-                                   vk::ImageLayout::eColorAttachmentOptimal,
-                                   vk::PipelineStageFlagBits2::eTopOfPipe,
-                                   vk::AccessFlagBits2::eNone,
-                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                   vk::AccessFlagBits2::eColorAttachmentWrite,
-                                   vk::ImageAspectFlagBits::eColor,
-                                   cmdBuf);
-
-    VkUtils::endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
-}
 
 void Engine::configureVkUtils() const {
 
@@ -1259,7 +1212,10 @@ void Engine::clickSceneObject(const glm::vec<2,double>& cursorPos) const {
 
     auto cmdBuf = VkUtils::beginSingleTimeCommand();
 
-    VkUtils::transitionImageLayout(objectIdMap_->getVkImage().image,
+    const auto& idMap = gBuffer_->getObjectIdMap();
+
+
+    VkUtils::transitionImageLayout(idMap.getVkImage().image,
                                    vk::ImageLayout::eColorAttachmentOptimal,
                                    vk::ImageLayout::eTransferSrcOptimal,
                                    vk::PipelineStageFlagBits2::eColorAttachmentOutput,
@@ -1269,10 +1225,10 @@ void Engine::clickSceneObject(const glm::vec<2,double>& cursorPos) const {
                                    vk::ImageAspectFlagBits::eColor,
                                    cmdBuf);
 
-    VkUtils::copyImageToBuffer(objectIdMap_->getVkImage(),idMapTransferBuffer_,xPos,1,yPos,1,cmdBuf);
+    VkUtils::copyImageToBuffer(idMap.getVkImage(),idMapTransferBuffer_,xPos,1,yPos,1,cmdBuf);
 
 
-    VkUtils::transitionImageLayout(objectIdMap_->getVkImage().image,
+    VkUtils::transitionImageLayout(idMap.getVkImage().image,
                                    vk::ImageLayout::eTransferSrcOptimal,
                                    vk::ImageLayout::eColorAttachmentOptimal,
                                    vk::PipelineStageFlagBits2::eTransfer,

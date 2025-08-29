@@ -234,16 +234,8 @@ private:
 
     vk::raii::DescriptorPool uiPool_{nullptr};
 
-    std::shared_ptr<Texture> depthTexture_{nullptr};
-    vk::Format depthFormat_{vk::Format::eD32Sfloat};
-
-    std::shared_ptr<Texture> objectIdMap_{nullptr};
-    vk::Format idMapFormat_{vk::Format::eR32Uint};
-
     std::shared_ptr<Texture> dummy_{nullptr};
 
-    void initDepthResources();
-    void initIdMapImage();
     void configureVkUtils() const;
     void updateUBOs();
 

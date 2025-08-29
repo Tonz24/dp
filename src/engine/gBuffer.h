@@ -26,6 +26,9 @@ public:
     [[nodiscard]] Texture& getObjectIdMap() const { return *objectIdMap_; }
     [[nodiscard]] Texture& getTarget() const { return *target_; }
 
+    static constexpr vk::Format depthMapVkFormat{vk::Format::eD32Sfloat};
+    static constexpr vk::Format idMapVkFormat{vk::Format::eR32Uint};
+
 private:
     friend class GBufferManager;
 
@@ -51,12 +54,10 @@ private:
 
     std::shared_ptr<Texture> depthMap_{nullptr};
     static constexpr uint32_t depthMapChannelCount{1};
-    static constexpr vk::Format depthMapVkFormat{vk::Format::eD32Sfloat};
     static constexpr vk::ImageUsageFlags depthMapUsageFlags{vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eDepthStencilAttachment}; // sampled because of world space position reconstruction from depth
 
     std::shared_ptr<Texture> objectIdMap_{nullptr};
     static constexpr uint32_t idMapChannelCount{1};
-    static constexpr vk::Format idMapVkFormat{vk::Format::eR32Uint};
     static constexpr vk::ImageUsageFlags idMapUsageFlags{vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc};  // transfer src for retrieving id at cursor position
 
     std::shared_ptr<Texture> target_{nullptr};

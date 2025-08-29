@@ -72,7 +72,7 @@ GBuffer::GBuffer(std::string_view resourceName, uint32_t width, uint32_t height)
                                   cmdBuf);
 
 
-
+*/
     //  transition depth
     VkUtils::transitionImageLayout(depthMap_->getVkImage().image,
                                   vk::ImageLayout::eUndefined,
@@ -82,7 +82,7 @@ GBuffer::GBuffer(std::string_view resourceName, uint32_t width, uint32_t height)
                                   vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
                                   vk::AccessFlagBits2::eDepthStencilAttachmentWrite | vk::AccessFlagBits2::eDepthStencilAttachmentRead,
                                   vk::ImageAspectFlagBits::eDepth,
-                                  cmdBuf);*/
+                                  cmdBuf);
 
     //  transition id map
     VkUtils::transitionImageLayout(objectIdMap_->getVkImage().image,
