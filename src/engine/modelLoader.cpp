@@ -201,7 +201,8 @@ void ModelLoader::loadMaterials(const std::string& directory, const aiScene& sce
                 auto texture = TextureManager::getInstance()->getResource(fullName);
 
                 if (texture == nullptr) {
-                    texture  = TextureManager::getInstance()->registerResource(fullName, fullName);
+                    bool isSrgb = slot != Material::TextureMapSlot::normalMapSlot;
+                    texture  = TextureManager::getInstance()->registerResource(fullName, fullName, isSrgb);
 
                     //  this is a new texture, so mark it for staging
                     textureNames.insert(texture->getResourceName());

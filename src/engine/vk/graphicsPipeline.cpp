@@ -8,7 +8,7 @@
 
 
 GraphicsPipeline::GraphicsPipeline(std::string_view vShaderPath, std::string_view fShaderPath,
-                                   std::span<vk::DescriptorSetLayout> descriptorSetLayouts, std::span<vk::Format> colorAttachmentFormats, bool hasVertexLayout, vk::Format depthFormat) {
+                                   std::span<const vk::DescriptorSetLayout> descriptorSetLayouts, std::span<const vk::Format> colorAttachmentFormats, bool hasVertexLayout, vk::Format depthFormat) {
     initShaders(vShaderPath,fShaderPath);
 
     vk::PipelineLayoutCreateInfo pipelineLayoutInfo{

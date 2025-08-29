@@ -9,6 +9,7 @@ Ks 0.500000 0.500000 0.500000
 Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 map_Kd jpeg.jpg
+map_Kn normal.jpeg
 d 1.000000
 illum 2
 

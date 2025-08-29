@@ -518,10 +518,12 @@ void Engine::initGraphicsPipeline() {
     std::vector colorAttachmentFormats = {swapChainImageFormat, GBuffer::idMapVkFormat};
 
     std::span colorAttachmentFormatsSky{colorAttachmentFormats.begin(),1};
+    std::span colorAttachmentFormatsGBuffer{GBuffer::attachmentFormats};
+    std::array huhAttachments{swapChainImageFormat, GBuffer::attachmentFormats[1],GBuffer::attachmentFormats[2]};
 
     std::vector descriptorSetLayoutsSky = {*descriptorSetLayoutFrame_, *Scene::getDescriptorSetLayout()};
     rasterPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/shader_frag.spv",descriptorSetLayouts,colorAttachmentFormats,true, GBuffer::depthMapVkFormat};
-    gBufferPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/shader_frag.spv",descriptorSetLayouts,colorAttachmentFormats,true, GBuffer::depthMapVkFormat};
+    gBufferPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/gbuffer_fill_frag.spv",descriptorSetLayouts,huhAttachments,true, GBuffer::depthMapVkFormat};
     skyboxPipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/skypass_frag.spv",descriptorSetLayoutsSky,colorAttachmentFormatsSky, false};
 }
 
@@ -1042,23 +1044,33 @@ void Engine::renderSky(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uin
 void Engine::renderScene(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uint32_t frameInFlightIndex) {
     //set up the color attachment
     vk::ClearValue clearColor = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
-    vk::RenderingAttachmentInfo colorAttachmentInfo = {
-        .imageView = swapChainImageViews[imageIndex],
-        .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-        .loadOp = vk::AttachmentLoadOp::eLoad,
-        .storeOp = vk::AttachmentStoreOp::eStore,
-        .clearValue = clearColor
-    };
 
-    vk::RenderingAttachmentInfo idMapAttachmentInfo = {
-        .imageView = gBuffer_->getObjectIdMap().getVkImageView(),
-        .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-        .loadOp = vk::AttachmentLoadOp::eClear,
-        .storeOp = vk::AttachmentStoreOp::eStore,
-        .clearValue = clearColor
-    };
 
-    std::array colorAttachmentInfos = {colorAttachmentInfo,idMapAttachmentInfo};
+
+
+    std::array colorAttachmentInfos = {
+        vk::RenderingAttachmentInfo { // swapchain image
+            .imageView = swapChainImageViews[imageIndex],
+            .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+            .loadOp = vk::AttachmentLoadOp::eLoad,
+            .storeOp = vk::AttachmentStoreOp::eStore,
+            .clearValue = clearColor
+        },
+        vk::RenderingAttachmentInfo { // normals
+            .imageView = gBuffer_->getNormalMap().getVkImageView(),
+            .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+            .loadOp = vk::AttachmentLoadOp::eLoad,
+            .storeOp = vk::AttachmentStoreOp::eStore,
+            .clearValue = clearColor
+        },
+        vk::RenderingAttachmentInfo { // id map
+            .imageView = gBuffer_->getObjectIdMap().getVkImageView(),
+            .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+            .loadOp = vk::AttachmentLoadOp::eClear,
+            .storeOp = vk::AttachmentStoreOp::eStore,
+            .clearValue = clearColor
+        }
+    };
 
     vk::ClearValue depthClearColor = vk::ClearDepthStencilValue(1.0f,0);
     vk::RenderingAttachmentInfo depthAttachmentInfo = {
@@ -1108,11 +1120,11 @@ void Engine::renderScene(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, u
     cmdBuf.setScissor(0, scissor);
 
     //  bind graphics pipeline and global descriptor set
-    cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, rasterPipeline_.getGraphicsPipeline());
-    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, rasterPipeline_.getPipelineLayout(), 0, *descriptorSets_[frameInFlightIndex], nullptr);
+    cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, gBufferPipeline_.getGraphicsPipeline());
+    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, gBufferPipeline_.getPipelineLayout(), 0, *descriptorSets_[frameInFlightIndex], nullptr);
 
     for (const auto &mesh : scene_->getMeshes()) {
-        mesh->recordDrawCommands(cmdBuf, rasterPipeline_.getPipelineLayout());
+        mesh->recordDrawCommands(cmdBuf, gBufferPipeline_.getPipelineLayout());
     }
     cmdBuf.endRendering();
 }

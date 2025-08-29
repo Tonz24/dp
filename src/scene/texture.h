@@ -23,7 +23,7 @@ public:
     Texture(Texture&&) = delete;
     Texture& operator=(Texture&&) = delete;
 
-    explicit Texture(std::string_view fileName);
+    explicit Texture(std::string_view fileName, bool isSrgb);
     Texture(uint32_t width, uint32_t height, uint32_t channels, vk::Format format, vk::ImageUsageFlags imageUsage);
 
 
@@ -51,7 +51,7 @@ private:
 
     void initVkImage();
 
-    vk::Format chooseVkFormat() const;
+    vk::Format chooseVkFormat(bool isSrgb) const;
 
     static int getChannelCount(FREE_IMAGE_TYPE type, uint32_t bpp);
 

@@ -26,43 +26,44 @@ public:
     [[nodiscard]] Texture& getObjectIdMap() const { return *objectIdMap_; }
     [[nodiscard]] Texture& getTarget() const { return *target_; }
 
+    static constexpr vk::ImageUsageFlags defaultAttachmentUsageFlags{
+        vk::ImageUsageFlagBits::eSampled | //  will be sampled in a shader later
+        vk::ImageUsageFlagBits::eColorAttachment | //  render target output
+        vk::ImageUsageFlagBits::eTransferSrc // in case of needing to blit into the swapchain
+    };
+
+    static constexpr uint32_t albedoMapChannelCount{4};
+    static constexpr vk::Format albedoMapVkFormat{vk::Format::eR8G8B8A8Unorm};
+    static constexpr vk::ImageUsageFlags albedoMapUsageFlags{defaultAttachmentUsageFlags}; // transfer src for blitting into swapchain
+
+    static constexpr uint32_t normalMapChannelCount{4};
+    static constexpr vk::Format normalMapVkFormat{vk::Format::eR16G16B16A16Sfloat};
+    static constexpr vk::ImageUsageFlags normalMapUsageFlags{defaultAttachmentUsageFlags}; // transfer src for blitting into swapchain
+
+    static constexpr uint32_t depthMapChannelCount{1};
     static constexpr vk::Format depthMapVkFormat{vk::Format::eD32Sfloat};
+    static constexpr vk::ImageUsageFlags depthMapUsageFlags{vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eDepthStencilAttachment}; // sampled because of world space position reconstruction from depth
+
     static constexpr vk::Format idMapVkFormat{vk::Format::eR32Uint};
+    static constexpr uint32_t idMapChannelCount{1};
+    static constexpr vk::ImageUsageFlags idMapUsageFlags{vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc};  // transfer src for retrieving id at cursor position
+
+    static constexpr uint32_t targetChannelCount{4};
+    static constexpr vk::Format targetVkFormat{vk::Format::eR8G8B8A8Unorm};
+    static constexpr vk::ImageUsageFlags targetUsageFlags{vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc}; // transfer src for blitting into swapchain
+
+    static constexpr std::array attachmentFormats{albedoMapVkFormat, normalMapVkFormat, idMapVkFormat};
+
 
 private:
     friend class GBufferManager;
 
     GBuffer(std::string_view resourceName, uint32_t width, uint32_t height);
 
-
-    static constexpr vk::ImageUsageFlags defaultAttachmentUsageFlags{
-        vk::ImageUsageFlagBits::eSampled | //  it will be sampled in a shader later
-        vk::ImageUsageFlagBits::eColorAttachment | //  render target output
-        vk::ImageUsageFlagBits::eTransferSrc // in case of needing to blit into the swapchain
-    };
-
-
     std::shared_ptr<Texture> albedoMap_{nullptr};
-    static constexpr uint32_t albedoMapChannelCount{4};
-    static constexpr vk::Format albedoMapVkFormat{vk::Format::eR8G8B8A8Unorm};
-    static constexpr vk::ImageUsageFlags albedoMapUsageFlags{defaultAttachmentUsageFlags}; // transfer src for blitting into swapchain
-
     std::shared_ptr<Texture> normalMap_{nullptr};
-    static constexpr uint32_t normalMapChannelCount{4};
-    static constexpr vk::Format normalMapVkFormat{vk::Format::eR16G16B16A16Sfloat};
-    static constexpr vk::ImageUsageFlags normalMapUsageFlags{defaultAttachmentUsageFlags}; // transfer src for blitting into swapchain
-
     std::shared_ptr<Texture> depthMap_{nullptr};
-    static constexpr uint32_t depthMapChannelCount{1};
-    static constexpr vk::ImageUsageFlags depthMapUsageFlags{vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eDepthStencilAttachment}; // sampled because of world space position reconstruction from depth
-
     std::shared_ptr<Texture> objectIdMap_{nullptr};
-    static constexpr uint32_t idMapChannelCount{1};
-    static constexpr vk::ImageUsageFlags idMapUsageFlags{vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc};  // transfer src for retrieving id at cursor position
-
     std::shared_ptr<Texture> target_{nullptr};
-    static constexpr uint32_t targetChannelCount{4};
-    static constexpr vk::Format targetVkFormat{vk::Format::eR8G8B8A8Unorm};
-    static constexpr vk::ImageUsageFlags targetUsageFlags{vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc}; // transfer src for blitting into swapchain
 
 };

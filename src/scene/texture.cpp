@@ -105,7 +105,7 @@ void Texture::initVkImage() {
 }
 
 
-Texture::Texture(std::string_view fileName) : ManagedResource() {
+Texture::Texture(std::string_view fileName, bool isSrgb) : ManagedResource() {
     //TODO: initialize only once
     FreeImage_Initialise();
 
@@ -158,12 +158,11 @@ Texture::Texture(std::string_view fileName) : ManagedResource() {
 
                 imageUsageFlags_ = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
 
-                vkFormat_ = chooseVkFormat();
+                vkFormat_ = chooseVkFormat(isSrgb);
                 initVkImage();
             }
         }
         FreeImage_Unload(bitmap);
-
     }
     else
         throw std::runtime_error("ERROR! Failed to load texture " + std::string{fileName});
@@ -236,18 +235,18 @@ void Texture::stage(const VkUtils::BufferAlloc& stagingBuffer) const {
 }
 
 
-vk::Format Texture::chooseVkFormat() const {
+vk::Format Texture::chooseVkFormat(bool isSrgb) const {
     switch (freeImageType_) {
         case FIT_BITMAP:
             switch (channelCount_) {
                 case 1:
-                    return vk::Format::eR8Srgb;
+                    return isSrgb ? vk::Format::eR8Srgb : vk::Format::eR8Unorm;
                 case 2:
-                    return vk::Format::eR8G8Srgb;
+                    return isSrgb ? vk::Format::eR8G8Srgb : vk::Format::eR8G8Unorm;
                 case 3:
-                    return vk::Format::eB8G8R8Srgb;
+                    return isSrgb ? vk::Format::eB8G8R8Srgb : vk::Format::eB8G8R8Unorm;
                 case 4:
-                    return vk::Format::eB8G8R8A8Srgb;
+                    return isSrgb ? vk::Format::eB8G8R8A8Srgb: vk::Format::eB8G8R8A8Unorm;
                 default:
                     throw std::runtime_error("ERROR: Unsupported format type!");
             }
