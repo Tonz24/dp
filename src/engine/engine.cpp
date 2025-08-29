@@ -172,6 +172,8 @@ void Engine::initVulkan() {
 
     initIdMapImage();
     initDummyTexture();
+
+    gBuffer_ = GBufferManager::getInstance()->registerResource("gbuffer_test",1280,720);
 }
 
 void Engine::initVulkanInstance() {
@@ -521,6 +523,7 @@ void Engine::initGraphicsPipeline() {
 
     std::vector descriptorSetLayoutsSky = {*descriptorSetLayoutFrame_, *Scene::getDescriptorSetLayout()};
     rasterPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/shader_frag.spv",descriptorSetLayouts,colorAttachmentFormats,true, depthFormat_};
+    gBufferPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/shader_frag.spv",descriptorSetLayouts,colorAttachmentFormats,true, depthFormat_};
     skyboxPipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/skypass_frag.spv",descriptorSetLayoutsSky,colorAttachmentFormatsSky, false};
 }
 
@@ -803,6 +806,7 @@ void Engine::cleanup() {
     depthTexture_.reset();
     objectIdMap_.reset();
     dummy_.reset();
+    gBuffer_.reset();
 
     VkUtils::destroyBufferVMA(std::move(idMapTransferBuffer_));
 

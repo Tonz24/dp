@@ -258,4 +258,9 @@ private:
 
     VkUtils::BufferAlloc idMapTransferBuffer_{};
     void clickSceneObject(const glm::vec<2,double>& cursorPos) const;
+
+    std::shared_ptr<GBuffer> gBuffer_{nullptr};
+
+    GraphicsPipeline gBufferPipeline_{};
+
 };

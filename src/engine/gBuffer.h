@@ -6,18 +6,25 @@
 #include "managers/managedResource.h"
 #include "../scene/texture.h"
 
-class GBuffer : ManagedResource {
+class GBuffer : public ManagedResource {
 public:
 
     [[nodiscard]] std::string getResourceType() const override {
         return "G-buffer";
     }
 
-    void transitionToGather() const;
-    void transitionToShade() const;
-    void transitionToBlit() const;
+    void transitionToGather(vk::raii::CommandBuffer& cmdBuf) const;
+    void transitionToShade(vk::raii::CommandBuffer& cmdBuf) const;
+    void transitionToBlit(vk::raii::CommandBuffer& cmdBuf) const;
 
     ~GBuffer() override = default;
+
+
+    [[nodiscard]] Texture& getAlbedoMap() const { return *albedoMap_; }
+    [[nodiscard]] Texture& getNormalMap() const { return *normalMap_; }
+    [[nodiscard]] Texture& getDepthMap() const { return *depthMap_; }
+    [[nodiscard]] Texture& getObjectIdMap() const { return *objectIdMap_; }
+    [[nodiscard]] Texture& getTarget() const { return *target_; }
 
 private:
     friend class GBufferManager;

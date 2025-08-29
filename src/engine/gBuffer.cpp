@@ -60,7 +60,7 @@ GBuffer::GBuffer(std::string_view resourceName, uint32_t width, uint32_t height)
                                   vk::ImageAspectFlagBits::eColor,
                                   cmdBuf);
 
-    //  transition normals
+    /*//  transition normals
     VkUtils::transitionImageLayout(normalMap_->getVkImage().image,
                                   vk::ImageLayout::eUndefined,
                                   vk::ImageLayout::eColorAttachmentOptimal,
@@ -82,7 +82,7 @@ GBuffer::GBuffer(std::string_view resourceName, uint32_t width, uint32_t height)
                                   vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
                                   vk::AccessFlagBits2::eDepthStencilAttachmentWrite | vk::AccessFlagBits2::eDepthStencilAttachmentRead,
                                   vk::ImageAspectFlagBits::eDepth,
-                                  cmdBuf);
+                                  cmdBuf);*/
 
     //  transition id map
     VkUtils::transitionImageLayout(objectIdMap_->getVkImage().image,
@@ -95,7 +95,7 @@ GBuffer::GBuffer(std::string_view resourceName, uint32_t width, uint32_t height)
                                    vk::ImageAspectFlagBits::eColor,
                                    cmdBuf);
 
-
+/*
     //  transition target
     VkUtils::transitionImageLayout(target_->getVkImage().image,
                                    vk::ImageLayout::eUndefined,
@@ -105,14 +105,13 @@ GBuffer::GBuffer(std::string_view resourceName, uint32_t width, uint32_t height)
                                    vk::PipelineStageFlagBits2::eColorAttachmentOutput,
                                    vk::AccessFlagBits2::eColorAttachmentWrite,
                                    vk::ImageAspectFlagBits::eColor,
-                                   cmdBuf);
+                                   cmdBuf);*/
 
     VkUtils::endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
 }
 
 
-void GBuffer::transitionToGather() const {
-     auto cmdBuf = VkUtils::beginSingleTimeCommand();
+void GBuffer::transitionToGather(vk::raii::CommandBuffer& cmdBuf) const {
 
     //  transition albedo map
     VkUtils::transitionImageLayout(albedoMap_->getVkImage().image,
@@ -125,7 +124,7 @@ void GBuffer::transitionToGather() const {
                                   vk::ImageAspectFlagBits::eColor,
                                   cmdBuf);
 
-    //  transition normals
+    /*//  transition normals
     VkUtils::transitionImageLayout(normalMap_->getVkImage().image,
                                   vk::ImageLayout::eShaderReadOnlyOptimal,
                                   vk::ImageLayout::eColorAttachmentOptimal,
@@ -137,18 +136,6 @@ void GBuffer::transitionToGather() const {
                                   cmdBuf);
 
 
-
-    //  transition depth
-    VkUtils::transitionImageLayout(depthMap_->getVkImage().image,
-                                  vk::ImageLayout::eUndefined,
-                                  vk::ImageLayout::eDepthAttachmentOptimal,
-                                  vk::PipelineStageFlagBits2::eTopOfPipe,
-                                  vk::AccessFlagBits2::eNone,
-                                  vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
-                                  vk::AccessFlagBits2::eDepthStencilAttachmentWrite | vk::AccessFlagBits2::eDepthStencilAttachmentRead,
-                                  vk::ImageAspectFlagBits::eDepth,
-                                  cmdBuf);
-
     //  transition depth
     VkUtils::transitionImageLayout(depthMap_->getVkImage().image,
                                     vk::ImageLayout::eShaderReadOnlyOptimal,
@@ -158,14 +145,10 @@ void GBuffer::transitionToGather() const {
                                   vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
                                   vk::AccessFlagBits2::eDepthStencilAttachmentWrite | vk::AccessFlagBits2::eDepthStencilAttachmentRead,
                                   vk::ImageAspectFlagBits::eDepth,
-                                  cmdBuf);
-
-    VkUtils::endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
+                                  cmdBuf);*/
 }
 
-void GBuffer::transitionToShade() const {
-
-    auto cmdBuf = VkUtils::beginSingleTimeCommand();
+void GBuffer::transitionToShade(vk::raii::CommandBuffer& cmdBuf) const {
 
     //  transition albedo map
     VkUtils::transitionImageLayout(albedoMap_->getVkImage().image,
@@ -178,7 +161,7 @@ void GBuffer::transitionToShade() const {
                                   vk::ImageAspectFlagBits::eColor,
                                   cmdBuf);
 
-    //  transition normals
+    /*//  transition normals
     VkUtils::transitionImageLayout(normalMap_->getVkImage().image,
                                   vk::ImageLayout::eColorAttachmentOptimal,
                                   vk::ImageLayout::eShaderReadOnlyOptimal,
@@ -221,14 +204,12 @@ void GBuffer::transitionToShade() const {
                                    vk::PipelineStageFlagBits2::eColorAttachmentOutput,
                                    vk::AccessFlagBits2::eColorAttachmentWrite,
                                    vk::ImageAspectFlagBits::eColor,
-                                   cmdBuf);
+                                   cmdBuf);*/
 
 
-    VkUtils::endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
 }
 
-void GBuffer::transitionToBlit() const {
-    auto cmdBuf = VkUtils::beginSingleTimeCommand();
+void GBuffer::transitionToBlit(vk::raii::CommandBuffer& cmdBuf) const {
 
     //  transition target
     VkUtils::transitionImageLayout(target_->getVkImage().image,
@@ -242,5 +223,4 @@ void GBuffer::transitionToBlit() const {
                                    cmdBuf);
 
 
-    VkUtils::endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
 }
