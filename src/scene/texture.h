@@ -24,6 +24,8 @@ public:
     Texture& operator=(Texture&&) = delete;
 
     explicit Texture(std::string_view fileName);
+    Texture(uint32_t width, uint32_t height, uint32_t channels, vk::Format format, vk::ImageUsageFlags imageUsage);
+
 
     ~Texture() override;
 
@@ -41,8 +43,6 @@ public:
     friend class TextureManager;
 
     static std::shared_ptr<Texture> createDummy(std::string_view name,  const glm::vec<4, uint8_t>& color = {255, 0, 255, 255});
-
-    Texture(uint32_t width, uint32_t height, uint32_t channels, vk::Format format, vk::ImageUsageFlags imageUsage, vk::MemoryPropertyFlags memoryProperties);
 
     uint32_t getTotalSize() const {return data_.size() * sizeof(data_[0]);}
     void stage(const VkUtils::BufferAlloc& stagingBuffer) const;
@@ -73,5 +73,4 @@ private:
     vk::raii::Sampler  vkSampler_{nullptr};
 
     vk::ImageUsageFlags imageUsageFlags_{};
-    vk::MemoryPropertyFlags memoryPropertyFlags_{};
 };

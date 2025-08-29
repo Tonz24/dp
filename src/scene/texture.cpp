@@ -13,7 +13,7 @@
 std::shared_ptr<Texture> Texture::createDummy(std::string_view name,  const glm::vec<4, uint8_t>& color) {
 
     vk::ImageUsageFlags usageFlags = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
-    auto dummy = TextureManager::getInstance()->registerResource(name,1,1,4,vk::Format::eB8G8R8A8Unorm, usageFlags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+    auto dummy = TextureManager::getInstance()->registerResource(name,1,1,4,vk::Format::eB8G8R8A8Unorm, usageFlags);
 
     memcpy(dummy->data_.data(),&color[0],sizeof(color));
 
@@ -25,8 +25,8 @@ std::shared_ptr<Texture> Texture::createDummy(std::string_view name,  const glm:
 }
 
 
-Texture::Texture(uint32_t width, uint32_t height, uint32_t channels, vk::Format format, vk::ImageUsageFlags imageUsage, vk::MemoryPropertyFlags memoryProperties):
-    ManagedResource(), width_(width), height_(height), channelCount_(channels), vkFormat_(format), imageUsageFlags_(imageUsage), memoryPropertyFlags_(memoryProperties)
+Texture::Texture(uint32_t width, uint32_t height, uint32_t channels, vk::Format format, vk::ImageUsageFlags imageUsage):
+    ManagedResource(), width_(width), height_(height), channelCount_(channels), vkFormat_(format), imageUsageFlags_(imageUsage)
 {
     pixelSize_ = channelCount_;
     data_.reserve(width_ * height_ * channelCount_);
@@ -156,7 +156,6 @@ Texture::Texture(std::string_view fileName) : ManagedResource() {
                 FreeImage_ConvertToRawBits(data_.data(),bitmap,scanWidth_,pixelSize_ * 8, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, FALSE);
                 isFromDisk_ = true;
 
-                memoryPropertyFlags_ = vk::MemoryPropertyFlagBits::eDeviceLocal;
                 imageUsageFlags_ = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
 
                 vkFormat_ = chooseVkFormat();

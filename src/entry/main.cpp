@@ -13,5 +13,5 @@ int main() {
     Engine::getInstance().run();
     Engine::getInstance().cleanup();
 
-    return 0;
+    return EXIT_SUCCESS;
 }

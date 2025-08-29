@@ -374,7 +374,7 @@ void Engine::initSwapchain() {
        .imageColorSpace = surfaceFormat.colorSpace,
        .imageExtent = swapExtent,
        .imageArrayLayers = 1,
-       .imageUsage = vk::ImageUsageFlagBits::eColorAttachment,
+       .imageUsage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst,
        .imageSharingMode = vk::SharingMode::eExclusive,
        .preTransform = surfaceCapabilities.currentTransform,
        .compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
@@ -1172,7 +1172,7 @@ void Engine::initDepthResources() {
     int width{},height{};
     glfwGetFramebufferSize(window->getGlfwWindow(),&width,&height);
 
-    depthTexture_ = TextureManager::getInstance()->registerResource("depth_texture",width, height, 1,depthFormat_, vk::ImageUsageFlagBits::eDepthStencilAttachment,vk::MemoryPropertyFlagBits::eDeviceLocal);
+    depthTexture_ = TextureManager::getInstance()->registerResource("depth_texture",width, height, 1,depthFormat_, vk::ImageUsageFlagBits::eDepthStencilAttachment);
 
     auto cmdBuf = VkUtils::beginSingleTimeCommand();
 
@@ -1194,7 +1194,7 @@ void Engine::initIdMapImage() {
     glfwGetFramebufferSize(window->getGlfwWindow(),&width,&height);
 
     vk::ImageUsageFlags flags = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc;
-    objectIdMap_ = TextureManager::getInstance()->registerResource("id_map_texture", width, height, 1,idMapFormat_, flags,vk::MemoryPropertyFlagBits::eDeviceLocal);
+    objectIdMap_ = TextureManager::getInstance()->registerResource("id_map_texture", width, height, 1,idMapFormat_, flags);
 
     auto cmdBuf = VkUtils::beginSingleTimeCommand();
 

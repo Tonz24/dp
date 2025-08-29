@@ -10,6 +10,7 @@
 
 #include "managedResource.h"
 #include "resourceManagerBase.h"
+#include "../gBuffer.h"
 #include "../../scene/material.h"
 #include "../../scene/mesh.h"
 
@@ -123,6 +124,11 @@ protected:
     std::unordered_map<std::string,uint32_t> nameToIdMap_{};
 };
 
+class Mesh;
+class Texture;
+class Material;
+class GBuffer;
+
 
 class MeshManager : public ResourceManager<Mesh, MeshManager> {
     friend class ResourceManager<Mesh, MeshManager>;
@@ -139,3 +145,30 @@ class MaterialManager : public ResourceManager<Material, MaterialManager> {
     MaterialManager() = default;
 };
 
+class GBufferManager : public ResourceManager<GBuffer, GBufferManager> {
+    friend class ResourceManager<GBuffer, GBufferManager>;
+    GBufferManager() = default;
+
+public:
+
+    template <typename... Args>
+    std::shared_ptr<GBuffer> registerResource(std::string_view resourceName, Args&&... args) {
+
+        if (getResource(resourceName) != nullptr)
+            throw std::runtime_error("ERROR: Resource with name " + std::string{resourceName} + " is already registered!");
+
+        auto newResource = std::shared_ptr<GBuffer>(new GBuffer(resourceName, std::forward<Args>(args)...), ResourceDeleter{});
+
+        uint32_t newCId = assignCategoryId();
+        uint32_t newGId = ResourceManagerBase::getInstance()->assignGlobalId();
+        newResource->categoryId_ = newCId;
+        newResource->globalId_ = newGId;
+        newResource->resourceName_ = resourceName;
+        newResource->isRegistered_ = true;
+
+        nameToIdMap_[std::string{resourceName}] = newCId;
+        idToResourceMap_[newCId] = newResource;
+
+        return newResource;
+    }
+};
