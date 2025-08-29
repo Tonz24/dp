@@ -111,7 +111,6 @@ private:
     std::array<std::shared_ptr<Texture>,4> textures_{};
 
     vk::raii::DescriptorSet descriptorSet_{nullptr};
-
 };
 
 

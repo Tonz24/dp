@@ -14,8 +14,8 @@ Mesh::Mesh(std::vector<Vertex3D>&& vertexList, std::vector<uint32_t>&& indexList
 }
 
 Mesh::~Mesh() {
-    VkUtils::destroyBufferVMA(vertexBuffer_);
-    VkUtils::destroyBufferVMA(indexBuffer_);
+    VkUtils::destroyBufferVMA(std::move(vertexBuffer_));
+    VkUtils::destroyBufferVMA(std::move(indexBuffer_));
 }
 
 bool Mesh::drawGUI() {

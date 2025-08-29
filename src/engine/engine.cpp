@@ -108,9 +108,6 @@ void Engine::initImGui() {
     uiPool_ = vk::raii::DescriptorPool(device_,poolInfo);
 
     auto format = static_cast<VkFormat>(swapChainImageFormat);
-    auto idMapFormat = static_cast<VkFormat>(idMapFormat_);
-
-    std::array formats = {format, /*idMapFormat*/};
 
     ImGui_ImplVulkan_InitInfo initInfo = {
         .ApiVersion = vk::ApiVersion13,
@@ -125,8 +122,8 @@ void Engine::initImGui() {
         .UseDynamicRendering = true,
         .PipelineRenderingCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
-            .colorAttachmentCount = formats.size(),
-            .pColorAttachmentFormats = formats.data(),
+            .colorAttachmentCount = 1,
+            .pColorAttachmentFormats = &format,
             .depthAttachmentFormat = static_cast<VkFormat>(depthFormat_),
         },
     };
@@ -164,7 +161,6 @@ void Engine::initVulkan() {
     initDescriptorPool();
     initUniformBuffers();
     initDescriptorSetLayout();
-    initDescriptorSetLayout2();
 
     initCommandPool();
     initCommandBuffers();
@@ -176,37 +172,6 @@ void Engine::initVulkan() {
 
     initIdMapImage();
     initDummyTexture();
-
-
-    sky_ = TextureManager::getInstance()->registerResource("sky", "../assets/sky/lebombo_4k.exr");
-
-    VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(sky_->getTotalSize(),vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingAllocFlagsVMA);
-    sky_->stage(stagingBuffer);
-    VkUtils::destroyBufferVMA(stagingBuffer);
-
-    vk::DescriptorSetAllocateInfo allocInfo{
-        .descriptorPool = descriptorPool_,
-        .descriptorSetCount = 1,
-        .pSetLayouts = &*descriptorSetLayoutSky_
-    };
-    skyDescriptorSet_ = std::move(device_.allocateDescriptorSets(allocInfo).front());
-
-    vk::DescriptorImageInfo descInfo{
-        .sampler = sky_->getVkSampler(),
-        .imageView = sky_->getVkImageView(),
-        .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-    };
-
-    vk::WriteDescriptorSet writeDescriptorSet{
-        .dstSet = skyDescriptorSet_,
-        .dstBinding = 0,
-        .dstArrayElement = 0,
-        .descriptorCount = 1,
-        .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-        .pImageInfo = &descInfo
-    };
-
-    device_.updateDescriptorSets(writeDescriptorSet,{});
 }
 
 void Engine::initVulkanInstance() {
@@ -239,8 +204,6 @@ void Engine::initSurface() {
 
     surface_ = vk::raii::SurfaceKHR(vkInstance, surface);
 }
-
-void Engine::initVMAllocator() {}
 
 Engine::QueueFamilyIndices Engine::initQueueFamilyIndices() const {
     auto queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
@@ -556,7 +519,7 @@ void Engine::initGraphicsPipeline() {
 
     std::span colorAttachmentFormatsSky{colorAttachmentFormats.begin(),1};
 
-    std::vector descriptorSetLayoutsSky = {*descriptorSetLayoutFrame_, *descriptorSetLayoutSky_};
+    std::vector descriptorSetLayoutsSky = {*descriptorSetLayoutFrame_, *Scene::getDescriptorSetLayout()};
     rasterPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/shader_frag.spv",descriptorSetLayouts,colorAttachmentFormats,true, depthFormat_};
     skyboxPipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/skypass_frag.spv",descriptorSetLayoutsSky,colorAttachmentFormatsSky, false};
 }
@@ -841,6 +804,7 @@ void Engine::cleanup() {
     objectIdMap_.reset();
     dummy_.reset();
 
+    VkUtils::destroyBufferVMA(std::move(idMapTransferBuffer_));
 
     cleanUBOs();
 
@@ -949,24 +913,10 @@ void Engine::initDescriptorSetLayout() {
 
         device_.updateDescriptorSets({writeDescriptorSetCam, writeDescriptorSetMat},{});
     }
+
+    Scene::initDescriptorSetLayout();
 }
 
-void Engine::initDescriptorSetLayout2() {
-
-    vk::DescriptorSetLayoutBinding skyBinding{
-        .binding = 0,
-        .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-        .descriptorCount = 1,
-        .stageFlags = vk::ShaderStageFlagBits::eFragment,
-    };
-
-    vk::DescriptorSetLayoutCreateInfo skyLayoutInfo{
-        .bindingCount = 1,
-        .pBindings = &skyBinding
-    };
-
-    descriptorSetLayoutSky_ = vk::raii::DescriptorSetLayout(device_,skyLayoutInfo);
-}
 
 void Engine::initUniformBuffers() {
     cameraUBOs_.clear();
@@ -1078,9 +1028,9 @@ void Engine::renderSky(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uin
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, skyboxPipeline_.getPipelineLayout(), 0, *descriptorSets_[frameInFlightIndex], nullptr);
 
     //  bind per mesh descriptor set
-    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, skyboxPipeline_.getPipelineLayout(), 1, *skyDescriptorSet_, nullptr);
+    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, skyboxPipeline_.getPipelineLayout(), 1, *scene_->getSkyDescriptorSet(), nullptr);
 
-    const PushConstants pcs = { };
+    constexpr PushConstants pcs = { };
 
     cmdBuf.pushConstants(skyboxPipeline_.getPipelineLayout(),vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const PushConstants>{pcs});
 
@@ -1282,8 +1232,8 @@ void Engine::updateUBOs() {
 
 void Engine::cleanUBOs() {
     for (uint32_t i = 0; i < maxFramesInFlight; ++i) {
-        VkUtils::destroyBufferVMA(cameraUBOs_[i]);
-        VkUtils::destroyBufferVMA(materialUBOs_[i]);
+        VkUtils::destroyBufferVMA(std::move(cameraUBOs_[i]));
+        VkUtils::destroyBufferVMA(std::move(materialUBOs_[i]));
     }
 }
 

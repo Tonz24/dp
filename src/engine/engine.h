@@ -60,7 +60,6 @@ private:
     std::vector<const char*> initValidationLayers();
 
     void initSurface();
-    void initVMAllocator();
 
     void initPhysicalDevice();
     void initLogicalDevice();
@@ -84,7 +83,6 @@ private:
     void initSyncObjects();
 
     void initDescriptorSetLayout();
-    void initDescriptorSetLayout2();
     void initUniformBuffers();
     void initDescriptorPool();
 
@@ -229,7 +227,7 @@ private:
         const auto app = static_cast<Engine*>(glfwGetWindowUserPointer(window));
 
         if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS && app->window->getCursorMode() == Window::CursorMode::normal && !ImGui::GetIO().WantCaptureMouse)
-            app->clickSceneObject(app->cursorPos_);
+            app->clickSceneObject(cursorPos_);
     }
 
     std::shared_ptr<Scene> scene_{};
@@ -257,9 +255,6 @@ private:
     MaterialUBOFormat materialUBOStorage_{};
     uint32_t materialUpdateIndex_{};
 
-    vk::raii::DescriptorSetLayout descriptorSetLayoutSky_{nullptr};
-    vk::raii::DescriptorSet skyDescriptorSet_{nullptr};
-    std::shared_ptr<Texture> sky_;
 
     VkUtils::BufferAlloc idMapTransferBuffer_{};
     void clickSceneObject(const glm::vec<2,double>& cursorPos) const;

@@ -128,7 +128,7 @@ std::vector<std::shared_ptr<Mesh>> ModelLoader::loadModel(std::string_view path,
         mesh->stage(stagingBuffer);
     }
     // destroy staging buffer
-    VkUtils::destroyBufferVMA(stagingBuffer);
+    VkUtils::destroyBufferVMA(std::move(stagingBuffer));
 
     return meshes;
 }
@@ -234,6 +234,6 @@ void ModelLoader::loadMaterials(const std::string& directory, const aiScene& sce
             texture->stage(stagingBuffer);
         }
         // destroy staging buffer
-        VkUtils::destroyBufferVMA(stagingBuffer);
+        VkUtils::destroyBufferVMA(std::move(stagingBuffer));
     }
 }

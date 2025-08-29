@@ -44,7 +44,7 @@ VkUtils::ImageAlloc VkUtils::createImageVMA(const vk::ImageCreateInfo& imageInfo
     return imageAlloc;
 }
 
-void VkUtils::destroyImageVMA(const ImageAlloc& image) {
+void VkUtils::destroyImageVMA(ImageAlloc&& image) {
     vmaDestroyImage(allocator_,image.image,image.allocation);
 }
 
@@ -56,7 +56,7 @@ void VkUtils::unmapMemory(const BufferAlloc& buffer) {
     vmaUnmapMemory(allocator_,buffer.allocation);
 }
 
-void VkUtils::destroyBufferVMA(const BufferAlloc& buffer) {
+void VkUtils::destroyBufferVMA(BufferAlloc&& buffer) {
     vmaDestroyBuffer(allocator_,buffer.buffer,buffer.allocation);
 }
 

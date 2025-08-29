@@ -9,12 +9,6 @@
 
 class VkUtils {
 public:
-
-    struct BufferWithMemory {
-        vk::raii::Buffer buffer{nullptr};
-        vk::raii::DeviceMemory memory{nullptr};
-    };
-
     struct BufferAlloc {
         vk::Buffer buffer{nullptr};
         VmaAllocation allocation{};
@@ -36,13 +30,13 @@ public:
     VkUtils() = delete;
 
     static BufferAlloc createBufferVMA(vk::DeviceSize bufferSize, vk::BufferUsageFlags bufferUsage, VmaAllocationCreateFlags allocationFlags = {});
-    static void destroyBufferVMA(const BufferAlloc& buffer);
+    static void destroyBufferVMA(BufferAlloc&& buffer);
     static void mapMemory(const BufferAlloc& buffer, void*& ptr);
     static void unmapMemory(const BufferAlloc& buffer);
 
 
     static ImageAlloc createImageVMA(const vk::ImageCreateInfo& imageInfo, VmaAllocationCreateFlags allocationFlags = {});
-    static void destroyImageVMA(const ImageAlloc& image);
+    static void destroyImageVMA(ImageAlloc&& image);
 
 
     static void copyBuffer(const BufferAlloc& srcBuffer, const BufferAlloc& dstBuffer, vk::DeviceSize size);

@@ -63,7 +63,7 @@ void Material::recordDescriptorSet() const {
         descriptorWrites.emplace_back(writeDescriptorSet);
     }
 
-    Engine::getInstance().getDevice().updateDescriptorSets(descriptorWrites,{});
+   VkUtils::getDevice().updateDescriptorSets(descriptorWrites,{});
 }
 
 void Material::updateUBO() const {
@@ -104,6 +104,6 @@ void Material::allocateDescriptorSet() {
         .pSetLayouts = &*Engine::getInstance().getDescriptorSetLayoutMaterial(),
     };
 
-    auto h = Engine::getInstance().getDevice().allocateDescriptorSets(allocInfo);
+    auto h = VkUtils::getDevice().allocateDescriptorSets(allocInfo);
     descriptorSet_ = std::move(h.front());
 }

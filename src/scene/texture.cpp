@@ -19,7 +19,7 @@ std::shared_ptr<Texture> Texture::createDummy(std::string_view name,  const glm:
 
     VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(dummy->getTotalSize(),vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingAllocFlagsVMA);
     dummy->stage(stagingBuffer);
-    VkUtils::destroyBufferVMA(stagingBuffer);
+    VkUtils::destroyBufferVMA(std::move(stagingBuffer));
 
     return dummy;
 }
@@ -286,5 +286,5 @@ int Texture::getChannelCount(FREE_IMAGE_TYPE type, uint32_t bpp) {
 
 
 Texture::~Texture() {
-    VkUtils::destroyImageVMA(imageAlloc_);
+    VkUtils::destroyImageVMA(std::move(imageAlloc_));
 }
