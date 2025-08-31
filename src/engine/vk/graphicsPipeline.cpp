@@ -44,7 +44,7 @@ GraphicsPipeline::GraphicsPipeline(std::string_view vShaderPath, std::string_vie
         .colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA
     };
 
-    std::vector blendAttachments{colorAttachmentFormats.size(),colorBlendAttachment};
+    std::vector blendAttachments(colorAttachmentFormats.size(),colorBlendAttachment);
 
     vk::PipelineColorBlendStateCreateInfo colorBlending{
         .logicOpEnable = vk::False,
