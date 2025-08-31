@@ -12,7 +12,8 @@
 class GraphicsPipeline {
 public:
     GraphicsPipeline(std::string_view vShaderPath, std::string_view fShaderPath, std::span<const vk::DescriptorSetLayout> descriptorSetLayouts,
-                     std::span<const vk::Format> colorAttachmentFormats, bool hasVertexLayout, vk::Format depthFormat = vk::Format::eUndefined);
+                     std::span<const vk::PushConstantRange> pcsRange, std::span<const vk::Format> colorAttachmentFormats, bool hasVertexLayout,
+                     vk::Format depthFormat = vk::Format::eUndefined);
 
     GraphicsPipeline() = default;
 
@@ -99,10 +100,4 @@ private:
         .sampleShadingEnable = vk::False
     };
 
-
-    static constexpr vk::PushConstantRange pcsTest{
-        .stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
-        .offset = 0,
-        .size = static_cast<uint32_t>(sizeof(PushConstants))
-    };
 };

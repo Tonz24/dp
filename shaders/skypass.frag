@@ -8,7 +8,7 @@ layout(set = 1, binding = 0) uniform sampler2D skyTexture;
 
 #include "common.glsl"
 #include "tonemappers.glsl"
-#include "constants.glsl"
+#include "math_constants.glsl"
 
 vec2 dirToUv(vec3 dir){
     const float u = 0.5f + 0.5f * atan(dir.z, dir.x) * INVPI;

@@ -8,14 +8,16 @@
 
 
 GraphicsPipeline::GraphicsPipeline(std::string_view vShaderPath, std::string_view fShaderPath,
-                                   std::span<const vk::DescriptorSetLayout> descriptorSetLayouts, std::span<const vk::Format> colorAttachmentFormats, bool hasVertexLayout, vk::Format depthFormat) {
+                                   std::span<const vk::DescriptorSetLayout> descriptorSetLayouts,  std::span<const vk::PushConstantRange> pcsRange,
+                                   std::span<const vk::Format> colorAttachmentFormats, bool hasVertexLayout, vk::Format depthFormat)
+{
     initShaders(vShaderPath,fShaderPath);
 
     vk::PipelineLayoutCreateInfo pipelineLayoutInfo{
         .setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size()),
         .pSetLayouts =  descriptorSetLayouts.data(),
-        .pushConstantRangeCount = 1,
-        .pPushConstantRanges = &pcsTest
+        .pushConstantRangeCount = static_cast<uint32_t>(pcsRange.size()),
+        .pPushConstantRanges = pcsRange.data()
     };
 
     pipelineLayout_ = vk::raii::PipelineLayout( VkUtils::getDevice(), pipelineLayoutInfo );

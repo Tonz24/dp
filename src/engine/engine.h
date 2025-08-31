@@ -254,5 +254,7 @@ private:
     std::shared_ptr<GBuffer> gBuffer_{nullptr};
 
     GraphicsPipeline gBufferPipeline_{};
+    GraphicsPipeline gBufferShadePipeline_{};
+
 
 };

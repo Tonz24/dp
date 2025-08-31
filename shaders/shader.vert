@@ -11,6 +11,7 @@ layout(location = 2) out mat3 outTBN;
 
 
 #include "common.glsl"
+#include "pcs_gbuffer_fill.glsl"
 
 void main() {
     gl_Position = cameraUBO.matVP * pcs.matM * vec4(inPosition,1);

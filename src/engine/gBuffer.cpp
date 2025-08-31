@@ -24,21 +24,12 @@ GBuffer::GBuffer(std::string_view resourceName, uint32_t width, uint32_t height)
                                                                  normalMapVkFormat,
                                                                  normalMapUsageFlags);
 
-
-    depthMap_ = TextureManager::getInstance()->registerResource(textureNamesPrefix + "_depth",
+    materialIdMap_ = TextureManager::getInstance()->registerResource(textureNamesPrefix + "_mat_id",
                                                                  width,
                                                                  height,
-                                                                 depthMapChannelCount,
-                                                                 depthMapVkFormat,
-                                                                 depthMapUsageFlags);
-
-    objectIdMap_ = TextureManager::getInstance()->registerResource(textureNamesPrefix + "_obj_id",
-                                                                 width,
-                                                                 height,
-                                                                 idMapChannelCount,
-                                                                 idMapVkFormat,
-                                                                 idMapUsageFlags);
-
+                                                                 materialMapChannelCount,
+                                                                 materialMapVkFormat,
+                                                                 materialMapUsageFlags);
 
     target_ = TextureManager::getInstance()->registerResource(textureNamesPrefix + "_shading_target",
                                                                  width,
@@ -46,6 +37,23 @@ GBuffer::GBuffer(std::string_view resourceName, uint32_t width, uint32_t height)
                                                                  targetChannelCount,
                                                                  targetVkFormat,
                                                                  targetUsageFlags);
+
+
+
+
+    depthMap_ = TextureManager::getInstance()->registerResource(textureNamesPrefix + "_depth",
+                                                                width,
+                                                                height,
+                                                                depthMapChannelCount,
+                                                                depthMapVkFormat,
+                                                                depthMapUsageFlags);
+
+    objectIdMap_ = TextureManager::getInstance()->registerResource(textureNamesPrefix + "_obj_id",
+                                                                 width,
+                                                                 height,
+                                                                 idMapChannelCount,
+                                                                 idMapVkFormat,
+                                                                 idMapUsageFlags);
 
     auto cmdBuf = VkUtils::beginSingleTimeCommand();
 
@@ -60,7 +68,7 @@ GBuffer::GBuffer(std::string_view resourceName, uint32_t width, uint32_t height)
                                   vk::ImageAspectFlagBits::eColor,
                                   cmdBuf);
 
-    /*//  transition normals
+    //  transition normals
     VkUtils::transitionImageLayout(normalMap_->getVkImage().image,
                                   vk::ImageLayout::eUndefined,
                                   vk::ImageLayout::eColorAttachmentOptimal,
@@ -71,8 +79,29 @@ GBuffer::GBuffer(std::string_view resourceName, uint32_t width, uint32_t height)
                                   vk::ImageAspectFlagBits::eColor,
                                   cmdBuf);
 
+    //  transition material map
+    VkUtils::transitionImageLayout(materialIdMap_->getVkImage().image,
+                                   vk::ImageLayout::eUndefined,
+                                   vk::ImageLayout::eColorAttachmentOptimal,
+                                   vk::PipelineStageFlagBits2::eTopOfPipe,
+                                   vk::AccessFlagBits2::eNone,
+                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                                   vk::AccessFlagBits2::eColorAttachmentWrite,
+                                   vk::ImageAspectFlagBits::eColor,
+                                   cmdBuf);
 
-*/
+    //  transition target
+    VkUtils::transitionImageLayout(target_->getVkImage().image,
+                                   vk::ImageLayout::eUndefined,
+                                   vk::ImageLayout::eColorAttachmentOptimal,
+                                   vk::PipelineStageFlagBits2::eTopOfPipe,
+                                   vk::AccessFlagBits2::eNone,
+                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                                   vk::AccessFlagBits2::eColorAttachmentWrite,
+                                   vk::ImageAspectFlagBits::eColor,
+                                   cmdBuf);
+
+
     //  transition depth
     VkUtils::transitionImageLayout(depthMap_->getVkImage().image,
                                   vk::ImageLayout::eUndefined,
@@ -95,23 +124,13 @@ GBuffer::GBuffer(std::string_view resourceName, uint32_t width, uint32_t height)
                                    vk::ImageAspectFlagBits::eColor,
                                    cmdBuf);
 
-/*
-    //  transition target
-    VkUtils::transitionImageLayout(target_->getVkImage().image,
-                                   vk::ImageLayout::eUndefined,
-                                   vk::ImageLayout::eColorAttachmentOptimal,
-                                   vk::PipelineStageFlagBits2::eTopOfPipe,
-                                   vk::AccessFlagBits2::eNone,
-                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                   vk::AccessFlagBits2::eColorAttachmentWrite,
-                                   vk::ImageAspectFlagBits::eColor,
-                                   cmdBuf);*/
+
 
     VkUtils::endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
 }
 
 
-void GBuffer::transitionToGather(vk::raii::CommandBuffer& cmdBuf) const {
+void GBuffer::transitionToFill(vk::raii::CommandBuffer& cmdBuf) const {
 
     //  transition albedo map
     VkUtils::transitionImageLayout(albedoMap_->getVkImage().image,

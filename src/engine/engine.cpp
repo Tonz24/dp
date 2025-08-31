@@ -518,13 +518,19 @@ void Engine::initGraphicsPipeline() {
     std::vector colorAttachmentFormats = {swapChainImageFormat, GBuffer::idMapVkFormat};
 
     std::span colorAttachmentFormatsSky{colorAttachmentFormats.begin(),1};
-    std::span colorAttachmentFormatsGBuffer{GBuffer::attachmentFormats};
-    std::array huhAttachments{swapChainImageFormat, GBuffer::attachmentFormats[1],GBuffer::attachmentFormats[2]};
+    std::array huhAttachments{swapChainImageFormat, GBuffer::attachmentFormats[1],GBuffer::attachmentFormats[2], GBuffer::attachmentFormats[3]};
+
+    std::array gBufferShadeFormat{GBuffer::targetVkFormat};
+
+    std::array pcsFillRange{GBuffer::pcsFillRange};
+    std::array pcsShadeRange{GBuffer::pcsShadeRange};
+
 
     std::vector descriptorSetLayoutsSky = {*descriptorSetLayoutFrame_, *Scene::getDescriptorSetLayout()};
-    rasterPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/shader_frag.spv",descriptorSetLayouts,colorAttachmentFormats,true, GBuffer::depthMapVkFormat};
-    gBufferPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/gbuffer_fill_frag.spv",descriptorSetLayouts,huhAttachments,true, GBuffer::depthMapVkFormat};
-    skyboxPipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/skypass_frag.spv",descriptorSetLayoutsSky,colorAttachmentFormatsSky, false};
+    rasterPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/shader_frag.spv",descriptorSetLayouts,pcsFillRange, colorAttachmentFormats,true, GBuffer::depthMapVkFormat};
+    gBufferPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/gbuffer_fill_frag.spv",descriptorSetLayouts,pcsFillRange,huhAttachments,true, GBuffer::depthMapVkFormat};
+    skyboxPipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/skypass_frag.spv",descriptorSetLayoutsSky,{},colorAttachmentFormatsSky, false};
+    gBufferShadePipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/gbuffer_shade_frag.spv",descriptorSetLayoutsSky,pcsShadeRange,gBufferShadeFormat, false};
 }
 
 void Engine::initCommandPool() {
@@ -567,6 +573,9 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
                                    vk::AccessFlagBits2::eColorAttachmentWrite,
                                    vk::ImageAspectFlagBits::eColor,
                                    cmdBuf);
+
+
+    //gBuffer_->transitionToFill(cmdBuf);
 
 
 
@@ -1032,9 +1041,6 @@ void Engine::renderSky(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uin
     //  bind per mesh descriptor set
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, skyboxPipeline_.getPipelineLayout(), 1, *scene_->getSkyDescriptorSet(), nullptr);
 
-    constexpr PushConstants pcs = { };
-
-    cmdBuf.pushConstants(skyboxPipeline_.getPipelineLayout(),vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const PushConstants>{pcs});
 
     // draw six vertices making up the screen quad
     cmdBuf.draw(6, 1, 0, 0);
@@ -1066,12 +1072,19 @@ void Engine::renderScene(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, u
         vk::RenderingAttachmentInfo { // normals
             .imageView = gBuffer_->getNormalMap().getVkImageView(),
             .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-            .loadOp = vk::AttachmentLoadOp::eLoad,
+            .loadOp = vk::AttachmentLoadOp::eClear,
             .storeOp = vk::AttachmentStoreOp::eStore,
             .clearValue = clearColor
         },
         vk::RenderingAttachmentInfo { // id map
             .imageView = gBuffer_->getObjectIdMap().getVkImageView(),
+            .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+            .loadOp = vk::AttachmentLoadOp::eClear,
+            .storeOp = vk::AttachmentStoreOp::eStore,
+            .clearValue = clearColor
+        },
+        vk::RenderingAttachmentInfo { // material map
+            .imageView = gBuffer_->getMaterialMap().getVkImageView(),
             .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
             .loadOp = vk::AttachmentLoadOp::eClear,
             .storeOp = vk::AttachmentStoreOp::eStore,

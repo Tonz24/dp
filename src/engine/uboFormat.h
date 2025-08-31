@@ -41,9 +41,14 @@ struct MaterialUBOFormat {
     float padding2;
 };
 
-struct PushConstants {
+struct PcsGBufferFill {
     glm::mat4 modelMat{};
     glm::mat4 normalMat{};
     uint32_t materialId{};
     uint32_t meshId{};
+};
+
+struct PcsGBufferShade {
+    alignas(16) glm::vec3 lightPosWS{};
+    alignas(16) glm::vec3 lightEmission{};
 };

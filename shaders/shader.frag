@@ -14,6 +14,7 @@ layout(set = 1, binding = 3) uniform sampler2D shininessMap;
 
 
 #include "common.glsl"
+#include "pcs_gbuffer_fill.glsl"
 
 void main() {
     Material mat = materialUBO.materials[pcs.matIndex];
