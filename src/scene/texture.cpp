@@ -94,7 +94,7 @@ void Texture::initVkImage() {
         .anisotropyEnable = vk::True,
         .maxAnisotropy = Engine::getInstance().getDeviceLimits().maxSamplerAnisotropy,
         .compareEnable = vk::False,
-        .compareOp =   vk::CompareOp::eAlways,
+        .compareOp = vk::CompareOp::eAlways,
         .minLod = 0.0f,
         .maxLod = 0.0f,
         .borderColor = vk::BorderColor::eIntOpaqueBlack,
