@@ -29,6 +29,8 @@ private:
     vk::PipelineRenderingCreateInfo pipelineRenderingCreateInfo_{};
     std::array<vk::PipelineShaderStageCreateInfo,2> shaderStages_{};
 
+    std::vector<vk::Format> colorFormatsCopy_{};
+
     void initShaders(std::string_view vShaderPath, std::string_view fShaderPath) {
         auto vertexShaderCode = Utils::readFile(vShaderPath);
         auto fragmentShaderCode = Utils::readFile(fShaderPath);

@@ -1,4 +1,6 @@
 layout(push_constant) uniform PushConstants {
-    vec3 lightPosWS;
-    vec3 lightEmission;
+    mat4 matM;
+    mat4 matN;
+    uint matIndex;
+    uint meshId;
 } pcs;

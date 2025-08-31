@@ -32,10 +32,12 @@ GraphicsPipeline::GraphicsPipeline(std::string_view vShaderPath, std::string_vie
         .stencilTestEnable = vk::False,
     };
 
+
+    colorFormatsCopy_.assign(colorAttachmentFormats.begin(), colorAttachmentFormats.end());
     pipelineRenderingCreateInfo_ = vk::PipelineRenderingCreateInfo{
-        .colorAttachmentCount = static_cast<uint32_t>(colorAttachmentFormats.size()),
-        .pColorAttachmentFormats = colorAttachmentFormats.data(),
-        .depthAttachmentFormat = depthFormat,
+        .colorAttachmentCount = static_cast<uint32_t>(colorFormatsCopy_.size()),
+        .pColorAttachmentFormats = colorFormatsCopy_.data(),
+        .depthAttachmentFormat = depthFormat
     };
 
 
