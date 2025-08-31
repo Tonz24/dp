@@ -1049,6 +1049,13 @@ void Engine::renderScene(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, u
 
 
     std::array colorAttachmentInfos = {
+        /*vk::RenderingAttachmentInfo { // swapchain image
+            .imageView = swapChainImageViews[imageIndex],
+            .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+            .loadOp = vk::AttachmentLoadOp::eLoad,
+            .storeOp = vk::AttachmentStoreOp::eStore,
+            .clearValue = clearColor
+        },*/
         vk::RenderingAttachmentInfo { // swapchain image
             .imageView = swapChainImageViews[imageIndex],
             .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,

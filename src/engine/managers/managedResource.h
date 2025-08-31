@@ -18,26 +18,11 @@ public:
 
     virtual ~ManagedResource() = default;
 
-    [[nodiscard]] virtual uint32_t getCID() const {
-        return categoryId_;
-    };
-
-    [[nodiscard]] virtual uint32_t getGID() const {
-        return globalId_;
-    };
-
-    [[nodiscard]] virtual std::string getFullFileName() const {
-        return fileName_ + extension_;
-    };
-
-    [[nodiscard]] virtual std::string getResourceName() const {
-        return resourceName_;
-    };
-
-
-    [[nodiscard]] bool isValid() const{
-        return  categoryId_ != 0 && !resourceName_.empty() && globalId_ != 0;
-    }
+    [[nodiscard]] virtual uint32_t getCID() const {return categoryId_;}
+    [[nodiscard]] virtual uint32_t getGID() const {return globalId_;}
+    [[nodiscard]] virtual std::string getFullFileName() const {return fileName_ + extension_;}
+    [[nodiscard]] virtual std::string getResourceName() const {return resourceName_;}
+    [[nodiscard]] bool isValid() const{return  categoryId_ != 0 && !resourceName_.empty() && globalId_ != 0;}
 
     [[nodiscard]] virtual std::string getResourceType() const = 0;
 
