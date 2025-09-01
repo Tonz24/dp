@@ -27,6 +27,8 @@ public:
     [[nodiscard]] Texture& getDepthMap() const { return *depthMap_; }
     [[nodiscard]] Texture& getObjectIdMap() const { return *objectIdMap_; }
 
+    [[nodiscard]] const vk::raii::DescriptorSet& getDescriptorSet() const { return descriptorSet_; }
+
     static constexpr vk::ImageUsageFlags defaultAttachmentUsageFlags{
         vk::ImageUsageFlagBits::eSampled | //  will be sampled in a shader later
         vk::ImageUsageFlagBits::eColorAttachment | //  render target output
@@ -90,7 +92,12 @@ private:
     std::shared_ptr<Texture> materialIdMap_{nullptr};
     std::shared_ptr<Texture> target_{nullptr};
 
-
     std::shared_ptr<Texture> depthMap_{nullptr};
     std::shared_ptr<Texture> objectIdMap_{nullptr};
+
+
+    vk::raii::DescriptorSet descriptorSet_{nullptr};
+
+    void allocateDescriptorSet();
+    void recordDescriptorSet();
 };

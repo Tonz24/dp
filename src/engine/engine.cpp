@@ -528,10 +528,11 @@ void Engine::initGraphicsPipeline() {
 
 
     std::vector descriptorSetLayoutsSky = {*descriptorSetLayoutFrame_, *Scene::getDescriptorSetLayout()};
+    std::vector descLayoutShade{*descriptorSetLayoutMaterial_};
     rasterPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/shader_frag.spv",descriptorSetLayouts,pcsFillRange, colorAttachmentFormats,true, GBuffer::depthMapVkFormat};
     gBufferPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/gbuffer_fill_frag.spv",descriptorSetLayouts,pcsFillRange,huhAttachments,true, GBuffer::depthMapVkFormat};
     skyboxPipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/skypass_frag.spv",descriptorSetLayoutsSky,{},colorAttachmentFormatsSky, false};
-    gBufferShadePipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/gbuffer_shade_frag.spv",descriptorSetLayoutsSky,pcsShadeRange,gBufferShadeFormat, false};
+    gBufferShadePipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/gbuffer_shade_frag.spv",descriptorSetLayouts,pcsShadeRange,gBufferShadeFormat, false};
 }
 
 void Engine::initCommandPool() {
@@ -557,20 +558,15 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
     cmdBuf.reset();
     cmdBuf.begin({.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
 
-    /*VkUtils::transitionImageLayout(gBuffer_->getTarget().getVkImage().image,
-                                   vk::ImageLayout::eUndefined,
-                                  vk::ImageLayout::eColorAttachmentOptimal,
-                                  vk::PipelineStageFlagBits2::eTopOfPipe,
-                                  vk::AccessFlagBits2::eNone,
-                                  vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                  vk::AccessFlagBits2::eColorAttachmentWrite,
-                                  vk::ImageAspectFlagBits::eColor,
-                                  cmdBuf);*/
 
     gBuffer_->transitionToFill(cmdBuf);
 
     renderSky(cmdBuf,imageIndex, frameInFlightIndex);
     renderScene(cmdBuf,imageIndex, frameInFlightIndex);
+
+    gBuffer_->transitionToShade(cmdBuf);
+
+    renderGBufferShade(cmdBuf,imageIndex, frameInFlightIndex);
 
     VkUtils::transitionImageLayout(gBuffer_->getTarget().getVkImage().image,
                                     vk::ImageLayout::eColorAttachmentOptimal,
@@ -585,7 +581,7 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
     VkUtils::transitionImageLayout(swapChainImages[imageIndex],
                                    vk::ImageLayout::eUndefined,
                                    vk::ImageLayout::eTransferDstOptimal,
-                                   vk::PipelineStageFlagBits2::eBottomOfPipe,
+                                   vk::PipelineStageFlagBits2::eTopOfPipe,
                                    vk::AccessFlagBits2::eNone,
                                    vk::PipelineStageFlagBits2::eTransfer,
                                    vk::AccessFlagBits2::eTransferWrite,
@@ -1054,13 +1050,6 @@ void Engine::initDescriptorPool() {
 
 void Engine::renderSky(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uint32_t frameInFlightIndex) {
     vk::ClearValue clearColor = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
-    /*vk::RenderingAttachmentInfo colorAttachmentInfo = {
-        .imageView = swapChainImageViews[imageIndex],
-        .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-        .loadOp = vk::AttachmentLoadOp::eClear,
-        .storeOp = vk::AttachmentStoreOp::eStore,
-        .clearValue = clearColor
-    };*/
 
     vk::RenderingAttachmentInfo colorAttachmentInfo = {
         .imageView = gBuffer_->getTarget().getVkImageView(),
@@ -1126,9 +1115,9 @@ void Engine::renderScene(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, u
 
     std::array colorAttachmentInfos = {
         vk::RenderingAttachmentInfo { // swapchain image
-            .imageView = gBuffer_->getTarget().getVkImageView(),
+            .imageView = gBuffer_->getAlbedoMap().getVkImageView(),
             .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-            .loadOp = vk::AttachmentLoadOp::eLoad,
+            .loadOp = vk::AttachmentLoadOp::eClear,
             .storeOp = vk::AttachmentStoreOp::eStore,
             .clearValue = clearColor
         },
@@ -1208,6 +1197,70 @@ void Engine::renderScene(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, u
     for (const auto &mesh : scene_->getMeshes()) {
         mesh->recordDrawCommands(cmdBuf, gBufferPipeline_.getPipelineLayout());
     }
+    cmdBuf.endRendering();
+}
+
+void Engine::renderGBufferShade(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uint32_t frameInFlightIndex) {
+    //set up the color attachment
+    vk::ClearValue clearColor = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
+
+    std::array colorAttachmentInfos = {
+        vk::RenderingAttachmentInfo { // swapchain image
+            .imageView = gBuffer_->getTarget().getVkImageView(),
+            .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+            .loadOp = vk::AttachmentLoadOp::eLoad,
+            .storeOp = vk::AttachmentStoreOp::eStore,
+            .clearValue = clearColor
+        },
+    };
+
+    vk::RenderingInfo renderingInfo{
+        .renderArea = {
+                .offset = {
+                    .x = 0,
+                    .y = 0
+                },
+                .extent = swapChainExtent
+        },
+        .layerCount = 1,
+        .colorAttachmentCount = colorAttachmentInfos.size(),
+        .pColorAttachments = colorAttachmentInfos.data(),
+    };
+
+    //  set dynamic rendering state values
+    const vk::Viewport viewport{
+        .x = 0,
+        .y = static_cast<float>(swapChainExtent.height),
+        .width = static_cast<float>(swapChainExtent.width),
+        .height = -static_cast<float>(swapChainExtent.height),
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f
+    };
+
+    const vk::Rect2D scissor{
+        .offset = vk::Offset2D{
+            .x = 0,
+            .y = 0
+        },
+        .extent =  swapChainExtent
+    };
+
+    //begin rendering with the specified info
+    cmdBuf.beginRendering(renderingInfo);
+
+    cmdBuf.setViewport(0, viewport);
+    cmdBuf.setScissor(0, scissor);
+
+    //  bind graphics pipeline and global descriptor set
+    cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, gBufferShadePipeline_.getGraphicsPipeline());
+    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, gBufferShadePipeline_.getPipelineLayout(), 0, *descriptorSets_[frameInFlightIndex], nullptr);
+    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, gBufferShadePipeline_.getPipelineLayout(), 1, *gBuffer_->getDescriptorSet(), nullptr);
+
+    PcsGBufferShade pcs{};
+
+    cmdBuf.pushConstants(gBufferShadePipeline_.getPipelineLayout(),vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const PcsGBufferShade>{pcs});
+    cmdBuf.draw(6, 1, 0, 0);
+
     cmdBuf.endRendering();
 }
 

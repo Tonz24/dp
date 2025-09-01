@@ -17,4 +17,8 @@ layout(set = 1, binding = 3) uniform usampler2D materialMap;
 
 void main() {
 
+    vec2 texCoord = inNDCxy * 0.5 + 0.5;
+    vec3 albedo = texture(albedoMap,texCoord).xyz;
+
+    fragColor = vec4(albedo,1.0);
 }
