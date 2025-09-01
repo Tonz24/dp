@@ -557,46 +557,17 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
     cmdBuf.reset();
     cmdBuf.begin({.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
 
-    //  the old layout is undefined
-    //  the new layout is color attachment optimal
-    //
-    //  the old stage mask is TopOfPipe
-    //  the old access mask is none
-    //
-    //  the new stage mask is color attachment output
-    //  the new access mask is color attachment write
-    /*VkUtils::transitionImageLayout(swapChainImages[imageIndex],
-                                   vk::ImageLayout::eUndefined,
-                                   vk::ImageLayout::eColorAttachmentOptimal,                           //
-                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput | vk::PipelineStageFlagBits2::eTopOfPipe,
-                                   vk::AccessFlagBits2::eNone,
-                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                   vk::AccessFlagBits2::eColorAttachmentWrite,
-                                   vk::ImageAspectFlagBits::eColor,
-                                   cmdBuf);*/
-
     /*VkUtils::transitionImageLayout(gBuffer_->getTarget().getVkImage().image,
-                                  vk::ImageLayout::eUndefined,
-                                  vk::ImageLayout::eColorAttachmentOptimal,                           //
-                                  vk::PipelineStageFlagBits2::eColorAttachmentOutput | vk::PipelineStageFlagBits2::eTopOfPipe,
+                                   vk::ImageLayout::eUndefined,
+                                  vk::ImageLayout::eColorAttachmentOptimal,
+                                  vk::PipelineStageFlagBits2::eTopOfPipe,
                                   vk::AccessFlagBits2::eNone,
                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
                                   vk::AccessFlagBits2::eColorAttachmentWrite,
                                   vk::ImageAspectFlagBits::eColor,
                                   cmdBuf);*/
 
-
-    //gBuffer_->transitionToFill(cmdBuf);
-
-    VkUtils::transitionImageLayout(gBuffer_->getTarget().getVkImage().image,
-                                   vk::ImageLayout::eUndefined,
-                                  vk::ImageLayout::eColorAttachmentOptimal,
-                                  vk::PipelineStageFlagBits2::eAllCommands,
-                                  vk::AccessFlagBits2::eNone,
-                                  vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                  vk::AccessFlagBits2::eColorAttachmentWrite,
-                                  vk::ImageAspectFlagBits::eColor,
-                                  cmdBuf);
+    gBuffer_->transitionToFill(cmdBuf);
 
     renderSky(cmdBuf,imageIndex, frameInFlightIndex);
     renderScene(cmdBuf,imageIndex, frameInFlightIndex);
@@ -670,18 +641,6 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
                      vk::Filter::eNearest);
 
 
-
-    VkUtils::transitionImageLayout(gBuffer_->getTarget().getVkImage().image,
-                                  vk::ImageLayout::eTransferSrcOptimal,
-                                  vk::ImageLayout::eColorAttachmentOptimal,
-                                vk::PipelineStageFlagBits2::eTransfer,
-                                vk::AccessFlagBits2::eTransferRead,
-                                vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                vk::AccessFlagBits2::eColorAttachmentWrite,
-                                vk::ImageAspectFlagBits::eColor,
-                                cmdBuf);
-
-
     VkUtils::transitionImageLayout(swapChainImages[imageIndex],
                                         vk::ImageLayout::eTransferDstOptimal,
                                         vk::ImageLayout::eColorAttachmentOptimal,
@@ -705,35 +664,6 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
                                   vk::AccessFlagBits2::eNone,
                                   vk::ImageAspectFlagBits::eColor,
                                   cmdBuf);
-
-
-    /*VkUtils::transitionImageLayout(swapChainImages[imageIndex],
-                                   vk::ImageLayout::eTransferDstOptimal,
-                                   vk::ImageLayout::ePresentSrcKHR,
-                                   vk::PipelineStageFlagBits2::eTransfer,
-                                   vk::AccessFlagBits2::eTransferWrite,
-                                   vk::PipelineStageFlagBits2::eBottomOfPipe,
-                                   vk::AccessFlagBits2::eNone,
-                                   vk::ImageAspectFlagBits::eColor,
-                                   cmdBuf);*/
-
-    //  the old layout is attachment optimal
-    //  the new layout is color present src
-    //
-    //  the old stage mask is color attachment output
-    //  the old access mask is color attachment write
-    //
-    //  the new stage mask is Bottom of pipe
-    //  the new access mask is none (nothing else accesses this image)
-    /*VkUtils::transitionImageLayout(swapChainImages[imageIndex],
-                                   vk::ImageLayout::eColorAttachmentOptimal,
-                                   vk::ImageLayout::ePresentSrcKHR,
-                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                   vk::AccessFlagBits2::eColorAttachmentWrite,
-                                   vk::PipelineStageFlagBits2::eBottomOfPipe,
-                                   vk::AccessFlagBits2::eNone,
-                                   vk::ImageAspectFlagBits::eColor,
-                                   cmdBuf);*/
 
     cmdBuf.end();
 }
