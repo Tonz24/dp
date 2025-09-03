@@ -44,6 +44,8 @@ public:
     [[nodiscard]] uint8_t* getMaterialUBO() const {return materialUBOsMapped_[frameInFlightIndex_];}
     [[nodiscard]] const std::vector<uint8_t*>& getMaterialUBOs() const {return materialUBOsMapped_;}
 
+    [[nodiscard]] const vk::raii::PhysicalDevice& getPhysicalDevice() const { return physicalDevice; }
+
 private:
     friend class VkUtils;
 

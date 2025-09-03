@@ -83,10 +83,14 @@ void Texture::initVkImage() {
 
     vkImageView_ = vk::raii::ImageView(device, imageViewCreateInfo);
 
+    auto formatProps = Engine::getInstance().getPhysicalDevice().getFormatProperties2(vkFormat_);
+    vk::Filter filter = formatProps.formatProperties.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSampledImageFilterLinear ? vk::Filter::eLinear : vk::Filter::eNearest;
+    vk::SamplerMipmapMode mipmapMode = formatProps.formatProperties.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSampledImageFilterLinear ? vk::SamplerMipmapMode::eLinear : vk::SamplerMipmapMode::eNearest;
+
     vk::SamplerCreateInfo samplerInfo = {
-        .magFilter = vk::Filter::eLinear,
-        .minFilter = vk::Filter::eLinear,
-        .mipmapMode  = vk::SamplerMipmapMode::eLinear,
+        .magFilter = filter,
+        .minFilter = filter,
+        .mipmapMode  = mipmapMode,
         .addressModeU = vk::SamplerAddressMode::eRepeat,
         .addressModeV = vk::SamplerAddressMode::eRepeat,
         .addressModeW = vk::SamplerAddressMode::eRepeat,
@@ -100,7 +104,6 @@ void Texture::initVkImage() {
         .borderColor = vk::BorderColor::eIntOpaqueBlack,
         .unnormalizedCoordinates = vk::False
     };
-
     vkSampler_ = vk::raii::Sampler(device,samplerInfo);
 }
 
