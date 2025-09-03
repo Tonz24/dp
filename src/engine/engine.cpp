@@ -585,51 +585,12 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
                                    cmdBuf);
 
 
-    std::array srcOffsets{
-        vk::Offset3D{
-            .x = 0,
-            .y = 0,
-            .z = 0
-        },
-        vk::Offset3D{
-            .x = static_cast<int32_t>(gBuffer_->getTarget().getWidth()),
-            .y = static_cast<int32_t>(gBuffer_->getTarget().getHeight()),
-            .z = 1
-        }
-    };
-
-    vk::ImageBlit blitRegion{
-        .srcSubresource = {
-            .aspectMask = vk::ImageAspectFlagBits::eColor,
-            .mipLevel = 0,
-            .baseArrayLayer = 0,
-            .layerCount = 1,
-        },
-        .srcOffsets =  srcOffsets,
-        .dstSubresource = {
-            .aspectMask = vk::ImageAspectFlagBits::eColor,
-            .mipLevel = 0,
-            .baseArrayLayer = 0,
-            .layerCount = 1,
-        },
-        .dstOffsets =  std::array{
-            vk::Offset3D{
-                .x = 0,
-                .y = 0,
-                .z = 0
-            },
-            vk::Offset3D{
-                .x = static_cast<int32_t>(swapChainExtent.width),
-                .y = static_cast<int32_t>(swapChainExtent.height),
-                .z = 1
-            }
-        },
-    };
-    cmdBuf.blitImage(gBuffer_->getTarget().getVkImage().image,
-                     vk::ImageLayout::eTransferSrcOptimal,
+    VkUtils::blit(cmdBuf,gBuffer_->getTarget().getVkImage().image,
+                     {gBuffer_->getTarget().getWidth(),gBuffer_->getTarget().getHeight()},
+                     vk::ImageAspectFlagBits::eColor,
                      swapChainImages[imageIndex],
-                     vk::ImageLayout::eTransferDstOptimal,
-                     blitRegion,
+                     {swapChainExtent.width,swapChainExtent.height},
+                     vk::ImageAspectFlagBits::eColor,
                      vk::Filter::eNearest);
 
 

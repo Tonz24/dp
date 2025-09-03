@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <glm/glm.hpp>
 #include <vulkan/vulkan_raii.hpp>
 #include "vmaUsage.h"
 
@@ -80,6 +81,10 @@ public:
     static constexpr VmaAllocationCreateFlags stagingAllocFlagsVMA{VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT};
 
     static const vk::raii::Device& getDevice() {return *device_;}
+
+
+    static void blit(const vk::raii::CommandBuffer& cmdBuf, const vk::Image& srcImage, const glm::vec<2,int32_t>& srcSize, vk::ImageAspectFlags srcAspect, const vk::
+                     Image& dstImage, const glm::vec<2,int32_t>& dstSize, vk::ImageAspectFlags dstAspect, vk::Filter filter);
 
 private:
     friend class Engine;

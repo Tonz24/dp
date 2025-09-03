@@ -134,6 +134,8 @@ void VkUtils::copyImageToBuffer(const ImageAlloc& image, const BufferAlloc& buff
 }
 
 
+
+
 void VkUtils::init(const vk::raii::Device* device, const vk::raii::PhysicalDevice* physicalDevice, const vk::raii::Instance* instance, const std::vector<const vk::raii::Queue*>&& queueHandles, const vk::
                    raii::CommandPool* commandPool) {
     device_ = device;
@@ -224,4 +226,58 @@ void VkUtils::transitionImageLayout(const vk::Image& image, vk::ImageLayout oldL
     };
 
     cmdBuf.pipelineBarrier2(dependencyInfo);
+}
+
+void VkUtils::blit(const vk::raii::CommandBuffer& cmdBuf, const vk::Image& srcImage, const glm::vec<2, int32_t>& srcSize,
+    vk::ImageAspectFlags srcAspect, const vk::Image& dstImage, const glm::vec<2, int32_t>& dstSize, vk::ImageAspectFlags dstAspect,
+    vk::Filter filter) {
+
+    std::array srcOffsets{
+        vk::Offset3D{
+            .x = 0,
+            .y = 0,
+            .z = 0
+        },
+        vk::Offset3D{
+            .x = srcSize.x,
+            .y = srcSize.y,
+            .z = 1
+        }
+    };
+
+    std::array dstOffsets{
+        vk::Offset3D{
+            .x = 0,
+            .y = 0,
+            .z = 0
+        },
+        vk::Offset3D{
+            .x = dstSize.x,
+            .y = dstSize.y,
+            .z = 1
+        }
+    };
+
+    vk::ImageBlit blitRegion{
+        .srcSubresource = {
+            .aspectMask = srcAspect,
+            .mipLevel = 0,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        },
+        .srcOffsets =  srcOffsets,
+        .dstSubresource = {
+            .aspectMask = dstAspect,
+            .mipLevel = 0,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        },
+        .dstOffsets =  dstOffsets
+    };
+    cmdBuf.blitImage(srcImage,
+                     vk::ImageLayout::eTransferSrcOptimal,
+                     dstImage,
+                     vk::ImageLayout::eTransferDstOptimal,
+                     blitRegion,
+                     filter);
 }

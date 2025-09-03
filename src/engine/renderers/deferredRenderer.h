@@ -18,6 +18,7 @@ public:
 
 protected:
     void initGraphicsPipelines();
+    void initDescriptorSetLayouts();
 
     void recordCommandBuffer() override;
 
