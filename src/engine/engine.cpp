@@ -563,56 +563,7 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
 
 
     //  transition to g buffer shade
-    VkUtils::transitionImageLayout(gBuffer_->getTarget().getVkImage().image,
-                                    vk::ImageLayout::eColorAttachmentOptimal,
-                                   vk::ImageLayout::eColorAttachmentOptimal,
-                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                   vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead,
-                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                   vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead,
-                                   vk::ImageAspectFlagBits::eColor,
-                                   cmdBuf);
-
-
-    VkUtils::transitionImageLayout(gBuffer_->getAlbedoMap().getVkImage().image,
-                                   vk::ImageLayout::eColorAttachmentOptimal,
-                                  vk::ImageLayout::eShaderReadOnlyOptimal,
-                                  vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                  vk::AccessFlagBits2::eColorAttachmentWrite,
-                                  vk::PipelineStageFlagBits2::eFragmentShader,
-                                  vk::AccessFlagBits2::eShaderSampledRead,
-                                  vk::ImageAspectFlagBits::eColor,
-                                  cmdBuf);
-
-    VkUtils::transitionImageLayout(gBuffer_->getNormalMap().getVkImage().image,
-                                  vk::ImageLayout::eColorAttachmentOptimal,
-                                 vk::ImageLayout::eShaderReadOnlyOptimal,
-                                 vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                 vk::AccessFlagBits2::eColorAttachmentWrite,
-                                 vk::PipelineStageFlagBits2::eFragmentShader,
-                                 vk::AccessFlagBits2::eShaderSampledRead,
-                                 vk::ImageAspectFlagBits::eColor,
-                                 cmdBuf);
-
-    VkUtils::transitionImageLayout(gBuffer_->getMaterialMap().getVkImage().image,
-                                 vk::ImageLayout::eColorAttachmentOptimal,
-                                vk::ImageLayout::eShaderReadOnlyOptimal,
-                                vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                vk::AccessFlagBits2::eColorAttachmentWrite,
-                                vk::PipelineStageFlagBits2::eFragmentShader,
-                                vk::AccessFlagBits2::eShaderSampledRead,
-                                vk::ImageAspectFlagBits::eColor,
-                                cmdBuf);
-
-    VkUtils::transitionImageLayout(gBuffer_->getDepthMap().getVkImage().image,
-                                 vk::ImageLayout::eDepthStencilAttachmentOptimal,
-                                vk::ImageLayout::eDepthStencilReadOnlyOptimal,
-                                vk::PipelineStageFlagBits2::eAllCommands,
-                                  vk::AccessFlagBits2::eDepthStencilAttachmentWrite | vk::AccessFlagBits2::eDepthStencilAttachmentRead,
-                                vk::PipelineStageFlagBits2::eFragmentShader,
-                                vk::AccessFlagBits2::eDepthStencilAttachmentRead,
-                                vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil,
-                                cmdBuf);
+    gBuffer_->transitionToShade(cmdBuf);
 
 
     //  g buffer fill

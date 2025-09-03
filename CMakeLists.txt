@@ -61,6 +61,10 @@ add_executable(dp
         src/engine/vk/graphicsPipeline.h
         src/engine/gBuffer.cpp
         src/engine/gBuffer.h
+        src/engine/renderers/renderer.cpp
+        src/engine/renderers/renderer.h
+        src/engine/renderers/deferredRenderer.cpp
+        src/engine/renderers/deferredRenderer.h
 )
 
 # add shader compilation as a build step
