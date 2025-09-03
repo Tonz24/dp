@@ -16,9 +16,9 @@ public:
     DeferredRenderer(std::shared_ptr<GBuffer> gBuffer);
     DeferredRenderer(std::string_view gBufferName);
 
-
-
 protected:
+    void initGraphicsPipelines();
+
     void recordCommandBuffer() override;
 
     GraphicsPipeline skyboxPipeline_;
@@ -27,3 +27,4 @@ protected:
 
     std::shared_ptr<GBuffer> gBuffer_{nullptr};
 };
+

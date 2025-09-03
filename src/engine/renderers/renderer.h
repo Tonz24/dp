@@ -13,5 +13,6 @@ public:
 
 protected:
     Renderer() = default;
+
     virtual void recordCommandBuffer() = 0;
 };
