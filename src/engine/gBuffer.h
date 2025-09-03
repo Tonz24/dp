@@ -16,6 +16,7 @@ public:
     void transitionToFill(vk::raii::CommandBuffer& cmdBuf) const;
     void transitionToShade(vk::raii::CommandBuffer& cmdBuf) const;
     void transitionToBlit(vk::raii::CommandBuffer& cmdBuf) const;
+    void transitionResetTarget(vk::raii::CommandBuffer& cmdBuf) const;
 
     ~GBuffer() override = default;
 
@@ -105,3 +106,5 @@ private:
     void allocateDescriptorSet();
     void recordDescriptorSet();
 };
+
+
