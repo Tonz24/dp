@@ -17,6 +17,7 @@ layout(set = 1, binding = 3) uniform usampler2D materialMap;
 
 void main() {
     vec2 texCoord = inNDCxy * 0.5 + 0.5;
+    texCoord.y = 1.0 - texCoord.y;
 
     vec3 albedo = texture(albedoMap,texCoord).xyz;
     vec3 normal = texture(normalMap,texCoord).xyz;
