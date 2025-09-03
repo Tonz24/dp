@@ -55,7 +55,7 @@ public:
 
 
     static constexpr uint32_t depthMapChannelCount{1};
-    static constexpr vk::Format depthMapVkFormat{vk::Format::eD32Sfloat};
+    static constexpr vk::Format depthMapVkFormat{vk::Format::eD24UnormS8Uint};
     static constexpr vk::ImageUsageFlags depthMapUsageFlags{vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eDepthStencilAttachment}; // sampled because of world space position reconstruction from depth
 
     static constexpr vk::Format idMapVkFormat{vk::Format::eR32Uint};
@@ -80,6 +80,9 @@ public:
         .size = static_cast<uint32_t>(sizeof(PcsGBufferShade))
     };
 
+
+    [[nodiscard]] const vk::raii::DescriptorSet& getDescriptorSet() const { return descriptorSet_; }
+
 private:
     friend class GBufferManager;
 
@@ -93,4 +96,12 @@ private:
 
     std::shared_ptr<Texture> depthMap_{nullptr};
     std::shared_ptr<Texture> objectIdMap_{nullptr};
+
+    vk::raii::DescriptorSet descriptorSet_{nullptr};
+
+
+    std::vector<std::shared_ptr<Texture>> textures_{};
+
+    void allocateDescriptorSet();
+    void recordDescriptorSet();
 };

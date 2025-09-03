@@ -531,7 +531,7 @@ void Engine::initGraphicsPipeline() {
     rasterPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/shader_frag.spv",descriptorSetLayouts,pcsFillRange, colorAttachmentFormats,true, GBuffer::depthMapVkFormat};
     gBufferPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/gbuffer_fill_frag.spv",descriptorSetLayouts,pcsFillRange,huhAttachments,true, GBuffer::depthMapVkFormat};
     skyboxPipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/skypass_frag.spv",descriptorSetLayoutsSky,{},colorAttachmentFormatsSky, false};
-    gBufferShadePipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/gbuffer_shade_frag.spv",descriptorSetLayoutsSky,pcsShadeRange,gBufferShadeFormat, false};
+    gBufferShadePipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/gbuffer_shade_frag.spv",descriptorSetLayouts,pcsShadeRange,gBufferShadeFormat, false};
 }
 
 void Engine::initCommandPool() {
@@ -557,55 +557,116 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
     cmdBuf.reset();
     cmdBuf.begin({.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
 
-    //  the old layout is undefined
-    //  the new layout is color attachment optimal
-    //
-    //  the old stage mask is TopOfPipe
-    //  the old access mask is none
-    //
-    //  the new stage mask is color attachment output
-    //  the new access mask is color attachment write
-    /*VkUtils::transitionImageLayout(swapChainImages[imageIndex],
-                                   vk::ImageLayout::eUndefined,
-                                   vk::ImageLayout::eColorAttachmentOptimal,                           //
-                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput | vk::PipelineStageFlagBits2::eTopOfPipe,
-                                   vk::AccessFlagBits2::eNone,
-                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                   vk::AccessFlagBits2::eColorAttachmentWrite,
-                                   vk::ImageAspectFlagBits::eColor,
-                                   cmdBuf);*/
-
-    /*VkUtils::transitionImageLayout(gBuffer_->getTarget().getVkImage().image,
-                                  vk::ImageLayout::eUndefined,
-                                  vk::ImageLayout::eColorAttachmentOptimal,                           //
-                                  vk::PipelineStageFlagBits2::eColorAttachmentOutput | vk::PipelineStageFlagBits2::eTopOfPipe,
-                                  vk::AccessFlagBits2::eNone,
-                                  vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                  vk::AccessFlagBits2::eColorAttachmentWrite,
-                                  vk::ImageAspectFlagBits::eColor,
-                                  cmdBuf);*/
-
-
-    //gBuffer_->transitionToFill(cmdBuf);
-
-    VkUtils::transitionImageLayout(gBuffer_->getTarget().getVkImage().image,
-                                   vk::ImageLayout::eUndefined,
-                                  vk::ImageLayout::eColorAttachmentOptimal,
-                                  vk::PipelineStageFlagBits2::eAllCommands,
-                                  vk::AccessFlagBits2::eNone,
-                                  vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                  vk::AccessFlagBits2::eColorAttachmentWrite,
-                                  vk::ImageAspectFlagBits::eColor,
-                                  cmdBuf);
-
+    //  g buffer fill and sky pass
     renderSky(cmdBuf,imageIndex, frameInFlightIndex);
     renderScene(cmdBuf,imageIndex, frameInFlightIndex);
 
+
+    //  transition to g buffer shade
+    VkUtils::transitionImageLayout(gBuffer_->getTarget().getVkImage().image,
+                                    vk::ImageLayout::eColorAttachmentOptimal,
+                                   vk::ImageLayout::eColorAttachmentOptimal,
+                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                                   vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead,
+                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                                   vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead,
+                                   vk::ImageAspectFlagBits::eColor,
+                                   cmdBuf);
+
+
+    VkUtils::transitionImageLayout(gBuffer_->getAlbedoMap().getVkImage().image,
+                                   vk::ImageLayout::eColorAttachmentOptimal,
+                                  vk::ImageLayout::eShaderReadOnlyOptimal,
+                                  vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                                  vk::AccessFlagBits2::eColorAttachmentWrite,
+                                  vk::PipelineStageFlagBits2::eFragmentShader,
+                                  vk::AccessFlagBits2::eShaderSampledRead,
+                                  vk::ImageAspectFlagBits::eColor,
+                                  cmdBuf);
+
+    VkUtils::transitionImageLayout(gBuffer_->getNormalMap().getVkImage().image,
+                                  vk::ImageLayout::eColorAttachmentOptimal,
+                                 vk::ImageLayout::eShaderReadOnlyOptimal,
+                                 vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                                 vk::AccessFlagBits2::eColorAttachmentWrite,
+                                 vk::PipelineStageFlagBits2::eFragmentShader,
+                                 vk::AccessFlagBits2::eShaderSampledRead,
+                                 vk::ImageAspectFlagBits::eColor,
+                                 cmdBuf);
+
+    VkUtils::transitionImageLayout(gBuffer_->getMaterialMap().getVkImage().image,
+                                 vk::ImageLayout::eColorAttachmentOptimal,
+                                vk::ImageLayout::eShaderReadOnlyOptimal,
+                                vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                                vk::AccessFlagBits2::eColorAttachmentWrite,
+                                vk::PipelineStageFlagBits2::eFragmentShader,
+                                vk::AccessFlagBits2::eShaderSampledRead,
+                                vk::ImageAspectFlagBits::eColor,
+                                cmdBuf);
+
+    VkUtils::transitionImageLayout(gBuffer_->getDepthMap().getVkImage().image,
+                                 vk::ImageLayout::eDepthStencilAttachmentOptimal,
+                                vk::ImageLayout::eDepthStencilReadOnlyOptimal,
+                                vk::PipelineStageFlagBits2::eAllCommands,
+                                  vk::AccessFlagBits2::eDepthStencilAttachmentWrite | vk::AccessFlagBits2::eDepthStencilAttachmentRead,
+                                vk::PipelineStageFlagBits2::eFragmentShader,
+                                vk::AccessFlagBits2::eDepthStencilAttachmentRead,
+                                vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil,
+                                cmdBuf);
+
+
+    //  g buffer fill
+    renderGBufferShade(cmdBuf,imageIndex, frameInFlightIndex);
+
+
+
+    // transition g buffer images back to write
+    VkUtils::transitionImageLayout(gBuffer_->getAlbedoMap().getVkImage().image,
+                                    vk::ImageLayout::eShaderReadOnlyOptimal,
+                                  vk::ImageLayout::eColorAttachmentOptimal,
+                                  vk::PipelineStageFlagBits2::eFragmentShader,
+                                                vk::AccessFlagBits2::eShaderSampledRead,
+                                                vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                                                vk::AccessFlagBits2::eColorAttachmentWrite,
+                                  vk::ImageAspectFlagBits::eColor,
+                                  cmdBuf);
+
+    VkUtils::transitionImageLayout(gBuffer_->getNormalMap().getVkImage().image,
+                                    vk::ImageLayout::eShaderReadOnlyOptimal,
+                                  vk::ImageLayout::eColorAttachmentOptimal,
+                                  vk::PipelineStageFlagBits2::eFragmentShader,
+                                                vk::AccessFlagBits2::eShaderSampledRead,
+                                                vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                                                vk::AccessFlagBits2::eColorAttachmentWrite,
+                                  vk::ImageAspectFlagBits::eColor,
+                                  cmdBuf);
+
+    VkUtils::transitionImageLayout(gBuffer_->getMaterialMap().getVkImage().image,
+                                    vk::ImageLayout::eShaderReadOnlyOptimal,
+                                  vk::ImageLayout::eColorAttachmentOptimal,
+                                  vk::PipelineStageFlagBits2::eFragmentShader,
+                                                vk::AccessFlagBits2::eShaderSampledRead,
+                                                vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                                                vk::AccessFlagBits2::eColorAttachmentWrite,
+                                  vk::ImageAspectFlagBits::eColor,
+                                  cmdBuf);
+
+    VkUtils::transitionImageLayout(gBuffer_->getDepthMap().getVkImage().image,
+                                 vk::ImageLayout::eDepthStencilReadOnlyOptimal,
+                                vk::ImageLayout::eDepthStencilAttachmentOptimal,
+                                vk::PipelineStageFlagBits2::eFragmentShader,
+                                vk::AccessFlagBits2::eDepthStencilAttachmentRead,
+                                vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
+                                  vk::AccessFlagBits2::eDepthStencilAttachmentWrite | vk::AccessFlagBits2::eDepthStencilAttachmentRead,
+                                vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil,
+                                cmdBuf);
+
+    //  transition g buffer target to blit
     VkUtils::transitionImageLayout(gBuffer_->getTarget().getVkImage().image,
                                     vk::ImageLayout::eColorAttachmentOptimal,
                                    vk::ImageLayout::eTransferSrcOptimal,
                                    vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                   vk::AccessFlagBits2::eColorAttachmentWrite,
+                                   vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead,
                                    vk::PipelineStageFlagBits2::eTransfer,
                                    vk::AccessFlagBits2::eTransferRead,
                                    vk::ImageAspectFlagBits::eColor,
@@ -670,7 +731,7 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
                      vk::Filter::eNearest);
 
 
-
+    // transition g buffer target to color attachment (preparation for the next frame)
     VkUtils::transitionImageLayout(gBuffer_->getTarget().getVkImage().image,
                                   vk::ImageLayout::eTransferSrcOptimal,
                                   vk::ImageLayout::eColorAttachmentOptimal,
@@ -682,58 +743,31 @@ void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightInde
                                 cmdBuf);
 
 
+    //  transition swapchain image into color attachment optimal for gui write
     VkUtils::transitionImageLayout(swapChainImages[imageIndex],
                                         vk::ImageLayout::eTransferDstOptimal,
                                         vk::ImageLayout::eColorAttachmentOptimal,
                                        vk::PipelineStageFlagBits2::eTransfer,
                                        vk::AccessFlagBits2::eTransferWrite,
                                        vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                       vk::AccessFlagBits2::eColorAttachmentRead,
+                                       vk::AccessFlagBits2::eColorAttachmentRead | vk::AccessFlagBits2::eColorAttachmentWrite,
                                        vk::ImageAspectFlagBits::eColor,
                                        cmdBuf);
 
 
-    //
+    // render gui last, into the swapchain frame buffer
     renderGUI(cmdBuf, imageIndex);
 
+    //  transition swapchain image to present
     VkUtils::transitionImageLayout(swapChainImages[imageIndex],
                                    vk::ImageLayout::eColorAttachmentOptimal,
                                   vk::ImageLayout::ePresentSrcKHR,
                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                       vk::AccessFlagBits2::eColorAttachmentWrite,
+                                       vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead,
                                   vk::PipelineStageFlagBits2::eBottomOfPipe,
                                   vk::AccessFlagBits2::eNone,
                                   vk::ImageAspectFlagBits::eColor,
                                   cmdBuf);
-
-
-    /*VkUtils::transitionImageLayout(swapChainImages[imageIndex],
-                                   vk::ImageLayout::eTransferDstOptimal,
-                                   vk::ImageLayout::ePresentSrcKHR,
-                                   vk::PipelineStageFlagBits2::eTransfer,
-                                   vk::AccessFlagBits2::eTransferWrite,
-                                   vk::PipelineStageFlagBits2::eBottomOfPipe,
-                                   vk::AccessFlagBits2::eNone,
-                                   vk::ImageAspectFlagBits::eColor,
-                                   cmdBuf);*/
-
-    //  the old layout is attachment optimal
-    //  the new layout is color present src
-    //
-    //  the old stage mask is color attachment output
-    //  the old access mask is color attachment write
-    //
-    //  the new stage mask is Bottom of pipe
-    //  the new access mask is none (nothing else accesses this image)
-    /*VkUtils::transitionImageLayout(swapChainImages[imageIndex],
-                                   vk::ImageLayout::eColorAttachmentOptimal,
-                                   vk::ImageLayout::ePresentSrcKHR,
-                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                   vk::AccessFlagBits2::eColorAttachmentWrite,
-                                   vk::PipelineStageFlagBits2::eBottomOfPipe,
-                                   vk::AccessFlagBits2::eNone,
-                                   vk::ImageAspectFlagBits::eColor,
-                                   cmdBuf);*/
 
     cmdBuf.end();
 }
@@ -1124,13 +1158,6 @@ void Engine::initDescriptorPool() {
 
 void Engine::renderSky(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uint32_t frameInFlightIndex) {
     vk::ClearValue clearColor = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
-    /*vk::RenderingAttachmentInfo colorAttachmentInfo = {
-        .imageView = swapChainImageViews[imageIndex],
-        .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-        .loadOp = vk::AttachmentLoadOp::eClear,
-        .storeOp = vk::AttachmentStoreOp::eStore,
-        .clearValue = clearColor
-    };*/
 
     vk::RenderingAttachmentInfo colorAttachmentInfo = {
         .imageView = gBuffer_->getTarget().getVkImageView(),
@@ -1196,9 +1223,9 @@ void Engine::renderScene(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, u
 
     std::array colorAttachmentInfos = {
         vk::RenderingAttachmentInfo { // swapchain image
-            .imageView = gBuffer_->getTarget().getVkImageView(),
+            .imageView = gBuffer_->getAlbedoMap().getVkImageView(),
             .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-            .loadOp = vk::AttachmentLoadOp::eLoad,
+            .loadOp = vk::AttachmentLoadOp::eClear,
             .storeOp = vk::AttachmentStoreOp::eStore,
             .clearValue = clearColor
         },
@@ -1228,7 +1255,7 @@ void Engine::renderScene(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, u
     vk::ClearValue depthClearColor = vk::ClearDepthStencilValue(1.0f,0);
     vk::RenderingAttachmentInfo depthAttachmentInfo = {
         .imageView = gBuffer_->getDepthMap().getVkImageView(),
-        .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
+        .imageLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
         .loadOp = vk::AttachmentLoadOp::eClear,
         .storeOp = vk::AttachmentStoreOp::eStore,
         .clearValue = depthClearColor
@@ -1278,6 +1305,69 @@ void Engine::renderScene(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, u
     for (const auto &mesh : scene_->getMeshes()) {
         mesh->recordDrawCommands(cmdBuf, gBufferPipeline_.getPipelineLayout());
     }
+    cmdBuf.endRendering();
+}
+
+void Engine::renderGBufferShade(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uint32_t frameInFlightIndex) {
+    //set up the color attachment
+    vk::ClearValue clearColor = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
+
+    std::array colorAttachmentInfos = {
+        vk::RenderingAttachmentInfo { // swapchain image
+            .imageView = gBuffer_->getTarget().getVkImageView(),
+            .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+            .loadOp = vk::AttachmentLoadOp::eLoad,
+            .storeOp = vk::AttachmentStoreOp::eStore,
+            .clearValue = clearColor
+        }
+    };
+
+    vk::RenderingInfo renderingInfo{
+        .renderArea = {
+                .offset = {
+                    .x = 0,
+                    .y = 0
+                },
+                .extent = swapChainExtent
+        },
+        .layerCount = 1,
+        .colorAttachmentCount = colorAttachmentInfos.size(),
+        .pColorAttachments = colorAttachmentInfos.data(),
+        .pDepthAttachment = nullptr,
+    };
+    //  set dynamic rendering state values
+    const vk::Viewport viewport{
+        .x = 0,
+        .y = static_cast<float>(swapChainExtent.height),
+        .width = static_cast<float>(swapChainExtent.width),
+        .height = -static_cast<float>(swapChainExtent.height),
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f
+    };
+
+    const vk::Rect2D scissor{
+        .offset = vk::Offset2D{
+            .x = 0,
+            .y = 0
+        },
+        .extent =  swapChainExtent
+    };
+
+    //begin rendering with the specified info
+    cmdBuf.beginRendering(renderingInfo);
+
+    cmdBuf.setViewport(0, viewport);
+    cmdBuf.setScissor(0, scissor);
+
+    //  bind graphics pipeline and global descriptor set
+    cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, gBufferShadePipeline_.getGraphicsPipeline());
+    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, gBufferShadePipeline_.getPipelineLayout(), 0, *descriptorSets_[frameInFlightIndex], nullptr);
+    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, gBufferShadePipeline_.getPipelineLayout(), 1, *gBuffer_->getDescriptorSet(), nullptr);
+
+    const PcsGBufferShade pcs{};
+    cmdBuf.pushConstants(gBufferShadePipeline_.getPipelineLayout(), vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const PcsGBufferShade>{pcs});
+
+    cmdBuf.draw(6, 1, 0, 0);
     cmdBuf.endRendering();
 }
 

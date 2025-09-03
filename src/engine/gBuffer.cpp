@@ -3,6 +3,8 @@
 //
 
 #include "gBuffer.h"
+
+#include "engine.h"
 #include "managers/resourceManager.h"
 
 
@@ -55,6 +57,10 @@ GBuffer::GBuffer(std::string_view resourceName, uint32_t width, uint32_t height)
                                                                  idMapVkFormat,
                                                                  idMapUsageFlags);
 
+    textures_ = {albedoMap_,normalMap_,depthMap_,materialIdMap_};
+    allocateDescriptorSet();
+    recordDescriptorSet();
+
     auto cmdBuf = VkUtils::beginSingleTimeCommand();
 
     //  transition albedo map
@@ -105,12 +111,12 @@ GBuffer::GBuffer(std::string_view resourceName, uint32_t width, uint32_t height)
     //  transition depth
     VkUtils::transitionImageLayout(depthMap_->getVkImage().image,
                                   vk::ImageLayout::eUndefined,
-                                  vk::ImageLayout::eDepthAttachmentOptimal,
+                                  vk::ImageLayout::eDepthStencilAttachmentOptimal,
                                   vk::PipelineStageFlagBits2::eTopOfPipe,
                                   vk::AccessFlagBits2::eNone,
                                   vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
                                   vk::AccessFlagBits2::eDepthStencilAttachmentWrite | vk::AccessFlagBits2::eDepthStencilAttachmentRead,
-                                  vk::ImageAspectFlagBits::eDepth,
+                                  vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil,
                                   cmdBuf);
 
     //  transition id map
@@ -127,6 +133,50 @@ GBuffer::GBuffer(std::string_view resourceName, uint32_t width, uint32_t height)
 
 
     VkUtils::endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
+}
+
+void GBuffer::allocateDescriptorSet() {
+    vk::DescriptorSetAllocateInfo allocInfo{
+        .descriptorPool = Engine::getInstance().getDescriptorPool(),
+        .descriptorSetCount = 1,
+        .pSetLayouts = &*Engine::getInstance().getDescriptorSetLayoutMaterial(),
+    };
+
+    auto h = VkUtils::getDevice().allocateDescriptorSets(allocInfo);
+    descriptorSet_ = std::move(h.front());
+}
+
+void GBuffer::recordDescriptorSet() {
+    std::vector<vk::WriteDescriptorSet> descriptorWrites{};
+    std::vector<vk::DescriptorImageInfo> imageInfos;
+
+    imageInfos.reserve(textures_.size());
+    descriptorWrites.reserve(textures_.size());
+
+
+    for (uint32_t i = 0; i < textures_.size(); ++i) {
+
+        vk::ImageLayout imageLayout = textures_[i] == depthMap_ ?  vk::ImageLayout::eDepthStencilReadOnlyOptimal : vk::ImageLayout::eShaderReadOnlyOptimal;
+
+        imageInfos.emplace_back(vk::DescriptorImageInfo{
+            .sampler = textures_[i]->getVkSampler(),
+            .imageView =  textures_[i]->getVkImageView(),
+            .imageLayout = imageLayout
+        });
+
+        vk::WriteDescriptorSet writeDescriptorSet{
+            .dstSet = descriptorSet_,
+            .dstBinding = i,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = vk::DescriptorType::eCombinedImageSampler,
+            .pImageInfo = &imageInfos.back()
+        };
+
+        descriptorWrites.emplace_back(writeDescriptorSet);
+    }
+
+    VkUtils::getDevice().updateDescriptorSets(descriptorWrites,{});
 }
 
 

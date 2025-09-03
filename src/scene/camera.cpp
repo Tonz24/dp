@@ -49,7 +49,7 @@ const glm::mat4 &Camera::getInvViewProjMat() const {
 
 void Camera::updateOrientation(double dx, double dy) {
     yaw_ += dx * 0.03;
-    pitch_ -= dy * 0.03;
+    pitch_ += dy * 0.03;
 
     if (pitch_ > 89.0f)
         pitch_ = 89.0f;
