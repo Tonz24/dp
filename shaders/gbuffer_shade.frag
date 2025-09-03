@@ -20,11 +20,13 @@ void main() {
 
     vec3 albedo = texture(albedoMap,texCoord).xyz;
     vec3 normal = texture(normalMap,texCoord).xyz;
+    float depth = texture(depthMap,texCoord).x;
+    uint materialId = texture(materialMap,texCoord).x;
 
+    //  this fragment has something to shade only if there's a normal behind it
     bool hasValidGeometry = (bool((normal.x > 0 || normal.x < 0) || (normal.y > 0 || normal.y < 0) || (normal.z > 0 || normal.z < 0)));
+    if (!hasValidGeometry)
+        discard;
 
-    if (hasValidGeometry)
-        fragColor = vec4(albedo,1.0);
-    else
-        fragColor = vec4(1.0);
+    fragColor = vec4(albedo,1.0);
 }
