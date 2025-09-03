@@ -14,6 +14,7 @@ public:
     ~Renderer() override = default;
 
     static void initLayouts();
+    static void destroy();
 
     static const vk::raii::DescriptorSetLayout& getDescSetLayoutFrame() {return descSetLayoutFrame_;}
     static const vk::raii::DescriptorSetLayout& getDescSetLayoutMaterial() {return descSetLayoutMaterial_;}

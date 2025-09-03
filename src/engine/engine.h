@@ -36,14 +36,11 @@ public:
 
     [[nodiscard]] const vk::PhysicalDeviceLimits & getDeviceLimits() const { return deviceLimits; }
     [[nodiscard]] const vk::raii::DescriptorPool & getDescriptorPool() const { return descriptorPool_; }
-    [[nodiscard]] const vk::raii::DescriptorSetLayout & getDescriptorSetLayoutFrame() const { return descriptorSetLayoutFrame_; }
-    [[nodiscard]] const vk::raii::DescriptorSetLayout & getDescriptorSetLayoutMaterial() const { return descriptorSetLayoutMaterial_; }
+
 
     void setCameraUBOStorage(const CameraUBOFormat& data);
     void setMaterialUBOStorage(uint32_t updateIndex, const MaterialUBOFormat& data);
 
-    [[nodiscard]] uint8_t* getMaterialUBO() const {return materialUBOsMapped_[frameInFlightIndex_];}
-    [[nodiscard]] const std::vector<uint8_t*>& getMaterialUBOs() const {return materialUBOsMapped_;}
 
     [[nodiscard]] const vk::raii::PhysicalDevice& getPhysicalDevice() const { return physicalDevice; }
 
@@ -78,23 +75,13 @@ private:
     [[nodiscard]] vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) const;
 
     void initImageViews();
-    void initGraphicsPipeline();
 
     void initCommandPool();
     void initCommandBuffers();
 
     void initSyncObjects();
 
-    void initDescriptorSetLayout();
-    void initUniformBuffers();
     void initDescriptorPool();
-
-    void renderSky(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uint32_t frameInFlightIndex);
-    void renderScene(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uint32_t frameInFlightIndex);
-    void renderGBufferShade(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uint32_t frameInFlightIndex);
-    void renderGUI(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex);
-
-    void recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightIndex, vk::raii::CommandBuffer &cmdBuf);
 
     void drawFrame();
 
@@ -162,30 +149,16 @@ private:
     vk::Extent2D swapChainExtent{};
     std::vector<vk::raii::ImageView> swapChainImageViews{};
 
-    vk::raii::DescriptorSetLayout descriptorSetLayoutFrame_{nullptr};
-    vk::raii::DescriptorSetLayout descriptorSetLayoutMaterial_{nullptr};
-
-    GraphicsPipeline rasterPipeline_{};
-    GraphicsPipeline skyboxPipeline_{};
-
     vk::raii::CommandPool graphicsCommandPool_{nullptr};
 
     std::vector<vk::raii::CommandBuffer> commandBuffers_{};
 
     std::vector<vk::raii::Semaphore> acquireSemaphores_;
-
     std::vector<vk::raii::Semaphore> submitSemaphores_{};
-
     std::vector<vk::raii::Fence> inFlightFences_{};
 
-    std::vector<VkUtils::BufferAlloc> cameraUBOs_{};
-    std::vector<uint8_t*> cameraUBOsMapped_{};
-
-    std::vector<VkUtils::BufferAlloc> materialUBOs_{};
-    std::vector<uint8_t*> materialUBOsMapped_{};
 
     vk::raii::DescriptorPool descriptorPool_{nullptr};
-    std::vector<vk::raii::DescriptorSet> descriptorSets_{};
 
     vk::raii::DebugUtilsMessengerEXT debugMessenger{nullptr};
 
@@ -241,7 +214,6 @@ private:
     void configureVkUtils() const;
     void updateUBOs();
 
-    void cleanUBOs();
 
     bool dirtyCameraUBO_{false}, dirtyMaterialUBO_{false};
 
@@ -249,14 +221,10 @@ private:
     MaterialUBOFormat materialUBOStorage_{};
     uint32_t materialUpdateIndex_{};
 
-
     VkUtils::BufferAlloc idMapTransferBuffer_{};
     void clickSceneObject(const glm::vec<2,double>& cursorPos) const;
 
     std::shared_ptr<GBuffer> gBuffer_{nullptr};
-
-    GraphicsPipeline gBufferPipeline_{};
-    GraphicsPipeline gBufferShadePipeline_{};
 
     std::shared_ptr<DeferredRenderer> renderer_{};
 };

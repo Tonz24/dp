@@ -139,7 +139,7 @@ void GBuffer::allocateDescriptorSet() {
     vk::DescriptorSetAllocateInfo allocInfo{
         .descriptorPool = Engine::getInstance().getDescriptorPool(),
         .descriptorSetCount = 1,
-        .pSetLayouts = &*Engine::getInstance().getDescriptorSetLayoutMaterial(),
+        .pSetLayouts = &*Renderer::getDescSetLayoutMaterial(),
     };
 
     auto h = VkUtils::getDevice().allocateDescriptorSets(allocInfo);

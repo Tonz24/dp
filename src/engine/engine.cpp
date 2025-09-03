@@ -161,19 +161,18 @@ void Engine::initVulkan() {
     initImageViews();
 
     initDescriptorPool();
-    initUniformBuffers();
-    initDescriptorSetLayout();
     Renderer::initLayouts();
 
 
     initCommandPool();
     initCommandBuffers();
 
-    initGraphicsPipeline();
-
     initSyncObjects();
 
     initDummyTexture();
+
+    auto allocationCreateFlags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+    idMapTransferBuffer_ = VkUtils::createBufferVMA(sizeof(uint32_t),vk::BufferUsageFlagBits::eTransferDst, allocationCreateFlags);
 
     gBuffer_ = GBufferManager::getInstance()->registerResource("gbuffer_test",1280,720);
     renderer_ = std::make_shared<DeferredRenderer>(gBuffer_);
@@ -518,27 +517,6 @@ void Engine::initImageViews() {
     }
 }
 
-void Engine::initGraphicsPipeline() {
-    std::vector descriptorSetLayouts = {*descriptorSetLayoutFrame_, *descriptorSetLayoutMaterial_};
-    std::vector colorAttachmentFormats = {swapChainImageFormat, GBuffer::idMapVkFormat};
-
-    std::array huhAttachments{GBuffer::targetVkFormat, GBuffer::attachmentFormats[1],GBuffer::attachmentFormats[2], GBuffer::attachmentFormats[3]};
-    std::span colorAttachmentFormatsSky{huhAttachments.begin(),1};
-    //std::span colorAttachmentFormatsSky{&swapChainImageFormat,1};
-
-    std::array gBufferShadeFormat{GBuffer::targetVkFormat};
-
-    std::array pcsFillRange{GBuffer::pcsFillRange};
-    std::array pcsShadeRange{GBuffer::pcsShadeRange};
-
-
-    std::vector descriptorSetLayoutsSky = {*descriptorSetLayoutFrame_, *Renderer::getDescSetLayoutSky()};
-    rasterPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/shader_frag.spv",descriptorSetLayouts,pcsFillRange, colorAttachmentFormats,true, GBuffer::depthMapVkFormat};
-    gBufferPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/gbuffer_fill_frag.spv",descriptorSetLayouts,pcsFillRange,huhAttachments,true, GBuffer::depthMapVkFormat};
-    skyboxPipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/skypass_frag.spv",descriptorSetLayoutsSky,{},colorAttachmentFormatsSky, false};
-    gBufferShadePipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/gbuffer_shade_frag.spv",descriptorSetLayouts,pcsShadeRange,gBufferShadeFormat, false};
-}
-
 void Engine::initCommandPool() {
 
     vk::CommandPoolCreateInfo drawPoolInfo{
@@ -556,80 +534,6 @@ void Engine::initCommandBuffers() {
     };
 
     commandBuffers_ = vk::raii::CommandBuffers(device_,commandBufferAllocInfo);
-}
-
-void Engine::recordCommandBuffer(uint32_t imageIndex, uint32_t frameInFlightIndex, vk::raii::CommandBuffer &cmdBuf) {
-    cmdBuf.reset();
-    cmdBuf.begin({.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
-
-    //  g buffer fill and sky pass
-    renderSky(cmdBuf,imageIndex, frameInFlightIndex);
-    renderScene(cmdBuf,imageIndex, frameInFlightIndex);
-
-
-    //  transition to g buffer shade
-    gBuffer_->transitionToShade(cmdBuf);
-
-
-    //  g buffer fill
-    renderGBufferShade(cmdBuf,imageIndex, frameInFlightIndex);
-
-
-    gBuffer_->transitionToFill(cmdBuf);
-    //  transition g buffer target to blit
-    gBuffer_->transitionToBlit(cmdBuf);
-
-    VkUtils::transitionImageLayout(swapChainImages[imageIndex],
-                                   vk::ImageLayout::eUndefined,
-                                   vk::ImageLayout::eTransferDstOptimal,
-                                   vk::PipelineStageFlagBits2::eBottomOfPipe,
-                                   vk::AccessFlagBits2::eNone,
-                                   vk::PipelineStageFlagBits2::eTransfer,
-                                   vk::AccessFlagBits2::eTransferWrite,
-                                   vk::ImageAspectFlagBits::eColor,
-                                   cmdBuf);
-
-
-    VkUtils::blit(cmdBuf,gBuffer_->getTarget().getVkImage().image,
-                     {gBuffer_->getTarget().getWidth(),gBuffer_->getTarget().getHeight()},
-                     vk::ImageAspectFlagBits::eColor,
-                     swapChainImages[imageIndex],
-                     {swapChainExtent.width,swapChainExtent.height},
-                     vk::ImageAspectFlagBits::eColor,
-                     vk::Filter::eNearest);
-
-
-    // transition g buffer target to color attachment (preparation for the next frame)
-    gBuffer_->transitionResetTarget(cmdBuf);
-
-
-    //  transition swapchain image into color attachment optimal for gui write
-    VkUtils::transitionImageLayout(swapChainImages[imageIndex],
-                                        vk::ImageLayout::eTransferDstOptimal,
-                                        vk::ImageLayout::eColorAttachmentOptimal,
-                                       vk::PipelineStageFlagBits2::eTransfer,
-                                       vk::AccessFlagBits2::eTransferWrite,
-                                       vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                       vk::AccessFlagBits2::eColorAttachmentRead | vk::AccessFlagBits2::eColorAttachmentWrite,
-                                       vk::ImageAspectFlagBits::eColor,
-                                       cmdBuf);
-
-
-    // render gui last, into the swapchain frame buffer
-    renderGUI(cmdBuf, imageIndex);
-
-    //  transition swapchain image to present
-    VkUtils::transitionImageLayout(swapChainImages[imageIndex],
-                                   vk::ImageLayout::eColorAttachmentOptimal,
-                                  vk::ImageLayout::ePresentSrcKHR,
-                                  vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                       vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead,
-                                  vk::PipelineStageFlagBits2::eBottomOfPipe,
-                                  vk::AccessFlagBits2::eNone,
-                                  vk::ImageAspectFlagBits::eColor,
-                                  cmdBuf);
-
-    cmdBuf.end();
 }
 
 std::vector<const char *> Engine::initValidationLayers() {
@@ -726,13 +630,9 @@ vk::raii::ShaderModule Engine::createShaderModule(const std::vector<char> &code)
 
 
 void Engine::drawFrame() {
-
-
     //  reset the current frame's fence
     vk::raii::Fence& frameFence = inFlightFences_[frameInFlightIndex_];
     device_.waitForFences(*frameFence, vk::True, UINT64_MAX );
-
-
 
     updateUBOs();
 
@@ -852,7 +752,8 @@ void Engine::cleanup() {
 
     VkUtils::destroyBufferVMA(std::move(idMapTransferBuffer_));
 
-    cleanUBOs();
+    renderer_.reset();
+    Renderer::destroy();
 
     VkUtils::destroy();
     glfwTerminate();
@@ -869,129 +770,6 @@ void Engine::initSyncObjects() {
     }
 }
 
-void Engine::initDescriptorSetLayout() {
-
-    //  Frame descriptor layout first
-    std::array frameDescriptorBindings{
-        vk::DescriptorSetLayoutBinding { // camera UBO
-            .binding = 0,
-            .descriptorType = vk::DescriptorType::eUniformBuffer,
-            .descriptorCount = 1,
-            .stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment
-        },
-        vk::DescriptorSetLayoutBinding { // material UBO
-            .binding = 1,
-            .descriptorType = vk::DescriptorType::eUniformBuffer,
-            .descriptorCount = 1,
-            .stageFlags = vk::ShaderStageFlagBits::eFragment
-        }
-    };
-
-    vk::DescriptorSetLayoutCreateInfo frameLayoutInfo{
-        .bindingCount = static_cast<uint32_t>(frameDescriptorBindings.size()),
-        .pBindings = frameDescriptorBindings.data()
-    };
-    descriptorSetLayoutFrame_ = vk::raii::DescriptorSetLayout(device_,frameLayoutInfo);
-
-
-    //  Material descriptor layout second
-    std::vector<vk::DescriptorSetLayoutBinding> materialBindings{};
-
-    for (uint32_t i = 0; i < 4; ++i) {
-        vk::DescriptorSetLayoutBinding materialBinding{
-            .binding = i,
-            .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-            .descriptorCount = 1,
-            .stageFlags = vk::ShaderStageFlagBits::eFragment,
-        };
-        materialBindings.emplace_back(materialBinding);
-    }
-
-
-    vk::DescriptorSetLayoutCreateInfo materialLayoutInfo{
-        .bindingCount = static_cast<uint32_t>(materialBindings.size()),
-        .pBindings = materialBindings.data()
-    };
-    descriptorSetLayoutMaterial_ = vk::raii::DescriptorSetLayout(device_,materialLayoutInfo);
-
-    std::vector<vk::DescriptorSetLayout> layouts(Constants::maxFramesInFlight,*descriptorSetLayoutFrame_);
-    vk::DescriptorSetAllocateInfo allocInfo{
-        .descriptorPool = descriptorPool_,
-        .descriptorSetCount = static_cast<uint32_t>(layouts.size()),
-        .pSetLayouts = layouts.data()
-    };
-
-    descriptorSets_ = device_.allocateDescriptorSets(allocInfo);
-
-    for (size_t i = 0; i < Constants::maxFramesInFlight; i++) {
-
-        vk::DescriptorBufferInfo camBufferInfo{
-            .buffer = cameraUBOs_[i].buffer,
-            .offset = 0,
-            .range = sizeof(CameraUBOFormat)
-        };
-
-        vk::DescriptorBufferInfo matBufferInfo{
-            .buffer = materialUBOs_[i].buffer,
-            .offset = 0,
-            .range = sizeof(MaterialUBOFormat) * Constants::materialLimit
-        };
-
-        vk::WriteDescriptorSet writeDescriptorSetCam{
-            .dstSet = descriptorSets_[i], //  which descriptor set to update
-            .dstBinding = 0, // which binding to update
-            .dstArrayElement = 0, //  what element the update starts at
-            .descriptorCount = 1, //  how many descriptors are affected
-            .descriptorType = vk::DescriptorType::eUniformBuffer,
-            .pBufferInfo = &camBufferInfo,
-        };
-
-        vk::WriteDescriptorSet writeDescriptorSetMat{
-            .dstSet = descriptorSets_[i], //  which descriptor set to update
-            .dstBinding = 1, // which binding to update
-            .dstArrayElement = 0, //  what element the update starts at
-            .descriptorCount = 1, //  how many descriptors are affected
-            .descriptorType = vk::DescriptorType::eUniformBuffer,
-            .pBufferInfo = &matBufferInfo,
-        };
-
-        device_.updateDescriptorSets({writeDescriptorSetCam, writeDescriptorSetMat},{});
-    }
-}
-
-
-void Engine::initUniformBuffers() {
-    cameraUBOs_.clear();
-    cameraUBOsMapped_.clear();
-
-    materialUBOs_.clear();
-    materialUBOsMapped_.clear();
-
-    // camera UBO
-    for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
-        vk::DeviceSize bufferSize = sizeof(CameraUBOFormat);
-        auto allocationCreateFlags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
-        auto buffer = VkUtils::createBufferVMA(bufferSize,vk::BufferUsageFlagBits::eUniformBuffer, allocationCreateFlags);
-
-        cameraUBOsMapped_.emplace_back(static_cast<unsigned char*>(buffer.allocationInfo.pMappedData));
-        cameraUBOs_.emplace_back(std::move(buffer));
-
-    }
-
-    // material UBO
-    for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
-
-        vk::DeviceSize bufferSize = sizeof(MaterialUBOFormat) * Constants::materialLimit;
-        auto allocationCreateFlags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
-        auto buffer = VkUtils::createBufferVMA(bufferSize,vk::BufferUsageFlagBits::eUniformBuffer, allocationCreateFlags);
-
-        materialUBOsMapped_.emplace_back(static_cast<unsigned char*>(buffer.allocationInfo.pMappedData));
-        materialUBOs_.emplace_back(std::move(buffer));
-    }
-
-    auto allocationCreateFlags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-    idMapTransferBuffer_ = VkUtils::createBufferVMA(sizeof(uint32_t),vk::BufferUsageFlagBits::eTransferDst, allocationCreateFlags);
-}
 
 void Engine::initDescriptorPool() {
     std::array poolSize{
@@ -1014,248 +792,6 @@ void Engine::initDescriptorPool() {
 
     descriptorPool_ = vk::raii::DescriptorPool(device_,poolInfo);
 }
-
-void Engine::renderSky(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uint32_t frameInFlightIndex) {
-    vk::ClearValue clearColor = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
-
-    vk::RenderingAttachmentInfo colorAttachmentInfo = {
-        .imageView = gBuffer_->getTarget().getVkImageView(),
-        .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-        .loadOp = vk::AttachmentLoadOp::eClear,
-        .storeOp = vk::AttachmentStoreOp::eStore,
-        .clearValue = clearColor
-    };
-
-    vk::RenderingInfo renderingInfo{
-        .renderArea = {
-            .offset = {
-                .x = 0,
-                .y = 0
-            },
-            .extent = swapChainExtent
-        },
-        .layerCount = 1,
-        .colorAttachmentCount = 1,
-        .pColorAttachments = &colorAttachmentInfo,
-        .pDepthAttachment =  nullptr
-    };
-
-    //  set dynamic rendering state values
-    const vk::Viewport viewport{
-        .x = 0,
-        .y = static_cast<float>(gBuffer_->getTarget().getHeight()),
-        .width = static_cast<float>(gBuffer_->getTarget().getWidth()),
-        .height = -static_cast<float>(gBuffer_->getTarget().getHeight()),
-        .minDepth = 0.0f,
-        .maxDepth = 1.0f
-    };
-
-    const vk::Rect2D scissor{
-        .offset = vk::Offset2D{
-            .x = 0,
-            .y = 0
-        },
-        .extent =  swapChainExtent
-    };
-
-    //begin rendering with the specified info
-    cmdBuf.beginRendering(renderingInfo);
-
-    cmdBuf.setViewport(0, viewport);
-    cmdBuf.setScissor(0, scissor);
-
-    //  bind graphics pipeline and global descriptor set
-    cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, skyboxPipeline_.getGraphicsPipeline());
-    //  bind global descriptor set
-    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, skyboxPipeline_.getPipelineLayout(), 0, *descriptorSets_[frameInFlightIndex], nullptr);
-    //  bind per mesh descriptor set
-    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, skyboxPipeline_.getPipelineLayout(), 1, *scene_->getSkyDescriptorSet(), nullptr);
-
-    // draw six vertices making up the screen quad
-    cmdBuf.draw(6, 1, 0, 0);
-    cmdBuf.endRendering();
-}
-
-void Engine::renderScene(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uint32_t frameInFlightIndex) {
-    //set up the color attachment
-    vk::ClearValue clearColor = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
-
-    std::array colorAttachmentInfos = {
-        vk::RenderingAttachmentInfo { // swapchain image
-            .imageView = gBuffer_->getAlbedoMap().getVkImageView(),
-            .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-            .loadOp = vk::AttachmentLoadOp::eClear,
-            .storeOp = vk::AttachmentStoreOp::eStore,
-            .clearValue = clearColor
-        },
-        vk::RenderingAttachmentInfo { // normals
-            .imageView = gBuffer_->getNormalMap().getVkImageView(),
-            .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-            .loadOp = vk::AttachmentLoadOp::eClear,
-            .storeOp = vk::AttachmentStoreOp::eStore,
-            .clearValue = clearColor
-        },
-        vk::RenderingAttachmentInfo { // id map
-            .imageView = gBuffer_->getObjectIdMap().getVkImageView(),
-            .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-            .loadOp = vk::AttachmentLoadOp::eClear,
-            .storeOp = vk::AttachmentStoreOp::eStore,
-            .clearValue = clearColor
-        },
-        vk::RenderingAttachmentInfo { // material map
-            .imageView = gBuffer_->getMaterialMap().getVkImageView(),
-            .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-            .loadOp = vk::AttachmentLoadOp::eClear,
-            .storeOp = vk::AttachmentStoreOp::eStore,
-            .clearValue = clearColor
-        }
-    };
-
-    vk::ClearValue depthClearColor = vk::ClearDepthStencilValue(1.0f,0);
-    vk::RenderingAttachmentInfo depthAttachmentInfo = {
-        .imageView = gBuffer_->getDepthMap().getVkImageView(),
-        .imageLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
-        .loadOp = vk::AttachmentLoadOp::eClear,
-        .storeOp = vk::AttachmentStoreOp::eStore,
-        .clearValue = depthClearColor
-    };
-
-    vk::RenderingInfo renderingInfo{
-        .renderArea = {
-                .offset = {
-                    .x = 0,
-                    .y = 0
-                },
-                .extent = swapChainExtent
-        },
-        .layerCount = 1,
-        .colorAttachmentCount = colorAttachmentInfos.size(),
-        .pColorAttachments = colorAttachmentInfos.data(),
-        .pDepthAttachment = &depthAttachmentInfo,
-    };
-    //  set dynamic rendering state values
-    const vk::Viewport viewport{
-        .x = 0,
-        .y = static_cast<float>(swapChainExtent.height),
-        .width = static_cast<float>(swapChainExtent.width),
-        .height = -static_cast<float>(swapChainExtent.height),
-        .minDepth = 0.0f,
-        .maxDepth = 1.0f
-    };
-
-    const vk::Rect2D scissor{
-        .offset = vk::Offset2D{
-            .x = 0,
-            .y = 0
-        },
-        .extent =  swapChainExtent
-    };
-
-    //begin rendering with the specified info
-    cmdBuf.beginRendering(renderingInfo);
-
-    cmdBuf.setViewport(0, viewport);
-    cmdBuf.setScissor(0, scissor);
-
-    //  bind graphics pipeline and global descriptor set
-    cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, gBufferPipeline_.getGraphicsPipeline());
-    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, gBufferPipeline_.getPipelineLayout(), 0, *descriptorSets_[frameInFlightIndex], nullptr);
-
-    for (const auto &mesh : scene_->getMeshes()) {
-        mesh->recordDrawCommands(cmdBuf, gBufferPipeline_.getPipelineLayout());
-    }
-    cmdBuf.endRendering();
-}
-
-void Engine::renderGBufferShade(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex, uint32_t frameInFlightIndex) {
-    //set up the color attachment
-    vk::ClearValue clearColor = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
-
-    std::array colorAttachmentInfos = {
-        vk::RenderingAttachmentInfo { // swapchain image
-            .imageView = gBuffer_->getTarget().getVkImageView(),
-            .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-            .loadOp = vk::AttachmentLoadOp::eLoad,
-            .storeOp = vk::AttachmentStoreOp::eStore,
-            .clearValue = clearColor
-        }
-    };
-
-    vk::RenderingInfo renderingInfo{
-        .renderArea = {
-                .offset = {
-                    .x = 0,
-                    .y = 0
-                },
-                .extent = swapChainExtent
-        },
-        .layerCount = 1,
-        .colorAttachmentCount = colorAttachmentInfos.size(),
-        .pColorAttachments = colorAttachmentInfos.data(),
-        .pDepthAttachment = nullptr,
-    };
-    //  set dynamic rendering state values
-    const vk::Viewport viewport{
-        .x = 0,
-        .y = static_cast<float>(swapChainExtent.height),
-        .width = static_cast<float>(swapChainExtent.width),
-        .height = -static_cast<float>(swapChainExtent.height),
-        .minDepth = 0.0f,
-        .maxDepth = 1.0f
-    };
-
-    const vk::Rect2D scissor{
-        .offset = vk::Offset2D{
-            .x = 0,
-            .y = 0
-        },
-        .extent =  swapChainExtent
-    };
-
-    //begin rendering with the specified info
-    cmdBuf.beginRendering(renderingInfo);
-
-    cmdBuf.setViewport(0, viewport);
-    cmdBuf.setScissor(0, scissor);
-
-    //  bind graphics pipeline and global descriptor set
-    cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, gBufferShadePipeline_.getGraphicsPipeline());
-    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, gBufferShadePipeline_.getPipelineLayout(), 0, *descriptorSets_[frameInFlightIndex], nullptr);
-    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, gBufferShadePipeline_.getPipelineLayout(), 1, *gBuffer_->getDescriptorSet(), nullptr);
-
-    const PcsGBufferShade pcs{};
-    cmdBuf.pushConstants(gBufferShadePipeline_.getPipelineLayout(), vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const PcsGBufferShade>{pcs});
-
-    cmdBuf.draw(6, 1, 0, 0);
-    cmdBuf.endRendering();
-}
-
-void Engine::renderGUI(vk::raii::CommandBuffer& cmdBuf, uint32_t imageIndex) {
-    // prepare GUI render pass
-    vk::RenderingAttachmentInfo guiAttachmentInfo = {
-        .imageView = swapChainImageViews[imageIndex],
-        .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-        .loadOp = vk::AttachmentLoadOp::eLoad,
-        .storeOp = vk::AttachmentStoreOp::eStore,
-    };
-
-    vk::RenderingInfo guiRenderingInfo{
-        .renderArea = {
-            .offset = { .x = 0, .y = 0 },
-            .extent = swapChainExtent
-        },
-        .layerCount = 1,
-        .colorAttachmentCount = 1,
-        .pColorAttachments = &guiAttachmentInfo,
-        .pDepthAttachment = nullptr,
-    };
-
-    // render GUI separately
-    cmdBuf.beginRendering(guiRenderingInfo);
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(),*cmdBuf);
-    cmdBuf.endRendering();
-}
-
 
 void Engine::recreateSwapchain() {
 
@@ -1298,25 +834,8 @@ void Engine::updateUBOs() {
         memcpy(dst, &materialUBOStorage_,sizeof(materialUBOStorage_));
         dirtyMaterialUBO_ = false;
     }
-
-    /*if (dirtyCameraUBO_) {
-        memcpy(cameraUBOsMapped_[frameInFlightIndex_],&cameraUBOStorage_,sizeof(cameraUBOStorage_));
-        dirtyCameraUBO_ = false;
-   }
-
-    if (dirtyMaterialUBO_) {
-        uint8_t* dst = materialUBOsMapped_[frameInFlightIndex_] + materialUpdateIndex_ * sizeof(materialUBOStorage_);
-        memcpy(dst, &materialUBOStorage_,sizeof(materialUBOStorage_));
-        dirtyMaterialUBO_ = false;
-    }*/
 }
 
-void Engine::cleanUBOs() {
-    for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
-        VkUtils::destroyBufferVMA(std::move(cameraUBOs_[i]));
-        VkUtils::destroyBufferVMA(std::move(materialUBOs_[i]));
-    }
-}
 
 
 void Engine::setCameraUBOStorage(const CameraUBOFormat& data) {

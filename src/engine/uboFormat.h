@@ -22,7 +22,7 @@ struct CameraUBOFormat {
     alignas(16) glm::vec3 positionWorld{};
 };
 
-struct MaterialUBOFormat {
+struct alignas(16) MaterialUBOFormat {
     glm::vec3 diffuseAlbedo{};
     float shininess{};
 
@@ -40,6 +40,8 @@ struct MaterialUBOFormat {
     float padding;
     float padding2;
 };
+
+static_assert(sizeof(MaterialUBOFormat) % 16 == 0, "MaterialUBOFormat must be 16B aligned (std140).");
 
 struct PcsGBufferFill {
     glm::mat4 modelMat{};
