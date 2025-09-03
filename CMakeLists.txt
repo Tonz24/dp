@@ -65,6 +65,7 @@ add_executable(dp
         src/engine/renderers/renderer.h
         src/engine/renderers/deferredRenderer.cpp
         src/engine/renderers/deferredRenderer.h
+        src/engine/constants.h
 )
 
 # add shader compilation as a build step

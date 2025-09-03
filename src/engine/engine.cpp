@@ -15,10 +15,12 @@
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_vulkan.h>
 
+#include "constants.h"
 #include "managers/inputManager.h"
 #include "vk/vkUtils.h"
 #include "../scene/texture.h"
 #include "managers/resourceManager.h"
+#include "renderers/renderer.h"
 
 Engine &Engine::getInstance() {
     if (engineInstance == nullptr)
@@ -161,6 +163,8 @@ void Engine::initVulkan() {
     initDescriptorPool();
     initUniformBuffers();
     initDescriptorSetLayout();
+    Renderer::initLayouts();
+
 
     initCommandPool();
     initCommandBuffers();
@@ -172,6 +176,7 @@ void Engine::initVulkan() {
     initDummyTexture();
 
     gBuffer_ = GBufferManager::getInstance()->registerResource("gbuffer_test",1280,720);
+    renderer_ = std::make_shared<DeferredRenderer>(gBuffer_);
 }
 
 void Engine::initVulkanInstance() {
@@ -527,7 +532,7 @@ void Engine::initGraphicsPipeline() {
     std::array pcsShadeRange{GBuffer::pcsShadeRange};
 
 
-    std::vector descriptorSetLayoutsSky = {*descriptorSetLayoutFrame_, *Scene::getDescriptorSetLayout()};
+    std::vector descriptorSetLayoutsSky = {*descriptorSetLayoutFrame_, *Renderer::getDescSetLayoutSky()};
     rasterPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/shader_frag.spv",descriptorSetLayouts,pcsFillRange, colorAttachmentFormats,true, GBuffer::depthMapVkFormat};
     gBufferPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/gbuffer_fill_frag.spv",descriptorSetLayouts,pcsFillRange,huhAttachments,true, GBuffer::depthMapVkFormat};
     skyboxPipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/skypass_frag.spv",descriptorSetLayoutsSky,{},colorAttachmentFormatsSky, false};
@@ -547,7 +552,7 @@ void Engine::initCommandBuffers() {
     vk::CommandBufferAllocateInfo commandBufferAllocInfo{
         .commandPool = graphicsCommandPool_,
         .level = vk::CommandBufferLevel::ePrimary,
-        .commandBufferCount = maxFramesInFlight
+        .commandBufferCount = Constants::maxFramesInFlight
     };
 
     commandBuffers_ = vk::raii::CommandBuffers(device_,commandBufferAllocInfo);
@@ -727,6 +732,8 @@ void Engine::drawFrame() {
     vk::raii::Fence& frameFence = inFlightFences_[frameInFlightIndex_];
     device_.waitForFences(*frameFence, vk::True, UINT64_MAX );
 
+
+
     updateUBOs();
 
     //  acquire next swapchain image
@@ -745,9 +752,10 @@ void Engine::drawFrame() {
     vk::raii::Semaphore& submitSemaphore = submitSemaphores_[imageIndex];
 
     //  record command buffer for this frame
-    vk::raii::CommandBuffer& commandBuffer = commandBuffers_[frameInFlightIndex_];
+    vk::raii::CommandBuffer& cmdBuf = commandBuffers_[frameInFlightIndex_];
 
-    recordCommandBuffer(imageIndex, frameInFlightIndex_, commandBuffer);
+    //recordCommandBuffer(imageIndex, frameInFlightIndex_, cmdBuf);
+    renderer_->render(*scene_,cmdBuf,frameInFlightIndex_,swapChainImages[imageIndex],swapChainImageViews[imageIndex],swapChainExtent);
 
     //  set up the submit info for drawing
     //  set up the wait stage mask as color attachment output
@@ -757,7 +765,7 @@ void Engine::drawFrame() {
         .pWaitSemaphores = &*acquireSemaphore,
         .pWaitDstStageMask = &waitDestinationStageMask,
         .commandBufferCount = 1,
-        .pCommandBuffers = &*commandBuffer,
+        .pCommandBuffers = &*cmdBuf,
         .signalSemaphoreCount = 1,
         .pSignalSemaphores = &*submitSemaphore
     };
@@ -791,7 +799,7 @@ void Engine::drawFrame() {
     }
 
     currentFrameIndex_ += 1;
-    frameInFlightIndex_ = currentFrameIndex_ % maxFramesInFlight;
+    frameInFlightIndex_ = currentFrameIndex_ % Constants::maxFramesInFlight;
 }
 
 void Engine::processInput() {
@@ -851,7 +859,7 @@ void Engine::cleanup() {
 }
 
 void Engine::initSyncObjects() {
-    for (uint32_t i = 0; i < maxFramesInFlight; ++i) {
+    for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
         inFlightFences_.emplace_back(device_,vk::FenceCreateInfo{.flags = vk::FenceCreateFlagBits::eSignaled});
         acquireSemaphores_.emplace_back(device_, vk::SemaphoreCreateInfo{});
     }
@@ -864,8 +872,6 @@ void Engine::initSyncObjects() {
 void Engine::initDescriptorSetLayout() {
 
     //  Frame descriptor layout first
-    //  camera UBO
-
     std::array frameDescriptorBindings{
         vk::DescriptorSetLayoutBinding { // camera UBO
             .binding = 0,
@@ -908,7 +914,7 @@ void Engine::initDescriptorSetLayout() {
     };
     descriptorSetLayoutMaterial_ = vk::raii::DescriptorSetLayout(device_,materialLayoutInfo);
 
-    std::vector<vk::DescriptorSetLayout> layouts(maxFramesInFlight,*descriptorSetLayoutFrame_);
+    std::vector<vk::DescriptorSetLayout> layouts(Constants::maxFramesInFlight,*descriptorSetLayoutFrame_);
     vk::DescriptorSetAllocateInfo allocInfo{
         .descriptorPool = descriptorPool_,
         .descriptorSetCount = static_cast<uint32_t>(layouts.size()),
@@ -917,7 +923,7 @@ void Engine::initDescriptorSetLayout() {
 
     descriptorSets_ = device_.allocateDescriptorSets(allocInfo);
 
-    for (size_t i = 0; i < maxFramesInFlight; i++) {
+    for (size_t i = 0; i < Constants::maxFramesInFlight; i++) {
 
         vk::DescriptorBufferInfo camBufferInfo{
             .buffer = cameraUBOs_[i].buffer,
@@ -928,7 +934,7 @@ void Engine::initDescriptorSetLayout() {
         vk::DescriptorBufferInfo matBufferInfo{
             .buffer = materialUBOs_[i].buffer,
             .offset = 0,
-            .range = sizeof(MaterialUBOFormat) * materialLimit
+            .range = sizeof(MaterialUBOFormat) * Constants::materialLimit
         };
 
         vk::WriteDescriptorSet writeDescriptorSetCam{
@@ -951,8 +957,6 @@ void Engine::initDescriptorSetLayout() {
 
         device_.updateDescriptorSets({writeDescriptorSetCam, writeDescriptorSetMat},{});
     }
-
-    Scene::initDescriptorSetLayout();
 }
 
 
@@ -964,7 +968,7 @@ void Engine::initUniformBuffers() {
     materialUBOsMapped_.clear();
 
     // camera UBO
-    for (uint32_t i = 0; i < maxFramesInFlight; ++i) {
+    for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
         vk::DeviceSize bufferSize = sizeof(CameraUBOFormat);
         auto allocationCreateFlags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
         auto buffer = VkUtils::createBufferVMA(bufferSize,vk::BufferUsageFlagBits::eUniformBuffer, allocationCreateFlags);
@@ -975,9 +979,9 @@ void Engine::initUniformBuffers() {
     }
 
     // material UBO
-    for (uint32_t i = 0; i < maxFramesInFlight; ++i) {
+    for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
 
-        vk::DeviceSize bufferSize = sizeof(MaterialUBOFormat) * materialLimit;
+        vk::DeviceSize bufferSize = sizeof(MaterialUBOFormat) * Constants::materialLimit;
         auto allocationCreateFlags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
         auto buffer = VkUtils::createBufferVMA(bufferSize,vk::BufferUsageFlagBits::eUniformBuffer, allocationCreateFlags);
 
@@ -1285,6 +1289,17 @@ void Engine::configureVkUtils() const {
 void Engine::updateUBOs() {
 
     if (dirtyCameraUBO_) {
+        memcpy(renderer_->getCamUBOsMapped(frameInFlightIndex_),&cameraUBOStorage_,sizeof(cameraUBOStorage_));
+        dirtyCameraUBO_ = false;
+    }
+
+    if (dirtyMaterialUBO_) {
+        uint8_t* dst = renderer_->getCamUBOsMapped(frameInFlightIndex_) + materialUpdateIndex_ * sizeof(materialUBOStorage_);
+        memcpy(dst, &materialUBOStorage_,sizeof(materialUBOStorage_));
+        dirtyMaterialUBO_ = false;
+    }
+
+    /*if (dirtyCameraUBO_) {
         memcpy(cameraUBOsMapped_[frameInFlightIndex_],&cameraUBOStorage_,sizeof(cameraUBOStorage_));
         dirtyCameraUBO_ = false;
    }
@@ -1293,11 +1308,11 @@ void Engine::updateUBOs() {
         uint8_t* dst = materialUBOsMapped_[frameInFlightIndex_] + materialUpdateIndex_ * sizeof(materialUBOStorage_);
         memcpy(dst, &materialUBOStorage_,sizeof(materialUBOStorage_));
         dirtyMaterialUBO_ = false;
-    }
+    }*/
 }
 
 void Engine::cleanUBOs() {
-    for (uint32_t i = 0; i < maxFramesInFlight; ++i) {
+    for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
         VkUtils::destroyBufferVMA(std::move(cameraUBOs_[i]));
         VkUtils::destroyBufferVMA(std::move(materialUBOs_[i]));
     }

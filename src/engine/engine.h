@@ -16,6 +16,7 @@
 #include "../scene/camera.h"
 #include "../scene/mesh.h"
 #include "../scene/scene.h"
+#include "renderers/deferredRenderer.h"
 #include "vk/graphicsPipeline.h"
 
 class Engine : public IDrawGui {
@@ -123,8 +124,6 @@ private:
     static constexpr bool ENABLE_VALIDATION_LAYERS{true};
     #endif
 
-    static constexpr uint32_t maxFramesInFlight{1};
-    static constexpr uint32_t materialLimit{100};
 
     static inline Engine* engineInstance{nullptr};
     std::unique_ptr<Window> window{nullptr};
@@ -259,5 +258,5 @@ private:
     GraphicsPipeline gBufferPipeline_{};
     GraphicsPipeline gBufferShadePipeline_{};
 
-
+    std::shared_ptr<DeferredRenderer> renderer_{};
 };

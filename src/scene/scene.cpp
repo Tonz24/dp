@@ -7,6 +7,8 @@
 #include "../engine/engine.h"
 #include <imgui/imgui.h>
 
+#include "../engine/renderers/renderer.h"
+
 
 bool Scene::drawGUI() {
 
@@ -35,7 +37,7 @@ void Scene::initDescriptorSet() {
         vk::DescriptorSetAllocateInfo allocInfo{
             .descriptorPool = Engine::getInstance().getDescriptorPool(),
             .descriptorSetCount = 1,
-            .pSetLayouts = &*skyDescriptorSetLayout_
+            .pSetLayouts = &*Renderer::getDescSetLayoutSky()
         };
         skyDescriptorSet_ = std::move(VkUtils::getDevice().allocateDescriptorSets(allocInfo).front());
 
@@ -56,9 +58,4 @@ void Scene::initDescriptorSet() {
 
         VkUtils::getDevice().updateDescriptorSets(writeDescriptorSet,{});
     }
-}
-
-void Scene::initDescriptorSetLayout() {
-    skyDescriptorSetLayout_ = vk::raii::DescriptorSetLayout(VkUtils::getDevice(),skyLayoutInfo);
-    isDescSetLayoutInitialized_ = true;
 }

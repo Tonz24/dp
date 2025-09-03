@@ -11,16 +11,28 @@ class DeferredRenderer : public Renderer {
 public:
     bool drawGUI() override;
 
-    void render(const Scene& scene) override;
+    void render(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage, const vk::ImageView&
+                swapchainImageView, const vk::Extent2D&
+                swapchainExtent) override;
 
     DeferredRenderer(std::shared_ptr<GBuffer> gBuffer);
     DeferredRenderer(std::string_view gBufferName);
 
 protected:
     void initGraphicsPipelines();
-    void initDescriptorSetLayouts();
 
-    void recordCommandBuffer() override;
+    void recordSceneCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex);
+
+    void recordGBufferShadeCommands(const Scene& scene, const vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex);
+
+    void recordGUICommands(const Scene& scene, const vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::ImageView& swapchainImageView, const vk::Extent2D&
+                           swapchainExtent);
+
+    void recordCommandBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage, const vk::ImageView&
+                             swapchainImageView, const vk::Extent2D&
+                             swapchainExtent) override;
+
+    void recordSkyCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex);
 
     GraphicsPipeline skyboxPipeline_;
     GraphicsPipeline gBufferFillPipeline_;
