@@ -4,6 +4,8 @@ layout (set=0, binding=0, std140) uniform CameraUBO {
     mat4 matVP;
     mat4 matInvVP;
     vec3 posWS;
+    float zNear;
+    float zFar;
 } cameraUBO;
 
 

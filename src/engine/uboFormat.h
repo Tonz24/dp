@@ -19,12 +19,16 @@ struct CameraUBOFormat {
     glm::mat4 matProj{};
     glm::mat4 matViewProj{};
     glm::mat4 matInvViewProj{};
-    alignas(16) glm::vec3 positionWorld{};
+
+    glm::vec3 positionWorld{};
+    float zNear{0.01f};
+
+    float zFar{150.0f};
 };
 
 struct alignas(16) MaterialUBOFormat {
     glm::vec3 diffuseAlbedo{};
-    float shininess{};
+    float shininess{32};
 
     glm::vec3 specularAlbedo{};
     float ior{};
@@ -51,6 +55,11 @@ struct PcsGBufferFill {
 };
 
 struct PcsGBufferShade {
-    alignas(16) glm::vec3 lightPosWS{};
-    alignas(16) glm::vec3 lightEmission{};
+    glm::vec3 lightPosWS{};
+    int overlayIndex{};
+
+    glm::vec3 lightEmission{};
+    int drawSkybox{};
+
+    int remapNormals{};
 };

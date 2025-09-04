@@ -56,8 +56,9 @@ bool Engine::drawGUI() {
 
     ImGui::Begin("DP");
 
-    if (scene_)
-        return scene_->drawGUI();
+    if (renderer_)  renderer_->drawGUI();
+    if (scene_)     scene_->drawGUI();
+
 
     return false;
 }

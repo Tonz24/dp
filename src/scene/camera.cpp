@@ -85,7 +85,7 @@ void Camera::recalculateViewMat() {
 }
 
 void Camera::recalculateProjMat() {
-    uboFormat_.matProj = glm::perspective(getVerticalFov(true), aspectRatio_, zNear_, zFar_);
+    uboFormat_.matProj = glm::perspective(getVerticalFov(true), aspectRatio_, uboFormat_.zNear, uboFormat_.zFar);
     dirty_ = true;
 }
 

@@ -176,8 +176,10 @@ void ModelLoader::loadMaterials(const std::string& directory, const aiScene& sce
         if (aiColor3D aiEmissive{}; assimpMaterial->Get(AI_MATKEY_COLOR_EMISSIVE, aiEmissive) == aiReturn_SUCCESS)
             mat->setEmission({ aiEmissive.r,aiEmissive.g,aiEmissive.b });
 
-        if (float aiShininess{}; assimpMaterial->Get(AI_MATKEY_SHININESS, aiShininess) == aiReturn_SUCCESS)
-            mat->setShininess(aiShininess);
+        if (float aiShininess{}; assimpMaterial->Get(AI_MATKEY_SHININESS, aiShininess) == aiReturn_SUCCESS) {
+            if (aiShininess > 0)    //  for whatever reason assimp says that shininess is there even if it isn't
+                mat->setShininess(aiShininess);
+        }
 
         if (float aiIOR{}; assimpMaterial->Get(AI_MATKEY_REFRACTI, aiIOR) == aiReturn_SUCCESS)
             mat->setIor(aiIOR);

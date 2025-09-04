@@ -15,8 +15,8 @@ public:
                 swapchainImageView, const vk::Extent2D&
                 swapchainExtent) override;
 
-    DeferredRenderer(std::shared_ptr<GBuffer> gBuffer);
-    DeferredRenderer(std::string_view gBufferName);
+    explicit DeferredRenderer(std::shared_ptr<GBuffer> gBuffer);
+    explicit DeferredRenderer(std::string_view gBufferName);
 
 protected:
     void initGraphicsPipelines();
@@ -39,5 +39,10 @@ protected:
     GraphicsPipeline gBufferShadePipeline_;
 
     std::shared_ptr<GBuffer> gBuffer_{nullptr};
+
+    int selectedOverlay_{1};
+    glm::vec3 lightPosition_{}, lightEmission_{3.0f};
+    bool drawSkybox_{true};
+    bool remapNormals_{true};
 };
 

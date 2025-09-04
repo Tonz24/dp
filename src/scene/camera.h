@@ -48,7 +48,6 @@ private:
 
     float verticalFov_{45.0f};
     float aspectRatio_{16.0f / 9.0f};
-    float zNear_{0.01}, zFar_{150.0f};
 
     float yaw_{0.0f}, pitch_{0.0f};
 
