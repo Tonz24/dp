@@ -21,6 +21,8 @@ public:
     ~GBuffer() override = default;
 
 
+    void resizeContents(uint32_t width, uint32_t height);
+
     [[nodiscard]] Texture& getAlbedoMap() const { return *albedoMap_; }
     [[nodiscard]] Texture& getNormalMap() const { return *normalMap_; }
     [[nodiscard]] Texture& getMaterialMap() const { return *materialIdMap_; }
@@ -105,6 +107,7 @@ private:
 
     void allocateDescriptorSet();
     void recordDescriptorSet();
+    void createTextures(const std::string& prefix, uint32_t width,uint32_t height);
 };
 
 

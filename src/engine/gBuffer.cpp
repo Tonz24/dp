@@ -12,25 +12,85 @@
 GBuffer::GBuffer(std::string_view resourceName, uint32_t width, uint32_t height) {
     std::string textureNamesPrefix{resourceName};
 
-    albedoMap_ = TextureManager::getInstance()->registerResource(textureNamesPrefix + "_albedo",
+    allocateDescriptorSet();
+    createTextures(textureNamesPrefix,width,height);
+}
+
+void GBuffer::allocateDescriptorSet() {
+    vk::DescriptorSetAllocateInfo allocInfo{
+        .descriptorPool = Engine::getInstance().getDescriptorPool(),
+        .descriptorSetCount = 1,
+        .pSetLayouts = &*Renderer::getDescSetLayoutMaterial(),
+    };
+
+    auto h = VkUtils::getDevice().allocateDescriptorSets(allocInfo);
+    descriptorSet_ = std::move(h.front());
+}
+
+void GBuffer::recordDescriptorSet() {
+    std::vector<vk::WriteDescriptorSet> descriptorWrites{};
+    std::vector<vk::DescriptorImageInfo> imageInfos;
+
+    imageInfos.reserve(textures_.size());
+    descriptorWrites.reserve(textures_.size());
+
+
+    for (uint32_t i = 0; i < textures_.size(); ++i) {
+
+        vk::ImageLayout imageLayout = textures_[i] == depthMap_ ?  vk::ImageLayout::eDepthStencilReadOnlyOptimal : vk::ImageLayout::eShaderReadOnlyOptimal;
+
+        imageInfos.emplace_back(vk::DescriptorImageInfo{
+            .sampler = textures_[i]->getVkSampler(),
+            .imageView =  textures_[i]->getVkImageView(),
+            .imageLayout = imageLayout
+        });
+
+        vk::WriteDescriptorSet writeDescriptorSet{
+            .dstSet = descriptorSet_,
+            .dstBinding = i,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = vk::DescriptorType::eCombinedImageSampler,
+            .pImageInfo = &imageInfos.back()
+        };
+
+        descriptorWrites.emplace_back(writeDescriptorSet);
+    }
+
+    VkUtils::getDevice().updateDescriptorSets(descriptorWrites,{});
+}
+
+void GBuffer::createTextures(const std::string& prefix, uint32_t width, uint32_t height) {
+
+    albedoMap_.reset();
+    normalMap_.reset();
+    materialIdMap_.reset();
+    target_.reset();
+    depthMap_.reset();
+    objectIdMap_.reset();
+
+    textures_.clear();
+
+
+    albedoMap_ = TextureManager::getInstance()->registerResource(prefix + "_albedo",
                                                                  width,
                                                                  height,
                                                                  albedoMapVkFormat,
                                                                  albedoMapUsageFlags);
 
-    normalMap_ = TextureManager::getInstance()->registerResource(textureNamesPrefix + "_normal",
+    normalMap_ = TextureManager::getInstance()->registerResource(prefix + "_normal",
                                                                  width,
                                                                  height,
                                                                  normalMapVkFormat,
                                                                  normalMapUsageFlags);
 
-    materialIdMap_ = TextureManager::getInstance()->registerResource(textureNamesPrefix + "_mat_id",
+    materialIdMap_ = TextureManager::getInstance()->registerResource(prefix + "_mat_id",
                                                                  width,
                                                                  height,
                                                                  materialMapVkFormat,
                                                                  materialMapUsageFlags);
 
-    target_ = TextureManager::getInstance()->registerResource(textureNamesPrefix + "_shading_target",
+    target_ = TextureManager::getInstance()->registerResource(prefix + "_shading_target",
                                                                  width,
                                                                  height,
                                                                  targetVkFormat,
@@ -39,20 +99,19 @@ GBuffer::GBuffer(std::string_view resourceName, uint32_t width, uint32_t height)
 
 
 
-    depthMap_ = TextureManager::getInstance()->registerResource(textureNamesPrefix + "_depth",
+    depthMap_ = TextureManager::getInstance()->registerResource(prefix + "_depth",
                                                                 width,
                                                                 height,
                                                                 depthMapVkFormat,
                                                                 depthMapUsageFlags);
 
-    objectIdMap_ = TextureManager::getInstance()->registerResource(textureNamesPrefix + "_obj_id",
+    objectIdMap_ = TextureManager::getInstance()->registerResource(prefix + "_obj_id",
                                                                  width,
                                                                  height,
                                                                  idMapVkFormat,
                                                                  idMapUsageFlags);
 
     textures_ = {albedoMap_,normalMap_,depthMap_,materialIdMap_};
-    allocateDescriptorSet();
     recordDescriptorSet();
 
     auto cmdBuf = VkUtils::beginSingleTimeCommand();
@@ -129,48 +188,8 @@ GBuffer::GBuffer(std::string_view resourceName, uint32_t width, uint32_t height)
     VkUtils::endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
 }
 
-void GBuffer::allocateDescriptorSet() {
-    vk::DescriptorSetAllocateInfo allocInfo{
-        .descriptorPool = Engine::getInstance().getDescriptorPool(),
-        .descriptorSetCount = 1,
-        .pSetLayouts = &*Renderer::getDescSetLayoutMaterial(),
-    };
-
-    auto h = VkUtils::getDevice().allocateDescriptorSets(allocInfo);
-    descriptorSet_ = std::move(h.front());
-}
-
-void GBuffer::recordDescriptorSet() {
-    std::vector<vk::WriteDescriptorSet> descriptorWrites{};
-    std::vector<vk::DescriptorImageInfo> imageInfos;
-
-    imageInfos.reserve(textures_.size());
-    descriptorWrites.reserve(textures_.size());
-
-
-    for (uint32_t i = 0; i < textures_.size(); ++i) {
-
-        vk::ImageLayout imageLayout = textures_[i] == depthMap_ ?  vk::ImageLayout::eDepthStencilReadOnlyOptimal : vk::ImageLayout::eShaderReadOnlyOptimal;
-
-        imageInfos.emplace_back(vk::DescriptorImageInfo{
-            .sampler = textures_[i]->getVkSampler(),
-            .imageView =  textures_[i]->getVkImageView(),
-            .imageLayout = imageLayout
-        });
-
-        vk::WriteDescriptorSet writeDescriptorSet{
-            .dstSet = descriptorSet_,
-            .dstBinding = i,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-            .pImageInfo = &imageInfos.back()
-        };
-
-        descriptorWrites.emplace_back(writeDescriptorSet);
-    }
-
-    VkUtils::getDevice().updateDescriptorSets(descriptorWrites,{});
+void GBuffer::resizeContents(uint32_t width, uint32_t height) {
+    createTextures(getResourceName(),width,height);
 }
 
 

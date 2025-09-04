@@ -71,11 +71,13 @@ bool Engine::drawGUI() {
     if (ImGui::CollapsingHeader("Stats",ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Indent();
 
-
-
         ImGui::Text(("Total frame time: " + std::to_string(totalFrametime_) + " ms").c_str());
         ImGui::Text(("Draw time: " + std::to_string(drawFrametime_) + " ms").c_str());
         ImGui::Text(("FPS: " + std::to_string(1000.0f / totalFrametime_)).c_str());
+        ImGui::Separator();
+        ImGui::Text(("Swapchain dimensions: " + std::to_string(swapChainExtent.width) + "x" + std::to_string(swapChainExtent.height)).c_str());
+        auto renderDims = renderer_->getRenderDimensions();
+        ImGui::Text(("Render dimensions: " + std::to_string(renderDims.x) + "x" + std::to_string(renderDims.y)).c_str());
 
         ImGui::Unindent();
     }
@@ -835,6 +837,7 @@ void Engine::recreateSwapchain() {
 
     device_.waitIdle();
 
+    renderer_->resizeScreen(width,height);
     cleanupSwapchain();
     initSwapchain();
     initImageViews();

@@ -18,6 +18,9 @@ public:
     explicit DeferredRenderer(std::shared_ptr<GBuffer> gBuffer);
     explicit DeferredRenderer(std::string_view gBufferName);
 
+    void resizeScreen(uint32_t newWidth, uint32_t newHeight) override;
+    glm::vec<2, uint32_t> getRenderDimensions() const override {return {gBuffer_->getTarget().getWidth(),gBuffer_->getTarget().getHeight()};}
+
 protected:
     void initGraphicsPipelines();
 

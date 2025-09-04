@@ -16,6 +16,9 @@ public:
     static void initLayouts();
     static void destroy();
 
+    virtual void resizeScreen(uint32_t newWidth,uint32_t newHeight) = 0;
+    virtual glm::vec<2,uint32_t> getRenderDimensions() const = 0;
+
     static const vk::raii::DescriptorSetLayout& getDescSetLayoutFrame() {return descSetLayoutFrame_;}
     static const vk::raii::DescriptorSetLayout& getDescSetLayoutMaterial() {return descSetLayoutMaterial_;}
     static const vk::raii::DescriptorSetLayout& getDescSetLayoutSky() {return descSetLayoutSky_;}

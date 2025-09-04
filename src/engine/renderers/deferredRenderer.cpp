@@ -47,6 +47,10 @@ DeferredRenderer::DeferredRenderer(std::string_view gBufferName) {
     initGraphicsPipelines();
 }
 
+void DeferredRenderer::resizeScreen(uint32_t newWidth, uint32_t newHeight) {
+    gBuffer_->resizeContents(newWidth,newHeight);
+}
+
 void DeferredRenderer::initGraphicsPipelines() {
 
     std::array pcsFillRange{GBuffer::pcsFillRange};
