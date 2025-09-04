@@ -285,6 +285,122 @@ int Texture::getChannelCount(FREE_IMAGE_TYPE type, uint32_t bpp) {
     }
 }
 
+int Texture::chooseChannelCount(vk::Format format) {
+    using F = vk::Format;
+    switch (format) {
+        case F::eR8Unorm:
+        case F::eR8Snorm:
+        case F::eR8Uscaled:
+        case F::eR8Sscaled:
+        case F::eR8Uint:
+        case F::eR8Sint:
+        case F::eR8Srgb:
+        case F::eR16Unorm:
+        case F::eR16Snorm:
+        case F::eR16Uint:
+        case F::eR16Sint:
+        case F::eR16Sfloat:
+        case F::eR32Uint:
+        case F::eR32Sint:
+        case F::eR32Sfloat:
+        case F::eR64Uint:
+        case F::eR64Sint:
+        case F::eR64Sfloat:
+        case F::eD16Unorm:
+        case F::eX8D24UnormPack32:
+        case F::eD32Sfloat:
+        case F::eS8Uint:
+            return 1;
+
+        // 2 kanály
+        case F::eR8G8Unorm:
+        case F::eR8G8Snorm:
+        case F::eR8G8Uscaled:
+        case F::eR8G8Sscaled:
+        case F::eR8G8Uint:
+        case F::eR8G8Sint:
+        case F::eR8G8Srgb:
+        case F::eR16G16Unorm:
+        case F::eR16G16Snorm:
+        case F::eR16G16Uint:
+        case F::eR16G16Sint:
+        case F::eR16G16Sfloat:
+        case F::eR32G32Uint:
+        case F::eR32G32Sint:
+        case F::eR32G32Sfloat:
+        case F::eR64G64Uint:
+        case F::eR64G64Sint:
+        case F::eR64G64Sfloat:
+        case F::eD16UnormS8Uint:
+        case F::eD24UnormS8Uint:
+        case F::eD32SfloatS8Uint:
+            return 2;
+
+        // 3 kanály
+        case F::eR8G8B8Unorm:
+        case F::eR8G8B8Snorm:
+        case F::eR8G8B8Uscaled:
+        case F::eR8G8B8Sscaled:
+        case F::eR8G8B8Uint:
+        case F::eR8G8B8Sint:
+        case F::eR8G8B8Srgb:
+        case F::eB8G8R8Unorm:
+        case F::eB8G8R8Snorm:
+        case F::eB8G8R8Uscaled:
+        case F::eB8G8R8Sscaled:
+        case F::eB8G8R8Uint:
+        case F::eB8G8R8Sint:
+        case F::eB8G8R8Srgb:
+        case F::eR16G16B16Unorm:
+        case F::eR16G16B16Snorm:
+        case F::eR16G16B16Uint:
+        case F::eR16G16B16Sint:
+        case F::eR16G16B16Sfloat:
+        case F::eR32G32B32Uint:
+        case F::eR32G32B32Sint:
+        case F::eR32G32B32Sfloat:
+        case F::eB10G11R11UfloatPack32:
+            return 3;
+
+        // 4 kanály
+        case F::eR8G8B8A8Unorm:
+        case F::eR8G8B8A8Snorm:
+        case F::eR8G8B8A8Uscaled:
+        case F::eR8G8B8A8Sscaled:
+        case F::eR8G8B8A8Uint:
+        case F::eR8G8B8A8Sint:
+        case F::eR8G8B8A8Srgb:
+        case F::eB8G8R8A8Unorm:
+        case F::eB8G8R8A8Snorm:
+        case F::eB8G8R8A8Uscaled:
+        case F::eB8G8R8A8Sscaled:
+        case F::eB8G8R8A8Uint:
+        case F::eB8G8R8A8Sint:
+        case F::eB8G8R8A8Srgb:
+        case F::eA8B8G8R8UnormPack32:
+        case F::eA8B8G8R8SnormPack32:
+        case F::eA8B8G8R8UintPack32:
+        case F::eA8B8G8R8SintPack32:
+        case F::eA8B8G8R8SrgbPack32:
+        case F::eA2R10G10B10UnormPack32:
+        case F::eA2R10G10B10UintPack32:
+        case F::eA2B10G10R10UnormPack32:
+        case F::eA2B10G10R10UintPack32:
+        case F::eR16G16B16A16Unorm:
+        case F::eR16G16B16A16Snorm:
+        case F::eR16G16B16A16Uint:
+        case F::eR16G16B16A16Sint:
+        case F::eR16G16B16A16Sfloat:
+        case F::eR32G32B32A32Uint:
+        case F::eR32G32B32A32Sint:
+        case F::eR32G32B32A32Sfloat:
+            return 4;
+
+        default:
+            throw std::runtime_error("ERROR: Unsupported vk::Format in chooseChannelCount");
+    }
+}
+
 
 Texture::~Texture() {
     VkUtils::destroyImageVMA(std::move(imageAlloc_));

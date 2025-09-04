@@ -55,6 +55,8 @@ private:
 
     static int getChannelCount(FREE_IMAGE_TYPE type, uint32_t bpp);
 
+    int chooseChannelCount(vk::Format format);
+
     uint32_t width_{};
     uint32_t height_{};
     uint32_t channelCount_{};
