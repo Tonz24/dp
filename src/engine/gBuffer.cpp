@@ -15,28 +15,24 @@ GBuffer::GBuffer(std::string_view resourceName, uint32_t width, uint32_t height)
     albedoMap_ = TextureManager::getInstance()->registerResource(textureNamesPrefix + "_albedo",
                                                                  width,
                                                                  height,
-                                                                 albedoMapChannelCount,
                                                                  albedoMapVkFormat,
                                                                  albedoMapUsageFlags);
 
     normalMap_ = TextureManager::getInstance()->registerResource(textureNamesPrefix + "_normal",
                                                                  width,
                                                                  height,
-                                                                 normalMapChannelCount,
                                                                  normalMapVkFormat,
                                                                  normalMapUsageFlags);
 
     materialIdMap_ = TextureManager::getInstance()->registerResource(textureNamesPrefix + "_mat_id",
                                                                  width,
                                                                  height,
-                                                                 materialMapChannelCount,
                                                                  materialMapVkFormat,
                                                                  materialMapUsageFlags);
 
     target_ = TextureManager::getInstance()->registerResource(textureNamesPrefix + "_shading_target",
                                                                  width,
                                                                  height,
-                                                                 targetChannelCount,
                                                                  targetVkFormat,
                                                                  targetUsageFlags);
 
@@ -46,14 +42,12 @@ GBuffer::GBuffer(std::string_view resourceName, uint32_t width, uint32_t height)
     depthMap_ = TextureManager::getInstance()->registerResource(textureNamesPrefix + "_depth",
                                                                 width,
                                                                 height,
-                                                                depthMapChannelCount,
                                                                 depthMapVkFormat,
                                                                 depthMapUsageFlags);
 
     objectIdMap_ = TextureManager::getInstance()->registerResource(textureNamesPrefix + "_obj_id",
                                                                  width,
                                                                  height,
-                                                                 idMapChannelCount,
                                                                  idMapVkFormat,
                                                                  idMapUsageFlags);
 

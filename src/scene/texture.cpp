@@ -13,7 +13,7 @@
 std::shared_ptr<Texture> Texture::createDummy(std::string_view name,  const glm::vec<4, uint8_t>& color) {
 
     vk::ImageUsageFlags usageFlags = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
-    auto dummy = TextureManager::getInstance()->registerResource(name,1,1,4,vk::Format::eB8G8R8A8Unorm, usageFlags);
+    auto dummy = TextureManager::getInstance()->registerResource(name,1,1,vk::Format::eB8G8R8A8Unorm, usageFlags);
 
     memcpy(dummy->data_.data(),&color[0],sizeof(color));
 
@@ -25,8 +25,8 @@ std::shared_ptr<Texture> Texture::createDummy(std::string_view name,  const glm:
 }
 
 
-Texture::Texture(uint32_t width, uint32_t height, uint32_t channels, vk::Format format, vk::ImageUsageFlags imageUsage):
-    ManagedResource(), width_(width), height_(height), channelCount_(channels), vkFormat_(format), imageUsageFlags_(imageUsage)
+Texture::Texture(uint32_t width, uint32_t height, vk::Format format, vk::ImageUsageFlags imageUsage):
+    ManagedResource(), width_(width), height_(height), channelCount_(chooseChannelCount(format)), vkFormat_(format), imageUsageFlags_(imageUsage)
 {
     pixelSize_ = channelCount_;
     data_.reserve(width_ * height_ * channelCount_);
