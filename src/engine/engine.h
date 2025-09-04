@@ -116,6 +116,7 @@ private:
     std::unique_ptr<Window> window{nullptr};
 
 
+
     static inline const std::vector<const char*> requiredValidationLayers = {
         "VK_LAYER_KHRONOS_validation"
 };
@@ -226,5 +227,10 @@ private:
 
     std::shared_ptr<GBuffer> gBuffer_{nullptr};
 
+    int selectedRendererIndex_{0};
     std::shared_ptr<DeferredRenderer> renderer_{};
+
+    float drawFrametime_{};
+    float totalFrametime_{};
+    uint64_t frameCtr_{0};
 };

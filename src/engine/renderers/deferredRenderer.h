@@ -40,9 +40,6 @@ protected:
 
     std::shared_ptr<GBuffer> gBuffer_{nullptr};
 
-    int selectedOverlay_{1};
-    glm::vec3 lightPosition_{}, lightEmission_{3.0f};
-    bool drawSkybox_{true};
-    bool remapNormals_{true};
+    PcsGBufferShade pcs_{};
 };
 

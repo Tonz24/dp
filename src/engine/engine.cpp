@@ -56,8 +56,30 @@ bool Engine::drawGUI() {
 
     ImGui::Begin("DP");
 
-    if (renderer_)  renderer_->drawGUI();
-    if (scene_)     scene_->drawGUI();
+    if (ImGui::CollapsingHeader("Engine",ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Indent();
+
+        static constexpr std::array items{"G buffer debug","Naive path tracer","NEE path tracer","ReSTIR DI","ReSTIR GI"};
+        if (ImGui::Combo("Renderer", &selectedRendererIndex_, items.data(), items.size())) {
+
+        }
+
+        if (renderer_)  renderer_->drawGUI();
+        if (scene_)     scene_->drawGUI();
+        ImGui::Unindent();
+    }
+    if (ImGui::CollapsingHeader("Stats",ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Indent();
+
+
+
+        ImGui::Text(("Total frame time: " + std::to_string(totalFrametime_) + " ms").c_str());
+        ImGui::Text(("Draw time: " + std::to_string(drawFrametime_) + " ms").c_str());
+        ImGui::Text(("FPS: " + std::to_string(1000.0f / totalFrametime_)).c_str());
+
+        ImGui::Unindent();
+    }
+
 
 
     return false;
@@ -631,6 +653,9 @@ vk::raii::ShaderModule Engine::createShaderModule(const std::vector<char> &code)
 
 
 void Engine::drawFrame() {
+
+
+
     //  reset the current frame's fence
     vk::raii::Fence& frameFence = inFlightFences_[frameInFlightIndex_];
     device_.waitForFences(*frameFence, vk::True, UINT64_MAX );
@@ -727,19 +752,23 @@ void Engine::processInput() {
 void Engine::mainLoop() {
     isRunning_ = true;
 
-
-    int frameCtr{0};
     while(!glfwWindowShouldClose(window->getGlfwWindow())) {
+        std::chrono::steady_clock::time_point frameStart = std::chrono::steady_clock::now();
+
         glfwPollEvents();
         processInput();
-        drawGUI();
 
+        drawGUI();
         ImGui::End();
         ImGui::Render();
 
+        std::chrono::steady_clock::time_point renderStart = std::chrono::steady_clock::now();
         drawFrame();
+        std::chrono::steady_clock::time_point renderEnd = std::chrono::steady_clock::now();
+        std::chrono::steady_clock::time_point frameEnd = std::chrono::steady_clock::now();
 
-        std::cout << frameCtr++ << std::endl;
+        drawFrametime_ = std::chrono::duration_cast<std::chrono::microseconds>(renderEnd - renderStart).count() / 1000.0f;
+        totalFrametime_ = std::chrono::duration_cast<std::chrono::microseconds>(frameEnd - frameStart).count() / 1000.0f;
     }
     isRunning_ = false;
     device_.waitIdle();

@@ -55,11 +55,11 @@ struct PcsGBufferFill {
 };
 
 struct PcsGBufferShade {
-    glm::vec3 lightPosWS{};
-    int overlayIndex{};
+    glm::vec3 lightPosWS{1.0f};
+    int overlayIndex{0};
 
-    glm::vec3 lightEmission{};
-    int drawSkybox{};
+    glm::vec3 lightEmission{3.0f};
+    int drawSkybox{true};
 
-    int remapNormals{};
+    int remapNormals{true};
 };

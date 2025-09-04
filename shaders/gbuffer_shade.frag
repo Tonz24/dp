@@ -84,6 +84,6 @@ void main() {
 
         vec3 L_o = L_i * f_r * cos_theta_i * inv_r_sqr;
 
-        fragColor = vec4(L_o,1);
+        fragColor = vec4(aces(L_o),1);
     }
 }

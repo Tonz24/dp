@@ -10,18 +10,18 @@ bool DeferredRenderer::drawGUI() {
         ImGui::Indent();
 
         static constexpr std::array items{"Debug Phong","Albedo map","Normal map","Depth map","World space position"};
-        if (ImGui::Combo("Show target", &selectedOverlay_, items.data(), items.size())) {
+        if (ImGui::Combo("Show target", &pcs_.overlayIndex, items.data(), items.size())) {
 
         }
-        ImGui::Checkbox("Draw skybox",&drawSkybox_);
+        ImGui::Checkbox("Draw skybox",reinterpret_cast<bool*>(&pcs_.drawSkybox));
 
-        if (selectedOverlay_ == 0) {
-            ImGui::DragFloat3("Debug light position",&lightPosition_[0],0.1);
-            ImGui::ColorEdit3("Debug light emission",&lightEmission_[0],ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
+        if (pcs_.overlayIndex == 0) {
+            ImGui::DragFloat3("Debug light position",&pcs_.lightPosWS[0],0.1);
+            ImGui::ColorEdit3("Debug light emission",&pcs_.lightEmission[0],ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
         }
 
-        if (selectedOverlay_ == 2) {
-            ImGui::Checkbox("Remap to [0,1] range",&remapNormals_);
+        if (pcs_.overlayIndex == 2) {
+            ImGui::Checkbox("Remap to [0,1] range",reinterpret_cast<bool*>(&pcs_.remapNormals));
         }
 
         ImGui::Unindent();
@@ -350,15 +350,8 @@ void DeferredRenderer::recordGBufferShadeCommands(const Scene& scene, const vk::
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, gBufferShadePipeline_.getPipelineLayout(), 0, *getDescSetFrame(frameInFlightIndex), nullptr);
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, gBufferShadePipeline_.getPipelineLayout(), 1, *gBuffer_->getDescriptorSet(), nullptr);
 
-     const PcsGBufferShade pcs{
-         .lightPosWS = lightPosition_,
-         .overlayIndex = selectedOverlay_,
-         .lightEmission = lightEmission_,
-         .drawSkybox = drawSkybox_ ? 1 : 0,
-         .remapNormals = remapNormals_ ? 1 : 0,
-     };
 
-    cmdBuf.pushConstants(gBufferShadePipeline_.getPipelineLayout(), vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const PcsGBufferShade>{pcs});
+    cmdBuf.pushConstants(gBufferShadePipeline_.getPipelineLayout(), vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const PcsGBufferShade>{pcs_});
     cmdBuf.draw(6, 1, 0, 0);
     cmdBuf.endRendering();
 }
