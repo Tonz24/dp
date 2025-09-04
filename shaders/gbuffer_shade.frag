@@ -19,7 +19,6 @@ const int OVERLAY_ALBEDO_MAP = 1;
 const int OVERLAY_NORMAL_MAP = 2;
 const int OVERLAY_DEPTH_MAP = 3;
 const int OVERLAY_WS_POS = 4;
-const int OVERLAY_MAT_ID_MAP = 5;
 
 
 //  https://stackoverflow.com/questions/51108596/linearize-depth
@@ -64,23 +63,6 @@ void main() {
 
         fragColor = vec4(posWS,1);
     }
-    if (pcs.overlayIndex == OVERLAY_MAT_ID_MAP){
-        fragColor = vec4(materialId, materialId, materialId,1.0);
-    }
-    if (pcs.overlayIndex == OVERLAY_DEBUG_PHONG){
-        vec4 camRay = cameraUBO.matInvVP * vec4(inNDCxy,depth,1);
-
-        vec3 omega_i = normalize(pcs.lightPosWS - posWS);
-        vec3 omega_o = normalize(posWS - cameraUBO.posWS);
-
-        vec3 f_r = albedo * INVPI;
-        vec3 L_i = pcs.lightEmission;
-        float cos_theta_i = max(dot(omega_i, normal),0.0f);
-
-        vec3 L_o = L_i * f_r * cos_theta_i;
-
-        fragColor = vec4(L_o,1);
-    }
 
     if (pcs.overlayIndex == OVERLAY_DEBUG_PHONG){
         vec4 camRay = cameraUBO.matInvVP * vec4(inNDCxy,depth,1);
@@ -103,9 +85,5 @@ void main() {
         vec3 L_o = L_i * f_r * cos_theta_i * inv_r_sqr;
 
         fragColor = vec4(L_o,1);
-        //fragColor = vec4(pow(cos_theta_r,shininess));
-        //fragColor = vec4(shininess);
     }
-
-    //fragColor.xyz = aces(fragColor.xyz);
 }

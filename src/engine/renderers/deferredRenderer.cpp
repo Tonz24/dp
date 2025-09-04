@@ -9,7 +9,7 @@ bool DeferredRenderer::drawGUI() {
     if (ImGui::CollapsingHeader("Deferred renderer")) {
         ImGui::Indent();
 
-        static constexpr std::array items{"Debug Phong","Albedo map","Normal map","Depth map","World space position", "Material id map",};
+        static constexpr std::array items{"Debug Phong","Albedo map","Normal map","Depth map","World space position"};
         if (ImGui::Combo("Show target", &selectedOverlay_, items.data(), items.size())) {
 
         }
