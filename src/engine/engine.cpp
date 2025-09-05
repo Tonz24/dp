@@ -863,7 +863,7 @@ void Engine::updateUBOs() {
     }
 
     if (dirtyMaterialUBO_) {
-        uint8_t* dst = renderer_->getCamUBOsMapped(frameInFlightIndex_) + materialUpdateIndex_ * sizeof(materialUBOStorage_);
+        uint8_t* dst = renderer_->getMatUBOsMapped(frameInFlightIndex_) + materialUpdateIndex_ * sizeof(materialUBOStorage_);
         memcpy(dst, &materialUBOStorage_,sizeof(materialUBOStorage_));
         dirtyMaterialUBO_ = false;
     }
