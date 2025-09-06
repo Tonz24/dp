@@ -25,21 +25,22 @@ void Material::setTexture(std::shared_ptr<Texture> texture, TextureMapSlot slot)
     textures_[static_cast<uint8_t>(slot)] = std::move(texture);
 
     if (slot == TextureMapSlot::diffuseMapSlot)
-        uboFormat_.diffuseAlbedoMapHandle = 1;
+        uboFormat_.diffuseAlbedoMapHandle = textures_[static_cast<uint8_t>(TextureMapSlot::diffuseMapSlot)]->getCID();
     else if (slot == TextureMapSlot::specularMapSlot)
-        uboFormat_.specularALbedoMapHandle = 1;
+        uboFormat_.specularALbedoMapHandle = textures_[static_cast<uint8_t>(TextureMapSlot::specularMapSlot)]->getCID();
     else if (slot == TextureMapSlot::normalMapSlot)
-        uboFormat_.normalMapHandle = 1;
+        uboFormat_.normalMapHandle = textures_[static_cast<uint8_t>(TextureMapSlot::normalMapSlot)]->getCID();
     else if (slot == TextureMapSlot::shininessMapSlot)
-        uboFormat_.shininessMapHandle = 1;
+        uboFormat_.shininessMapHandle = textures_[static_cast<uint8_t>(TextureMapSlot::shininessMapSlot)]->getCID();
 }
 
 void Material::recordDescriptorSet() const {
 
-    std::vector<vk::WriteDescriptorSet> descriptorWrites{};
+    std::vector<vk::WriteDescriptorSet> descriptorWrites{}, descriptorWritesBindless{};
     std::vector<vk::DescriptorImageInfo> imageInfos;
     imageInfos.reserve(textures_.size());
     descriptorWrites.reserve(textures_.size());
+    descriptorWritesBindless.reserve(textures_.size());
 
     auto dummy = TextureManager::getInstance()->getResource("dummy");
 
@@ -60,10 +61,24 @@ void Material::recordDescriptorSet() const {
             .pImageInfo = &imageInfos.back()
         };
 
+
+        if (textures_[i] != nullptr) {
+            vk::WriteDescriptorSet writeDescriptorSetBindless{
+                .dstSet = Renderer::getDescSetFrame(0),
+                .dstBinding = 2,
+                .dstArrayElement = textures_[i]->getCID(),
+                .descriptorCount = 1,
+                .descriptorType = vk::DescriptorType::eCombinedImageSampler,
+                .pImageInfo = &imageInfos.back()
+            };
+            descriptorWritesBindless.emplace_back(writeDescriptorSetBindless);
+        }
+
         descriptorWrites.emplace_back(writeDescriptorSet);
     }
 
    VkUtils::getDevice().updateDescriptorSets(descriptorWrites,{});
+   VkUtils::getDevice().updateDescriptorSets(descriptorWritesBindless,{});
 }
 
 void Material::updateUBO() const {

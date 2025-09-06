@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include "../constants.h"
 #include "../../scene/scene.h"
 
 class Renderer : public IDrawGui {
@@ -47,7 +48,7 @@ private:
     inline static std::vector<VkUtils::BufferAlloc> materialUBOs_{};
     inline static std::vector<uint8_t*> materialUBOsMapped_{};
 
-    inline static std::vector<vk::raii::DescriptorSet> descSets_{};
+    inline static std::vector<vk::raii::DescriptorSet> descSetsFrame_{};
 
     static void initDescSetLayout();
     inline static vk::raii::DescriptorSetLayout descSetLayoutFrame_{nullptr};
@@ -66,6 +67,12 @@ private:
             .binding = 1,
             .descriptorType = vk::DescriptorType::eUniformBuffer,
             .descriptorCount = 1,
+            .stageFlags = vk::ShaderStageFlagBits::eFragment
+        },
+        vk::DescriptorSetLayoutBinding { // Bindless textures
+            .binding = 2,
+            .descriptorType = vk::DescriptorType::eCombinedImageSampler,
+            .descriptorCount = Constants::textureLimit,
             .stageFlags = vk::ShaderStageFlagBits::eFragment
         }
     };

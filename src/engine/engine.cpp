@@ -186,8 +186,6 @@ void Engine::initVulkan() {
     initImageViews();
 
     initDescriptorPool();
-    Renderer::initLayouts();
-
 
     initCommandPool();
     initCommandBuffers();
@@ -195,6 +193,7 @@ void Engine::initVulkan() {
     initSyncObjects();
 
     initDummyTexture();
+    Renderer::initLayouts();
 
     auto allocationCreateFlags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
     idMapTransferBuffer_ = VkUtils::createBufferVMA(sizeof(uint32_t),vk::BufferUsageFlagBits::eTransferDst, allocationCreateFlags);
@@ -807,11 +806,11 @@ void Engine::initDescriptorPool() {
     std::array poolSize{
         vk::DescriptorPoolSize {
             .type = vk::DescriptorType::eUniformBuffer,
-            .descriptorCount = 1000
+            .descriptorCount = 100
         },
         vk::DescriptorPoolSize {
             .type = vk::DescriptorType::eCombinedImageSampler,
-            .descriptorCount = 1000
+            .descriptorCount = Constants::textureLimit
         }
     };
 

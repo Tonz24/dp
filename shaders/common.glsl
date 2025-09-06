@@ -31,3 +31,5 @@ struct Material{
 layout (set=0,binding=1, std140) uniform MaterialUBO {
    Material materials[100];
 } materialUBO;
+
+layout(set = 0, binding = 2) uniform sampler2D textures[1024];

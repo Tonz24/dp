@@ -11,4 +11,5 @@ public:
 
   static constexpr uint32_t maxFramesInFlight{1};
   static constexpr uint32_t materialLimit{100};
+  static constexpr uint32_t textureLimit{1024};
 };

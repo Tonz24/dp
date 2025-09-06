@@ -4,7 +4,6 @@
 
 #include "renderer.h"
 
-#include "../constants.h"
 #include "../engine.h"
 
 void Renderer::initLayouts() {
@@ -24,7 +23,7 @@ const vk::raii::DescriptorSet& Renderer::getDescSetFrame(uint32_t frameInFlightI
     if (frameInFlightIndex >= Constants::maxFramesInFlight)
         throw std::runtime_error("ERROR: invalid index!");
 
-    return descSets_[frameInFlightIndex];
+    return descSetsFrame_[frameInFlightIndex];
 }
 
 uint8_t* Renderer::getCamUBOsMapped(uint32_t frameInFlightIndex) {
@@ -81,7 +80,9 @@ void Renderer::initDescSetLayout() {
         .pSetLayouts = layouts.data()
     };
 
-    descSets_ = VkUtils::getDevice().allocateDescriptorSets(allocInfo);
+    descSetsFrame_ = VkUtils::getDevice().allocateDescriptorSets(allocInfo);
+
+    auto dummy = TextureManager::getInstance()->getResource("dummy");
 
     for (size_t i = 0; i < Constants::maxFramesInFlight; i++) {
 
@@ -91,14 +92,8 @@ void Renderer::initDescSetLayout() {
             .range = sizeof(CameraUBOFormat)
         };
 
-        vk::DescriptorBufferInfo matBufferInfo{
-            .buffer = materialUBOs_[i].buffer,
-            .offset = 0,
-            .range = sizeof(MaterialUBOFormat) * Constants::materialLimit
-        };
-
         vk::WriteDescriptorSet writeDescriptorSetCam{
-            .dstSet = descSets_[i], //  which descriptor set to update
+            .dstSet = descSetsFrame_[i], //  which descriptor set to update
             .dstBinding = 0, // which binding to update
             .dstArrayElement = 0, //  what element the update starts at
             .descriptorCount = 1, //  how many descriptors are affected
@@ -106,8 +101,31 @@ void Renderer::initDescSetLayout() {
             .pBufferInfo = &camBufferInfo,
         };
 
+        vk::DescriptorImageInfo dummyInfo{
+            .sampler =  dummy->getVkSampler(),
+            .imageView = dummy->getVkImageView(),
+            .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
+        };
+
+        vk::WriteDescriptorSet writeDescriptorSetDummy{
+            .dstSet = descSetsFrame_[i], //  which descriptor set to update
+            .dstBinding = 2, // which binding to update
+            .dstArrayElement = 0, //  what element the update starts at
+            .descriptorCount = 1, //  how many descriptors are affected
+            .descriptorType = vk::DescriptorType::eCombinedImageSampler,
+            .pImageInfo = &dummyInfo,
+        };
+
+
+
+        vk::DescriptorBufferInfo matBufferInfo{
+            .buffer = materialUBOs_[i].buffer,
+            .offset = 0,
+            .range = sizeof(MaterialUBOFormat) * Constants::materialLimit
+        };
+
         vk::WriteDescriptorSet writeDescriptorSetMat{
-            .dstSet = descSets_[i], //  which descriptor set to update
+            .dstSet = descSetsFrame_[i], //  which descriptor set to update
             .dstBinding = 1, // which binding to update
             .dstArrayElement = 0, //  what element the update starts at
             .descriptorCount = 1, //  how many descriptors are affected
@@ -115,7 +133,7 @@ void Renderer::initDescSetLayout() {
             .pBufferInfo = &matBufferInfo,
         };
 
-        VkUtils::getDevice().updateDescriptorSets({writeDescriptorSetCam, writeDescriptorSetMat},{});
+        VkUtils::getDevice().updateDescriptorSets({writeDescriptorSetCam, writeDescriptorSetDummy, writeDescriptorSetMat},{});
     }
 
     isDescSetLayoutInit_ = true;

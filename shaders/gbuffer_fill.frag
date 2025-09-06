@@ -23,10 +23,11 @@ void main() {
     Material mat = materialUBO.materials[pcs.matIndex];
 
     float hasAlbedoMap = clamp(float(mat.diffuseAlbedoMapHandle),0.0f,1.0f);
-    vec3 albedo = mix(mat.diffuseAlbedo, texture(diffAlbedoMap, inTexCoord).rgb, hasAlbedoMap);
+    vec3 albedo = mix(mat.diffuseAlbedo, texture(textures[mat.diffuseAlbedoMapHandle], inTexCoord).rgb, hasAlbedoMap);
+
 
     float hasNormalMap = clamp(float(mat.normalMapHandle),0.0f,1.0f);
-    vec3 normal = mix(inNormal,normalize(inTBN * (texture(normalMap,inTexCoord).xyz * 2.0 - 1.0)),hasNormalMap);
+    vec3 normal = mix(inNormal,normalize(inTBN * (texture(textures[mat.normalMapHandle],inTexCoord).xyz * 2.0 - 1.0)),hasNormalMap);
 
 
     outAlbedo = vec4(albedo, 1.0);

@@ -312,7 +312,6 @@ int Texture::chooseChannelCount(vk::Format format) {
         case F::eS8Uint:
             return 1;
 
-        // 2 kanály
         case F::eR8G8Unorm:
         case F::eR8G8Snorm:
         case F::eR8G8Uscaled:
@@ -336,7 +335,6 @@ int Texture::chooseChannelCount(vk::Format format) {
         case F::eD32SfloatS8Uint:
             return 2;
 
-        // 3 kanály
         case F::eR8G8B8Unorm:
         case F::eR8G8B8Snorm:
         case F::eR8G8B8Uscaled:
@@ -362,7 +360,6 @@ int Texture::chooseChannelCount(vk::Format format) {
         case F::eB10G11R11UfloatPack32:
             return 3;
 
-        // 4 kanály
         case F::eR8G8B8A8Unorm:
         case F::eR8G8B8A8Snorm:
         case F::eR8G8B8A8Uscaled:
@@ -397,7 +394,7 @@ int Texture::chooseChannelCount(vk::Format format) {
             return 4;
 
         default:
-            throw std::runtime_error("ERROR: Unsupported vk::Format in chooseChannelCount");
+            throw std::runtime_error("ERROR: Unsupported vk::Format in chooseChannelCount!");
     }
 }
 
