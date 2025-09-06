@@ -29,9 +29,9 @@ void main() {
     float hasNormalMap = clamp(float(mat.normalMapHandle),0.0f,1.0f);
     vec3 normal = mix(inNormal,normalize(inTBN * (texture(textures[mat.normalMapHandle],inTexCoord).xyz * 2.0 - 1.0)),hasNormalMap);
 
-
-    outAlbedo = vec4(albedo, 1.0);
-    outNormal = vec4(normal,0.0);
+    // smuggle tex coords for bindless test
+    outAlbedo = vec4(albedo, inTexCoord.x);
+    outNormal = vec4(normal,inTexCoord.y);
     outMeshId = pcs.meshId;
     outMaterialId = pcs.matIndex;
 }

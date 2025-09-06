@@ -28,13 +28,24 @@ float linearizeDepth(float depth, float zNear, float zFar){
 
 
 void main() {
-    vec2 texCoord = inNDCxy * 0.5 + 0.5;
-    texCoord.y = 1.0 - texCoord.y;
+    vec2 screenTexCoord = inNDCxy * 0.5 + 0.5;
+    screenTexCoord.y = 1.0 - screenTexCoord.y;
 
-    vec3 albedo = texture(albedoMap,texCoord).xyz;
-    vec3 normal = texture(normalMap,texCoord).xyz;
-    float depth = texture(depthMap,texCoord).x;
-    uint materialId = texture(materialMap,texCoord).x;
+    vec4 albedoTexCoordX = texture(albedoMap, screenTexCoord);
+    vec4 normalTexCoordY = texture(normalMap, screenTexCoord);
+    float depth = texture(depthMap, screenTexCoord).x;
+    uint materialId = texture(materialMap, screenTexCoord).x;
+
+    vec3 albedo = albedoTexCoordX.xyz;
+    vec3 normal = normalTexCoordY.xyz;
+
+    vec2 texCoord = vec2(albedoTexCoordX.w,normalTexCoordY.w);
+
+    Material mat = materialUBO.materials[materialId];
+
+    float hasAlbedoMap = clamp(float(mat.diffuseAlbedoMapHandle),0.0f,1.0f);
+    albedo = mix(mat.diffuseAlbedo, texture(textures[mat.diffuseAlbedoMapHandle], texCoord).rgb, hasAlbedoMap);
+
 
     //  this fragment has something to shade only if there's a normal behind it
     bool hasValidGeometry = (bool((normal.x > 0 || normal.x < 0) || (normal.y > 0 || normal.y < 0) || (normal.z > 0 || normal.z < 0)));
@@ -60,8 +71,8 @@ void main() {
         fragColor = vec4(linDepth, linDepth, linDepth,1.0);
     }
     if (pcs.overlayIndex == OVERLAY_WS_POS){
-
-        fragColor = vec4(posWS,1);
+        fragColor = vec4(texCoord,0,1);
+        //fragColor = vec4(posWS,1);
     }
 
     if (pcs.overlayIndex == OVERLAY_DEBUG_PHONG){
