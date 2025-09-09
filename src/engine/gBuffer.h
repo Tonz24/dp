@@ -49,7 +49,7 @@ public:
     static constexpr vk::ImageUsageFlags materialMapUsageFlags{defaultAttachmentUsageFlags};  // transfer src for retrieving id at cursor position
 
     static constexpr uint32_t targetChannelCount{4};
-    static constexpr vk::Format targetVkFormat{vk::Format::eR8G8B8A8Unorm};
+    static constexpr vk::Format targetVkFormat{vk::Format::eA2R10G10B10UnormPack32};
     static constexpr vk::ImageUsageFlags targetUsageFlags{vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc}; // transfer src for blitting into swapchain
 
 

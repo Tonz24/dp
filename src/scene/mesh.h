@@ -39,6 +39,8 @@ public:
 private:
     void initBuffers();
 
+    void initBLAS();
+
     std::vector<Vertex3D> vertices_{};
     std::vector<uint32_t> indices_{};
     std::shared_ptr<Material> material_{nullptr};
@@ -47,5 +49,6 @@ private:
     VkUtils::BufferAlloc indexBuffer_{};
 
     Transform transform_{};
-
+    vk::raii::AccelerationStructureKHR blas_{nullptr};
+    VkUtils::BufferAlloc blasStorageBuffer_{};
 };

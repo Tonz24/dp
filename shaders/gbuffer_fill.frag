@@ -27,7 +27,7 @@ void main() {
 
 
     float hasNormalMap = clamp(float(mat.normalMapHandle),0.0f,1.0f);
-    vec3 normal = mix(inNormal,normalize(inTBN * (texture(textures[mat.normalMapHandle],inTexCoord).xyz * 2.0 - 1.0)),hasNormalMap);
+    vec3 normal = mix(normalize(inNormal),normalize(inTBN * (texture(textures[mat.normalMapHandle],inTexCoord).xyz * 2.0 - 1.0)),hasNormalMap);
 
     // smuggle tex coords for bindless test
     outAlbedo = vec4(albedo, inTexCoord.x);

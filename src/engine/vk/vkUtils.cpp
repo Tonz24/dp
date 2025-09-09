@@ -27,6 +27,28 @@ VkUtils::BufferAlloc VkUtils::createBufferVMA(vk::DeviceSize bufferSize, vk::Buf
     return bufferAlloc;
 }
 
+VkUtils::BufferAlloc VkUtils::createBufferVMA(vk::DeviceSize bufferSize, vk::BufferUsageFlags bufferUsage, vk::DeviceSize alignment,
+    VmaAllocationCreateFlags allocationFlags) {
+    vk::BufferCreateInfo bufferInfo{
+        .size = bufferSize,
+        .usage =  bufferUsage,
+        .sharingMode = vk::SharingMode::eExclusive
+    };
+
+    VmaAllocationCreateInfo allocInfo{
+        .flags = allocationFlags,
+        .usage = VMA_MEMORY_USAGE_AUTO,
+    };
+
+    BufferAlloc bufferAlloc;
+    vk::Result createResult = static_cast<vk::Result>(vmaCreateBufferWithAlignment(allocator_,&*bufferInfo,&allocInfo,alignment,reinterpret_cast<VkBuffer*>(&bufferAlloc.buffer) ,&bufferAlloc.allocation,&bufferAlloc.allocationInfo));
+
+    if (createResult != vk::Result::eSuccess)
+        throw std::runtime_error("ERROR: failed to create buffer!");
+
+    return bufferAlloc;
+}
+
 VkUtils::ImageAlloc VkUtils::createImageVMA(const vk::ImageCreateInfo& imageInfo, VmaAllocationCreateFlags allocationFlags) {
 
 
@@ -151,7 +173,7 @@ void VkUtils::init(const vk::raii::Device* device, const vk::raii::PhysicalDevic
     };
 
     VmaAllocatorCreateInfo allocatorCreateInfo{
-        .flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT,
+        .flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT | VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
         .physicalDevice = **physicalDevice_,
         .device = **device,
         .pVulkanFunctions = &vulkanFunctions,

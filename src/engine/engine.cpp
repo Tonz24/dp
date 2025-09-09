@@ -195,7 +195,7 @@ void Engine::initVulkan() {
     initDummyTexture();
     Renderer::initLayouts();
 
-    auto allocationCreateFlags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+    VmaAllocationCreateFlags allocationCreateFlags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
     idMapTransferBuffer_ = VkUtils::createBufferVMA(sizeof(uint32_t),vk::BufferUsageFlagBits::eTransferDst, allocationCreateFlags);
 
     gBuffer_ = GBufferManager::getInstance()->registerResource("gbuffer_test",1280,720);
@@ -214,7 +214,18 @@ void Engine::initVulkanInstance() {
             .apiVersion = vk::ApiVersion13
     };
 
+    vk::ValidationFeatureEnableEXT enables[] = {
+        vk::ValidationFeatureEnableEXT::eGpuAssisted,
+        vk::ValidationFeatureEnableEXT::eGpuAssistedReserveBindingSlot,
+        vk::ValidationFeatureEnableEXT::eSynchronizationValidation,
+    };
+    vk::ValidationFeaturesEXT validationFeatures{
+        .enabledValidationFeatureCount = static_cast<uint32_t>(std::size(enables)),
+        .pEnabledValidationFeatures    = enables,
+    };
+
     vk::InstanceCreateInfo createInfo{
+            .pNext = &validationFeatures,
             .pApplicationInfo = &appInfo,
             .enabledLayerCount = static_cast<uint32_t>(validationLayers.size()),
             .ppEnabledLayerNames = validationLayers.data(),
@@ -354,6 +365,7 @@ void Engine::initLogicalDevice() {
     // Create a chain of feature structures
     vk::StructureChain<
         vk::PhysicalDeviceFeatures2,
+        vk::PhysicalDeviceVulkan12Features,
         vk::PhysicalDeviceVulkan13Features,
         vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT,
         vk::PhysicalDeviceRayTracingPipelineFeaturesKHR,
@@ -362,13 +374,14 @@ void Engine::initLogicalDevice() {
         vk::PhysicalDevicePageableDeviceLocalMemoryFeaturesEXT
         >
             featureChain {
-                {.features = {.samplerAnisotropy = vk::True}},                               // vk::PhysicalDeviceFeatures2 (empty for now)
+                {.features = {.samplerAnisotropy = vk::True}}, // vk::PhysicalDeviceFeatures2 (empty for now)
+                {.bufferDeviceAddress = vk::True},
                 {.synchronization2 = vk::True, .dynamicRendering = vk::True},      // Enable dynamic rendering from Vulkan 1.3
                 {.extendedDynamicState = vk::True }, // Enable extended dynamic state from the extension_
                 {},
+                {.accelerationStructure = true},
                 {},
                 {},
-                {}
     };
 
     vk::DeviceCreateInfo deviceCreateInfo{

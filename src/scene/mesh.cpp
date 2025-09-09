@@ -11,11 +11,15 @@ Mesh::Mesh(std::vector<Vertex3D>&& vertexList, std::vector<uint32_t>&& indexList
     vertices_(std::move(vertexList)), indices_(std::move(indexList)), material_(std::move(material)) {
 
     initBuffers();
+    initBLAS();
 }
 
 Mesh::~Mesh() {
     VkUtils::destroyBufferVMA(std::move(vertexBuffer_));
     VkUtils::destroyBufferVMA(std::move(indexBuffer_));
+
+    blas_.release();
+    VkUtils::destroyBufferVMA(std::move(blasStorageBuffer_));
 }
 
 bool Mesh::drawGUI() {
@@ -70,8 +74,100 @@ void Mesh::recordDrawCommands(vk::raii::CommandBuffer& cmdBuf, const vk::raii::P
 
 void Mesh::initBuffers() {
     vk::DeviceSize vertexBufferSize = sizeof(vertices_[0]) * vertices_.size();
-    vertexBuffer_ = VkUtils::createBufferVMA(vertexBufferSize,vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst);
+    vertexBuffer_ = VkUtils::createBufferVMA(vertexBufferSize,vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR);
 
     vk::DeviceSize indexBufferSize = sizeof(indices_[0]) * indices_.size();
-    indexBuffer_ = VkUtils::createBufferVMA(indexBufferSize,vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst);
+    indexBuffer_ = VkUtils::createBufferVMA(indexBufferSize,vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR);
+}
+
+// https://nvpro-samples.github.io/vk_raytracing_tutorial_KHR/#raytracingsetup/main
+// https://github.com/yknishidate/single-file-vulkan-pathtracing/blob/master/main.cpp
+void Mesh::initBLAS() {
+
+    uint32_t maxPrimitiveCount = static_cast<uint32_t>(indices_.size() / 3);
+
+    vk::DeviceAddress indexAddress = VkUtils::getDevice().getBufferAddress({.buffer =  indexBuffer_.buffer});
+    vk::DeviceAddress vertexAddress = VkUtils::getDevice().getBufferAddress({.buffer =  vertexBuffer_.buffer});
+
+    //  setup triangle data (consume the whole vertex/index buffer pair for one BLAS)
+    vk::AccelerationStructureGeometryTrianglesDataKHR triangleData{
+        .vertexFormat = vk::Format::eR32G32B32Sfloat,
+        .vertexData = vertexAddress + offsetof(Vertex3D,position), // in case the vertex struct changes
+        .vertexStride = sizeof(Vertex3D),
+        .maxVertex =  static_cast<uint32_t>(vertices_.size() - 1),
+        .indexType = vk::IndexType::eUint32,
+        .indexData = indexAddress,
+        .transformData = nullptr
+    };
+
+
+    //  set everything as opaque triangles for now
+    vk::AccelerationStructureGeometryKHR geometryData{
+        .geometryType = vk::GeometryTypeKHR::eTriangles,
+        .geometry = triangleData,
+        .flags = vk::GeometryFlagBitsKHR::eOpaque, //TODO: change to no opaque if transparent materials are present
+    };
+
+
+    //  specify the range of primitives to build the BLAS from (entire buffer in this case)
+    vk::AccelerationStructureBuildRangeInfoKHR buildRangeInfo{
+        .primitiveCount = maxPrimitiveCount,
+        .primitiveOffset = 0,
+        .firstVertex = 0,
+        .transformOffset = 0
+    };
+
+    //  each mesh is responsible for its own BLAS, TLAS is maintained by scene
+    vk::AccelerationStructureTypeKHR buildType = vk::AccelerationStructureTypeKHR::eBottomLevel;
+
+    //  setup build info (scratchData and dstAccelerationStructure are filled later)
+    vk::AccelerationStructureBuildGeometryInfoKHR buildInfo{
+        .type = buildType,
+        .flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace, // TODO: allow compaction later
+        .mode = vk::BuildAccelerationStructureModeKHR::eBuild,
+        .geometryCount = 1,
+        .pGeometries  = &geometryData,
+    };
+
+
+    //  get build size, setup buffer flags
+    auto buildSize = VkUtils::getDevice().getAccelerationStructureBuildSizesKHR(vk::AccelerationStructureBuildTypeKHR::eDevice,buildInfo,{maxPrimitiveCount});
+    vk::BufferUsageFlags blasFlags = vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress;
+    vk::BufferUsageFlags scratchFlags = vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress;
+
+    // get the minimum scratch alignment
+    auto props = VkUtils::getPhysicalDevice().getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceAccelerationStructurePropertiesKHR>();
+    vk::DeviceAddress minimumScratchAlignment = props.get<vk::PhysicalDeviceAccelerationStructurePropertiesKHR>().minAccelerationStructureScratchOffsetAlignment;
+
+    // create blas and scratch buffers (blas buffer is a member)
+    blasStorageBuffer_ = VkUtils::createBufferVMA(buildSize.accelerationStructureSize,blasFlags);
+    VkUtils::BufferAlloc blasScratchBuffer = VkUtils::createBufferVMA(buildSize.buildScratchSize, scratchFlags, minimumScratchAlignment);
+    vk::DeviceAddress scratchBufferAddress = VkUtils::getDevice().getBufferAddress({.buffer =  blasScratchBuffer.buffer});
+
+
+    vk::AccelerationStructureCreateInfoKHR blasCreateInfo{
+        .buffer = blasStorageBuffer_.buffer,
+        .size = buildSize.accelerationStructureSize,
+        .type = buildType,
+    };
+
+    //  create the BLAS
+    blas_ = VkUtils::getDevice().createAccelerationStructureKHR(blasCreateInfo);
+
+    //  fill the remaining buildInfo data with scratch buffer and destination BLAS
+    buildInfo.scratchData = scratchBufferAddress;
+    buildInfo.dstAccelerationStructure = *blas_;
+
+
+    vk::ArrayProxy<const vk::AccelerationStructureBuildGeometryInfoKHR> h {buildInfo};
+    vk::ArrayProxy<vk::AccelerationStructureBuildRangeInfoKHR*> p {&buildRangeInfo};
+
+
+    // build the BLAS
+    auto cmdBuf = VkUtils::beginSingleTimeCommand();
+    cmdBuf.buildAccelerationStructuresKHR(h,p);
+    VkUtils::endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
+
+
+    VkUtils::destroyBufferVMA(std::move(blasScratchBuffer));
 }

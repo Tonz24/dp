@@ -55,7 +55,7 @@ void DeferredRenderer::initGraphicsPipelines() {
 
     std::array pcsFillRange{GBuffer::pcsFillRange};
     std::vector descSetFillLayouts = {*Renderer::getDescSetLayoutFrame(), *Renderer::getDescSetLayoutMaterial()};
-    std::array fillAttachmentFormats{GBuffer::targetVkFormat, GBuffer::attachmentFormats[1],GBuffer::attachmentFormats[2], GBuffer::attachmentFormats[3]};
+    std::array fillAttachmentFormats{GBuffer::attachmentFormats[0], GBuffer::attachmentFormats[1],GBuffer::attachmentFormats[2], GBuffer::attachmentFormats[3]};
 
 
     std::array pcsShadeRange{GBuffer::pcsShadeRange};
@@ -64,7 +64,7 @@ void DeferredRenderer::initGraphicsPipelines() {
 
     std::vector descSetLayoutSky = {*Renderer::getDescSetLayoutFrame(),*Renderer::getDescSetLayoutSky()};
     gBufferFillPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/gbuffer_fill_frag.spv",descSetFillLayouts,pcsFillRange,fillAttachmentFormats,true, GBuffer::depthMapVkFormat};
-    skyboxPipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/skypass_frag.spv",descSetLayoutSky,{},{fillAttachmentFormats.begin(),1}, false};
+    skyboxPipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/skypass_frag.spv",descSetLayoutSky,{},{shadeAttachmentFormat.begin(),1}, false};
     gBufferShadePipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/gbuffer_shade_frag.spv",descSetFillLayouts,pcsShadeRange,shadeAttachmentFormat, false};
 }
 

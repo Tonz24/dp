@@ -31,6 +31,7 @@ public:
     VkUtils() = delete;
 
     static BufferAlloc createBufferVMA(vk::DeviceSize bufferSize, vk::BufferUsageFlags bufferUsage, VmaAllocationCreateFlags allocationFlags = {});
+    static BufferAlloc createBufferVMA(vk::DeviceSize bufferSize, vk::BufferUsageFlags bufferUsage, vk::DeviceSize alignment, VmaAllocationCreateFlags allocationFlags = {});
     static void destroyBufferVMA(BufferAlloc&& buffer);
     static void mapMemory(const BufferAlloc& buffer, void*& ptr);
     static void unmapMemory(const BufferAlloc& buffer);
@@ -78,9 +79,12 @@ public:
                                       vk::PipelineStageFlags2 dstStageMask, vk::AccessFlags2 dstAccessMask,
                                       vk::ImageAspectFlags imageAspectFlags, vk::raii::CommandBuffer &cmdBuf);
 
+
+
     static constexpr VmaAllocationCreateFlags stagingAllocFlagsVMA{VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT};
 
     static const vk::raii::Device& getDevice() {return *device_;}
+    static const vk::raii::PhysicalDevice& getPhysicalDevice() {return *physicalDevice_;}
 
 
     static void blit(const vk::raii::CommandBuffer& cmdBuf, const vk::Image& srcImage, const glm::vec<2,int32_t>& srcSize, vk::ImageAspectFlags srcAspect, const vk::

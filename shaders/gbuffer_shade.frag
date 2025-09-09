@@ -43,9 +43,6 @@ void main() {
 
     Material mat = materialUBO.materials[materialId];
 
-    float hasAlbedoMap = clamp(float(mat.diffuseAlbedoMapHandle),0.0f,1.0f);
-    albedo = mix(mat.diffuseAlbedo, texture(textures[mat.diffuseAlbedoMapHandle], texCoord).rgb, hasAlbedoMap);
-
 
     //  this fragment has something to shade only if there's a normal behind it
     bool hasValidGeometry = (bool((normal.x > 0 || normal.x < 0) || (normal.y > 0 || normal.y < 0) || (normal.z > 0 || normal.z < 0)));
