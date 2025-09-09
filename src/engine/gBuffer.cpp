@@ -167,8 +167,8 @@ void GBuffer::createTextures(const std::string& prefix, uint32_t width, uint32_t
                                   vk::ImageLayout::eDepthStencilAttachmentOptimal,
                                   vk::PipelineStageFlagBits2::eTopOfPipe,
                                   vk::AccessFlagBits2::eNone,
-                                  vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
-                                  vk::AccessFlagBits2::eDepthStencilAttachmentWrite | vk::AccessFlagBits2::eDepthStencilAttachmentRead,
+                                  vk::PipelineStageFlagBits2::eFragmentShader,
+                                vk::AccessFlagBits2::eShaderSampledRead | vk::AccessFlagBits2::eDepthStencilAttachmentRead,
                                   vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil,
                                   cmdBuf);
 
@@ -229,7 +229,7 @@ void GBuffer::transitionToFill(vk::raii::CommandBuffer& cmdBuf) const {
                                  vk::ImageLayout::eDepthStencilReadOnlyOptimal,
                                 vk::ImageLayout::eDepthStencilAttachmentOptimal,
                                 vk::PipelineStageFlagBits2::eFragmentShader,
-                                vk::AccessFlagBits2::eDepthStencilAttachmentRead,
+                                vk::AccessFlagBits2::eShaderSampledRead | vk::AccessFlagBits2::eDepthStencilAttachmentRead,
                                 vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
                                   vk::AccessFlagBits2::eDepthStencilAttachmentWrite | vk::AccessFlagBits2::eDepthStencilAttachmentRead,
                                 vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil,
@@ -287,7 +287,7 @@ void GBuffer::transitionToShade(vk::raii::CommandBuffer& cmdBuf) const {
                                 vk::PipelineStageFlagBits2::eAllCommands,
                                   vk::AccessFlagBits2::eDepthStencilAttachmentWrite | vk::AccessFlagBits2::eDepthStencilAttachmentRead,
                                 vk::PipelineStageFlagBits2::eFragmentShader,
-                                vk::AccessFlagBits2::eDepthStencilAttachmentRead,
+                                vk::AccessFlagBits2::eShaderSampledRead | vk::AccessFlagBits2::eDepthStencilAttachmentRead,
                                 vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil,
                                 cmdBuf);
 

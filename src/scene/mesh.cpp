@@ -11,7 +11,6 @@ Mesh::Mesh(std::vector<Vertex3D>&& vertexList, std::vector<uint32_t>&& indexList
     vertices_(std::move(vertexList)), indices_(std::move(indexList)), material_(std::move(material)) {
 
     initBuffers();
-    initBLAS();
 }
 
 Mesh::~Mesh() {

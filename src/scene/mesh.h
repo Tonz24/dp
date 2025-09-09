@@ -23,6 +23,7 @@ public:
     bool drawGUI() override;
 
     void stage(const VkUtils::BufferAlloc& stagingBuffer) const;
+    void initBLAS();
 
 
     void recordDrawCommands(vk::raii::CommandBuffer& cmdBuf, const vk::raii::PipelineLayout& pipelineLayout) const;
@@ -39,7 +40,6 @@ public:
 private:
     void initBuffers();
 
-    void initBLAS();
 
     std::vector<Vertex3D> vertices_{};
     std::vector<uint32_t> indices_{};
