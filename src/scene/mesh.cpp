@@ -90,24 +90,21 @@ void Mesh::initBLAS() {
     vk::DeviceAddress vertexAddress = VkUtils::getDevice().getBufferAddress({.buffer =  vertexBuffer_.buffer});
 
     //  setup triangle data (consume the whole vertex/index buffer pair for one BLAS)
-    vk::AccelerationStructureGeometryTrianglesDataKHR triangleData{
-        .vertexFormat = vk::Format::eR32G32B32Sfloat,
-        .vertexData = vertexAddress + offsetof(Vertex3D,position), // in case the vertex struct changes
-        .vertexStride = sizeof(Vertex3D),
-        .maxVertex =  static_cast<uint32_t>(vertices_.size() - 1),
-        .indexType = vk::IndexType::eUint32,
-        .indexData = indexAddress,
-        .transformData = nullptr
-    };
+    vk::AccelerationStructureGeometryTrianglesDataKHR triangleData{};
+        triangleData.setVertexFormat(vk::Format::eR32G32B32Sfloat);
+        triangleData.setVertexData(vertexAddress + offsetof(Vertex3D,position)); // in case the vertex struct changes)
+        triangleData.setVertexStride(sizeof(Vertex3D));
+        triangleData.setMaxVertex( static_cast<uint32_t>(vertices_.size() - 1));
+        triangleData.setIndexType(vk::IndexType::eUint32);
+        triangleData.setIndexData(indexAddress);
+        triangleData.setTransformData(nullptr);
 
 
     //  set everything as opaque triangles for now
-    vk::AccelerationStructureGeometryKHR geometryData{
-        .geometryType = vk::GeometryTypeKHR::eTriangles,
-        .geometry = triangleData,
-        .flags = vk::GeometryFlagBitsKHR::eOpaque, //TODO: change to no opaque if transparent materials are present
-    };
-
+    vk::AccelerationStructureGeometryKHR geometryData{};
+    geometryData.setGeometryType(vk::GeometryTypeKHR::eTriangles);
+    geometryData.setGeometry(triangleData);
+    geometryData.setFlags(vk::GeometryFlagBitsKHR::eOpaque); //TODO: change to no opaque if transparent materials are present
 
     //  specify the range of primitives to build the BLAS from (entire buffer in this case)
     vk::AccelerationStructureBuildRangeInfoKHR buildRangeInfo{
@@ -159,13 +156,12 @@ void Mesh::initBLAS() {
     buildInfo.dstAccelerationStructure = *blas_;
 
 
-    vk::ArrayProxy<const vk::AccelerationStructureBuildGeometryInfoKHR> h {buildInfo};
-    vk::ArrayProxy<vk::AccelerationStructureBuildRangeInfoKHR*> p {&buildRangeInfo};
-
+    const vk::AccelerationStructureBuildRangeInfoKHR* pRangeInfos[] = { &buildRangeInfo };
 
     // build the BLAS
     auto cmdBuf = VkUtils::beginSingleTimeCommand();
-    cmdBuf.buildAccelerationStructuresKHR(h,p);
+    //cmdBuf.buildAccelerationStructuresKHR(h,p);
+    cmdBuf.buildAccelerationStructuresKHR(buildInfo, pRangeInfos);
     VkUtils::endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
 
 
