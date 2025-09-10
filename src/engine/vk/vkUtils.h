@@ -142,6 +142,7 @@ public:
     static constexpr VmaAllocationCreateFlags stagingAllocFlagsVMA{VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT};
     static constexpr vk::BufferUsageFlags accelStructStorageFlags{vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress};
     static constexpr vk::BufferUsageFlags scratchBufferFlags{vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress};
+    static constexpr vk::BufferUsageFlags accelStructInputFlags{ vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR};
 
     static const vk::raii::Device& getDevice() {return *device_;}
     static const vk::raii::PhysicalDevice& getPhysicalDevice() {return *physicalDevice_;}

@@ -5,7 +5,8 @@
 #pragma once
 #include "vkUtils.h"
 
-
+// https://nvpro-samples.github.io/vk_raytracing_tutorial_KHR/
+// https://github.com/yknishidate/single-file-vulkan-pathtracing
 class AccelerationStructure {
 public:
     AccelerationStructure() = default;

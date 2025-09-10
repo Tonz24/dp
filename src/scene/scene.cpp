@@ -78,11 +78,26 @@ void Scene::initTLAS() {
         instances.emplace_back(mesh->getBLASInstance());
 
     vk::DeviceSize instanceBufferSize = meshes_.size() * sizeof(vk::AccelerationStructureInstanceKHR);
-    VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(instanceBufferSize,vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingAllocFlagsVMA);
 
+    //  gather mesh BLAS instance infos into a staging buffer
+    VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(instanceBufferSize,vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingAllocFlagsVMA);
+    VkUtils::BufferAlloc instanceBuffer = VkUtils::createBufferVMA(instanceBufferSize,vk::BufferUsageFlagBits::eTransferDst | VkUtils::accelStructInputFlags);
     memcpy(stagingBuffer.allocationInfo.pMappedData,instances.data(),instanceBufferSize);
 
+    //  Copy the staging buffer into the TLAS input buffer
+    VkUtils::copyBuffer(stagingBuffer,instanceBuffer,instanceBufferSize);
     VkUtils::destroyBufferVMA(std::move(stagingBuffer));
 
-    //tlasStorageBuffer_ = VkUtils::createBufferVMA(buildSize.accelerationStructureSize,VkUtils::accelStructStorageFlags);
+
+    vk::AccelerationStructureGeometryInstancesDataKHR instanceData;
+    instanceData.setArrayOfPointers(false);
+    instanceData.setData(instanceBuffer.deviceAddress);
+
+    vk::AccelerationStructureGeometryKHR instanceGeometry;
+    instanceGeometry.setGeometryType(vk::GeometryTypeKHR::eInstances);
+    instanceGeometry.setGeometry({instanceData});
+    instanceGeometry.setFlags(vk::GeometryFlagBitsKHR::eOpaque);
+
+    tlas_ = AccelerationStructure(vk::AccelerationStructureTypeKHR::eTopLevel,instanceGeometry,instances.size());
+    VkUtils::destroyBufferVMA(std::move(instanceBuffer));
 }

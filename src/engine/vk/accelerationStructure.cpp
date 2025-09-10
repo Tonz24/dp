@@ -1,6 +1,8 @@
 //
 // Created by Tonz on 10.09.2025.
 //
+// https://nvpro-samples.github.io/vk_raytracing_tutorial_KHR/#raytracingsetup/main
+// https://github.com/yknishidate/single-file-vulkan-pathtracing/blob/master/main.cpp
 
 #include "accelerationStructure.h"
 
@@ -64,6 +66,8 @@ AccelerationStructure::AccelerationStructure(vk::AccelerationStructureTypeKHR ty
 }
 
 AccelerationStructure::~AccelerationStructure() {
-    accelStruct_.release();
+    // destroy the acceleration structure before destroying the underlying data buffer
+    {auto tmp = std::move(accelStruct_);}
+
     VkUtils::destroyBufferVMA(std::move(storageBuffer_));
 }

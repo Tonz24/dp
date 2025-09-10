@@ -74,8 +74,6 @@ VkUtils::ImageAlloc VkUtils::createImageVMA(const vk::ImageCreateInfo& imageInfo
 void VkUtils::destroyImageVMA(ImageAlloc&& image) {
     if (image.image && image.allocation)
         vmaDestroyImage(allocator_,image.image,image.allocation);
-    else
-        throw std::runtime_error("ERROR: trying to destroy an invalid VMA image!");
 
     image.image = nullptr;
     image.allocation = nullptr;
@@ -93,8 +91,6 @@ void VkUtils::unmapMemory(const BufferAlloc& buffer) {
 void VkUtils::destroyBufferVMA(BufferAlloc&& buffer) {
     if (buffer.buffer && buffer.allocation)
         vmaDestroyBuffer(allocator_,buffer.buffer,buffer.allocation);
-    else
-        throw std::runtime_error("ERROR: trying to destroy an invalid VMA buffer!");
 
     buffer.buffer = nullptr;
     buffer.allocation = nullptr;

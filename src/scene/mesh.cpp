@@ -70,14 +70,13 @@ void Mesh::recordDrawCommands(vk::raii::CommandBuffer& cmdBuf, const vk::raii::P
 
 void Mesh::initBuffers() {
     vk::DeviceSize vertexBufferSize = sizeof(vertices_[0]) * vertices_.size();
-    vertexBuffer_ = VkUtils::createBufferVMA(vertexBufferSize,vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR);
+    vertexBuffer_ = VkUtils::createBufferVMA(vertexBufferSize,vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst | VkUtils::accelStructInputFlags);
 
     vk::DeviceSize indexBufferSize = sizeof(indices_[0]) * indices_.size();
-    indexBuffer_ = VkUtils::createBufferVMA(indexBufferSize,vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR);
+    indexBuffer_ = VkUtils::createBufferVMA(indexBufferSize,vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst |  VkUtils::accelStructInputFlags);
 }
 
-// https://nvpro-samples.github.io/vk_raytracing_tutorial_KHR/#raytracingsetup/main
-// https://github.com/yknishidate/single-file-vulkan-pathtracing/blob/master/main.cpp
+
 void Mesh::initBLAS() {
 
     uint32_t maxPrimitiveCount = static_cast<uint32_t>(indices_.size() / 3);
