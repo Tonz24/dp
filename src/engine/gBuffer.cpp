@@ -37,7 +37,7 @@ void GBuffer::recordDescriptorSet() {
 
     for (uint32_t i = 0; i < textures_.size(); ++i) {
 
-        vk::ImageLayout imageLayout = textures_[i] == depthMap_ ?  vk::ImageLayout::eDepthStencilReadOnlyOptimal : vk::ImageLayout::eShaderReadOnlyOptimal;
+        vk::ImageLayout imageLayout = textures_[i] == depthMap_ ?  vk::ImageLayout::eDepthReadOnlyOptimal : vk::ImageLayout::eShaderReadOnlyOptimal;
 
         imageInfos.emplace_back(vk::DescriptorImageInfo{
             .sampler = textures_[i]->getVkSampler(),
@@ -164,12 +164,12 @@ void GBuffer::createTextures(const std::string& prefix, uint32_t width, uint32_t
     //  transition depth
     VkUtils::transitionImageLayout(depthMap_->getVkImage().image,
                                   vk::ImageLayout::eUndefined,
-                                  vk::ImageLayout::eDepthStencilAttachmentOptimal,
+                                  vk::ImageLayout::eDepthReadOnlyOptimal,
                                   vk::PipelineStageFlagBits2::eTopOfPipe,
                                   vk::AccessFlagBits2::eNone,
                                   vk::PipelineStageFlagBits2::eFragmentShader,
                                 vk::AccessFlagBits2::eShaderSampledRead | vk::AccessFlagBits2::eDepthStencilAttachmentRead,
-                                  vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil,
+                                  vk::ImageAspectFlagBits::eDepth,
                                   cmdBuf);
 
     //  transition id map
@@ -226,13 +226,13 @@ void GBuffer::transitionToFill(vk::raii::CommandBuffer& cmdBuf) const {
                                   cmdBuf);
 
     VkUtils::transitionImageLayout(depthMap_->getVkImage().image,
-                                 vk::ImageLayout::eDepthStencilReadOnlyOptimal,
-                                vk::ImageLayout::eDepthStencilAttachmentOptimal,
+                                 vk::ImageLayout::eDepthReadOnlyOptimal,
+                                vk::ImageLayout::eDepthAttachmentOptimal,
                                 vk::PipelineStageFlagBits2::eFragmentShader,
                                 vk::AccessFlagBits2::eShaderSampledRead | vk::AccessFlagBits2::eDepthStencilAttachmentRead,
                                 vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
                                   vk::AccessFlagBits2::eDepthStencilAttachmentWrite | vk::AccessFlagBits2::eDepthStencilAttachmentRead,
-                                vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil,
+                                vk::ImageAspectFlagBits::eDepth,
                                 cmdBuf);
 
 }
@@ -282,13 +282,13 @@ void GBuffer::transitionToShade(vk::raii::CommandBuffer& cmdBuf) const {
                                 cmdBuf);
 
     VkUtils::transitionImageLayout(depthMap_->getVkImage().image,
-                                 vk::ImageLayout::eDepthStencilAttachmentOptimal,
-                                vk::ImageLayout::eDepthStencilReadOnlyOptimal,
-                                vk::PipelineStageFlagBits2::eAllCommands,
+                                 vk::ImageLayout::eDepthAttachmentOptimal,
+                                vk::ImageLayout::eDepthReadOnlyOptimal,
+                                vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
                                   vk::AccessFlagBits2::eDepthStencilAttachmentWrite | vk::AccessFlagBits2::eDepthStencilAttachmentRead,
                                 vk::PipelineStageFlagBits2::eFragmentShader,
                                 vk::AccessFlagBits2::eShaderSampledRead | vk::AccessFlagBits2::eDepthStencilAttachmentRead,
-                                vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil,
+                                vk::ImageAspectFlagBits::eDepth,
                                 cmdBuf);
 
 

@@ -72,7 +72,7 @@ private:
         vk::DescriptorSetLayoutBinding { // Bindless textures
             .binding = 2,
             .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-            .descriptorCount = Constants::textureLimit,
+            .descriptorCount = Constants::bindlessTextureLimit,
             .stageFlags = vk::ShaderStageFlagBits::eFragment
         }
     };

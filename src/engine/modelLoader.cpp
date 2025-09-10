@@ -126,7 +126,7 @@ std::vector<std::shared_ptr<Mesh>> ModelLoader::loadModel(std::string_view path,
 
     for (auto& mesh : meshes) {
         mesh->stage(stagingBuffer);
-        //mesh->initBLAS();
+        mesh->initBLAS();
     }
     // destroy staging buffer
     VkUtils::destroyBufferVMA(std::move(stagingBuffer));

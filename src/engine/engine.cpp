@@ -172,7 +172,7 @@ void Engine::initVulkan() {
 
     initVulkanInstance();
 
-    if (ENABLE_VALIDATION_LAYERS)
+    if (Constants::enableValidationLayers)
         initDebugMessenger();
 
     initSurface();
@@ -214,14 +214,17 @@ void Engine::initVulkanInstance() {
             .apiVersion = vk::ApiVersion13
     };
 
-    vk::ValidationFeatureEnableEXT enables[] = {
+
+    std::vector enables = Constants::enableValidationLayers ? std::vector{
         vk::ValidationFeatureEnableEXT::eGpuAssisted,
         vk::ValidationFeatureEnableEXT::eGpuAssistedReserveBindingSlot,
         vk::ValidationFeatureEnableEXT::eSynchronizationValidation,
-    };
+        vk::ValidationFeatureEnableEXT::eBestPractices
+    } : std::vector<vk::ValidationFeatureEnableEXT>{};
+
     vk::ValidationFeaturesEXT validationFeatures{
-        .enabledValidationFeatureCount = static_cast<uint32_t>(std::size(enables)),
-        .pEnabledValidationFeatures    = enables,
+        .enabledValidationFeatureCount = static_cast<uint32_t>(enables.size()),
+        .pEnabledValidationFeatures    = enables.data(),
     };
 
     vk::InstanceCreateInfo createInfo{
@@ -506,7 +509,7 @@ std::vector<const char*> Engine::initRequiredInstanceExtensions() {
 
     std::vector requiredExtensions(glfwRequiredExtensions, glfwRequiredExtensions + glfwExtensionCount);
 
-    if (ENABLE_VALIDATION_LAYERS)
+    if (Constants::enableValidationLayers)
         requiredExtensions.push_back("VK_EXT_debug_utils");
 
     printSupportedExtensions(vkProvidedExtensions);
@@ -574,7 +577,7 @@ void Engine::initCommandBuffers() {
 }
 
 std::vector<const char *> Engine::initValidationLayers() {
-    std::vector<const char*> requiredLayers = ENABLE_VALIDATION_LAYERS ? requiredValidationLayers : std::vector<const char*>();
+    std::vector<const char*> requiredLayers = Constants::enableValidationLayers ? requiredValidationLayers : std::vector<const char*>();
 
     auto vkSupportedValidationLayers = vkContext.enumerateInstanceLayerProperties();
     printSupportedValidationLayers(vkSupportedValidationLayers);
@@ -630,7 +633,7 @@ Engine::debugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::Deb
 
     std::string msg;
 
-    msg.append( "==============================Debug callback==============================\n");
+;    msg.append( "==============================Debug callback==============================\n");
     msg.append( "\tSeverity: " +  to_string(severity) + "\n");
     msg.append( "\tType: " + to_string(type) + "\n");
     msg.append( "\tObjects:\n");
@@ -823,7 +826,7 @@ void Engine::initDescriptorPool() {
         },
         vk::DescriptorPoolSize {
             .type = vk::DescriptorType::eCombinedImageSampler,
-            .descriptorCount = Constants::textureLimit
+            .descriptorCount = Constants::bindlessTextureLimit + Constants::textureSamplerLimit
         }
     };
 

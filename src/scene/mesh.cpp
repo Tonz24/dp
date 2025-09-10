@@ -85,17 +85,15 @@ void Mesh::initBLAS() {
 
     uint32_t maxPrimitiveCount = static_cast<uint32_t>(indices_.size() / 3);
 
-    vk::DeviceAddress indexAddress = VkUtils::getDevice().getBufferAddress({.buffer =  indexBuffer_.buffer});
-    vk::DeviceAddress vertexAddress = VkUtils::getDevice().getBufferAddress({.buffer =  vertexBuffer_.buffer});
 
     //  setup triangle data (consume the whole vertex/index buffer pair for one BLAS)
     vk::AccelerationStructureGeometryTrianglesDataKHR triangleData{};
         triangleData.setVertexFormat(vk::Format::eR32G32B32Sfloat);
-        triangleData.setVertexData(vertexAddress + offsetof(Vertex3D,position)); // in case the vertex struct changes)
+        triangleData.setVertexData(vertexBuffer_.deviceAddress + offsetof(Vertex3D,position)); // in case the vertex struct changes)
         triangleData.setVertexStride(sizeof(Vertex3D));
         triangleData.setMaxVertex( static_cast<uint32_t>(vertices_.size() - 1));
         triangleData.setIndexType(vk::IndexType::eUint32);
-        triangleData.setIndexData(indexAddress);
+        triangleData.setIndexData(indexBuffer_.deviceAddress);
         triangleData.setTransformData(nullptr);
 
 
@@ -165,4 +163,23 @@ void Mesh::initBLAS() {
 
 
     VkUtils::destroyBufferVMA(std::move(blasScratchBuffer));
+
+    // setup instance
+
+    vk::TransformMatrixKHR transformMatrix{
+        .matrix = std::array{
+            std::array{1.0f,0.0f,0.0f,0.0f},
+            std::array{0.0f,1.0f,0.0f,0.0f},
+            std::array{0.0f,0.0f,1.0f,0.0f}
+        }
+    };
+
+    //  just one instance per mesh for now
+    blasInstance_ = vk::AccelerationStructureInstanceKHR{
+        .transform = transformMatrix,
+        .instanceCustomIndex = getCID(),
+        .mask = 0xFF,
+        .flags = static_cast<VkGeometryInstanceFlagsKHR>(vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable),
+        .accelerationStructureReference = blasStorageBuffer_.deviceAddress,
+    };
 }

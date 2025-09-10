@@ -105,11 +105,7 @@ private:
     static VKAPI_ATTR vk::Bool32 VKAPI_CALL debugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::DebugUtilsMessageTypeFlagsEXT type, const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData, void*);
 
 
-    #ifdef NDEBUG
-    static constexpr bool ENABLE_VALIDATION_LAYERS{false};
-    #else
-    static constexpr bool ENABLE_VALIDATION_LAYERS{true};
-    #endif
+
 
 
     static inline Engine* engineInstance{nullptr};
@@ -128,7 +124,8 @@ private:
         vk::KHRRayTracingPipelineExtensionName,
         vk::KHRDeferredHostOperationsExtensionName,
         vk::EXTPageableDeviceLocalMemoryExtensionName,
-        vk::EXTMemoryPriorityExtensionName
+        vk::EXTMemoryPriorityExtensionName,
+        vk::KHRRayQueryExtensionName
 };
 
     vk::raii::Context vkContext;

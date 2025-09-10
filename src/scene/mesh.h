@@ -49,6 +49,8 @@ private:
     VkUtils::BufferAlloc indexBuffer_{};
 
     Transform transform_{};
+
     vk::raii::AccelerationStructureKHR blas_{nullptr};
     VkUtils::BufferAlloc blasStorageBuffer_{};
+    vk::AccelerationStructureInstanceKHR blasInstance_{};
 };

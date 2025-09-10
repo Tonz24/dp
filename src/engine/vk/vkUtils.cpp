@@ -24,6 +24,8 @@ VkUtils::BufferAlloc VkUtils::createBufferVMA(vk::DeviceSize bufferSize, vk::Buf
     if (createResult != vk::Result::eSuccess)
         throw std::runtime_error("ERROR: failed to create buffer!");
 
+
+    bufferAlloc.deviceAddress = VkUtils::getDevice().getBufferAddress({.buffer =  bufferAlloc.buffer});
     return bufferAlloc;
 }
 
@@ -46,6 +48,7 @@ VkUtils::BufferAlloc VkUtils::createBufferVMA(vk::DeviceSize bufferSize, vk::Buf
     if (createResult != vk::Result::eSuccess)
         throw std::runtime_error("ERROR: failed to create buffer!");
 
+    bufferAlloc.deviceAddress = VkUtils::getDevice().getBufferAddress({.buffer =  bufferAlloc.buffer});
     return bufferAlloc;
 }
 

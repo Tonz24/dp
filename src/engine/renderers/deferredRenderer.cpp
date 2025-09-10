@@ -209,7 +209,8 @@ void DeferredRenderer::recordSkyCommands(const Scene& scene, vk::raii::CommandBu
 
 void DeferredRenderer::recordSceneCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex) {
      //set up the color attachment
-    vk::ClearValue clearColor = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
+    vk::ClearValue clearColorFloat = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
+    vk::ClearValue clearColorUint = vk::ClearColorValue(std::array<uint32_t,4>{0,0,0,0});
 
     std::array colorAttachmentInfos = {
         vk::RenderingAttachmentInfo { // albedo image
@@ -217,28 +218,28 @@ void DeferredRenderer::recordSceneCommands(const Scene& scene, vk::raii::Command
             .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
             .loadOp = vk::AttachmentLoadOp::eClear,
             .storeOp = vk::AttachmentStoreOp::eStore,
-            .clearValue = clearColor
+            .clearValue = clearColorFloat
         },
         vk::RenderingAttachmentInfo { // normals
             .imageView = gBuffer_->getNormalMap().getVkImageView(),
             .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
             .loadOp = vk::AttachmentLoadOp::eClear,
             .storeOp = vk::AttachmentStoreOp::eStore,
-            .clearValue = clearColor
+            .clearValue = clearColorFloat
         },
         vk::RenderingAttachmentInfo { // id map
             .imageView = gBuffer_->getObjectIdMap().getVkImageView(),
             .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
             .loadOp = vk::AttachmentLoadOp::eClear,
             .storeOp = vk::AttachmentStoreOp::eStore,
-            .clearValue = clearColor
+            .clearValue = clearColorUint
         },
         vk::RenderingAttachmentInfo { // material map
             .imageView = gBuffer_->getMaterialMap().getVkImageView(),
             .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
             .loadOp = vk::AttachmentLoadOp::eClear,
             .storeOp = vk::AttachmentStoreOp::eStore,
-            .clearValue = clearColor
+            .clearValue = clearColorUint
         }
     };
 
@@ -250,6 +251,8 @@ void DeferredRenderer::recordSceneCommands(const Scene& scene, vk::raii::Command
         .storeOp = vk::AttachmentStoreOp::eStore,
         .clearValue = depthClearColor
     };
+
+
 
     vk::RenderingInfo renderingInfo{
         .renderArea = {

@@ -14,6 +14,7 @@ public:
         vk::Buffer buffer{nullptr};
         VmaAllocation allocation{};
         VmaAllocationInfo allocationInfo;
+        vk::DeviceAddress deviceAddress{};
     };
 
     struct ImageAlloc    {
