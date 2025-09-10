@@ -23,9 +23,15 @@ void main() {
     float hasNormalMap = clamp(float(mat.normalMapHandle),0.0f,1.0f);
     vec3 normal = mix(normalize(inNormal),normalize(inTBN * (texture(textures[mat.normalMapHandle],inTexCoord).xyz * 2.0 - 1.0)),hasNormalMap);
 
+    float hasShininessMap = clamp(float(mat.shininessMapHandle),0.0f,1.0f);
+    float shininess = mix(mat.shininess, texture(textures[mat.shininessMapHandle], inTexCoord).r, hasShininessMap);
+
+    // roughness to shininess remapping https://simonstechblog.blogspot.com/2011/12/microfacet-brdf.html
+    shininess = mix(shininess,2.0f / (shininess * shininess) - 2.0f,hasShininessMap);
+
     // smuggle tex coords for bindless test
     outAlbedo = vec4(albedo, inTexCoord.x);
-    outNormal = vec4(normal,inTexCoord.y);
+    outNormal = vec4(normal,shininess);
     outMeshId = pcs.meshId;
     outMaterialId = pcs.matIndex;
 }

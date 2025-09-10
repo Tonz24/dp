@@ -48,3 +48,4 @@ private:
 
     AccelerationStructure tlas_{};
 };
+

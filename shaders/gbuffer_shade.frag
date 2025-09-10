@@ -28,7 +28,7 @@ float linearizeDepth(float depth, float zNear, float zFar){
 }
 
 /** https://github.com/KhronosGroup/Vulkan-Samples/blob/main/shaders/ray_queries/glsl/ray_shadow.frag
- * @brief Calculates shadow factors for given hit point and light position. If in shadow, the diffuse factor is 0.33 to prevent the surface from being pitch black
+ * @brief Calculates shadow factors for given hit point and light position. If in shadow, the diffuse factor is 0.25 to prevent the surface from appearing pitch black
  * @param posWS world space hit point
  * @param lightPos world space light position
  * @return vec2(diffuseFactor,specularFactor)
@@ -40,11 +40,13 @@ vec2 getShadowFactor(vec3 posWS, vec3 lightPos){
     float dstToLight = length(toLightUnnorm);
     float tMin = 0.01;
 
+
+    // tmax is distance to light - if the ray hits anything, the surface is in shadow, otherwise the light is visible
     rayQueryEXT query;
     rayQueryInitializeEXT(query,topLevelAS,gl_RayFlagsTerminateOnFirstHitEXT,0xFF,posWS,tMin,dirToLight,dstToLight);
     rayQueryProceedEXT(query);
 
-    vec2 inShadow = vec2(0.33f,0.0f);
+    vec2 inShadow = vec2(0.25f,0.0f);
     vec2 noShadow = vec2(1.0f);
 
     return mix(noShadow,inShadow,float((rayQueryGetIntersectionTypeEXT(query, true) != gl_RayQueryCommittedIntersectionNoneEXT)));
