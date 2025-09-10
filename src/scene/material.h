@@ -25,9 +25,7 @@ public:
         shininessMapSlot = 3,
     };
 
-    Material() : ManagedResource(){
-        allocateDescriptorSet();
-    }
+    Material() : ManagedResource(){}
 
 
     std::shared_ptr<Texture> getTexture(TextureMapSlot slot);
@@ -78,7 +76,6 @@ public:
     std::string getResourceType() const override { return "Material"; }
 
     void recordDescriptorSet() const;
-    const vk::raii::DescriptorSet& getDescriptorSet() const {return descriptorSet_;}
 
     void updateUBO() const;
     void updateUBONow() const;
@@ -88,8 +85,6 @@ public:
 
     friend class MaterialManager;
 private:
-
-    void allocateDescriptorSet();
     // glm::vec3 diffuseAlbedo_{};
     // glm::vec3 specularAlbedo_{};
     // glm::vec3 emission_{};
@@ -109,8 +104,6 @@ private:
     //  2 - normal map
     //  3 - shininnes map]
     std::array<std::shared_ptr<Texture>,4> textures_{};
-
-    vk::raii::DescriptorSet descriptorSet_{nullptr};
 };
 
 

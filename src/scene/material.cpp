@@ -36,10 +36,9 @@ void Material::setTexture(std::shared_ptr<Texture> texture, TextureMapSlot slot)
 
 void Material::recordDescriptorSet() const {
 
-    std::vector<vk::WriteDescriptorSet> descriptorWrites{}, descriptorWritesBindless{};
+    std::vector<vk::WriteDescriptorSet>  descriptorWritesBindless{};
     std::vector<vk::DescriptorImageInfo> imageInfos;
     imageInfos.reserve(textures_.size());
-    descriptorWrites.reserve(textures_.size());
     descriptorWritesBindless.reserve(textures_.size());
 
     auto dummy = TextureManager::getInstance()->getResource("dummy");
@@ -47,20 +46,10 @@ void Material::recordDescriptorSet() const {
     for (uint32_t i = 0; i < textures_.size(); ++i) {
 
         imageInfos.emplace_back(vk::DescriptorImageInfo{
-            .sampler = textures_[i] ? textures_[i]->getVkSampler() : dummy->getVkSampler(),
-            .imageView = textures_[i] ? textures_[i]->getVkImageView() : dummy->getVkImageView(),
-            .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-        });
-
-        vk::WriteDescriptorSet writeDescriptorSet{
-            .dstSet = descriptorSet_,
-            .dstBinding = i,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-            .pImageInfo = &imageInfos.back()
-        };
-
+           .sampler = textures_[i] ? textures_[i]->getVkSampler() : dummy->getVkSampler(),
+           .imageView = textures_[i] ? textures_[i]->getVkImageView() : dummy->getVkImageView(),
+           .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
+       });
 
         if (textures_[i] != nullptr) {
             vk::WriteDescriptorSet writeDescriptorSetBindless{
@@ -74,10 +63,7 @@ void Material::recordDescriptorSet() const {
             descriptorWritesBindless.emplace_back(writeDescriptorSetBindless);
         }
 
-        descriptorWrites.emplace_back(writeDescriptorSet);
     }
-
-   VkUtils::getDevice().updateDescriptorSets(descriptorWrites,{});
    VkUtils::getDevice().updateDescriptorSets(descriptorWritesBindless,{});
 }
 
@@ -110,15 +96,4 @@ bool Material::drawGUI() {
         updateUBO();
 
     return changed;
-}
-
-void Material::allocateDescriptorSet() {
-    vk::DescriptorSetAllocateInfo allocInfo{
-        .descriptorPool = Engine::getInstance().getDescriptorPool(),
-        .descriptorSetCount = 1,
-        .pSetLayouts = &*Renderer::getDescSetLayoutMaterial(),
-    };
-
-    auto h = VkUtils::getDevice().allocateDescriptorSets(allocInfo);
-    descriptorSet_ = std::move(h.front());
 }

@@ -827,6 +827,10 @@ void Engine::initDescriptorPool() {
         vk::DescriptorPoolSize {
             .type = vk::DescriptorType::eCombinedImageSampler,
             .descriptorCount = Constants::bindlessTextureLimit + Constants::textureSamplerLimit
+        },
+        vk::DescriptorPoolSize {
+            .type = vk::DescriptorType::eAccelerationStructureKHR,
+            .descriptorCount = 1
         }
     };
 

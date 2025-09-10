@@ -10,12 +10,6 @@ layout(location = 2) out uint outMeshId;
 layout(location = 3) out uint outMaterialId;
 
 
-layout(set = 1, binding = 0) uniform sampler2D diffAlbedoMap;
-layout(set = 1, binding = 1) uniform sampler2D specAlbedoMap;
-layout(set = 1, binding = 2) uniform sampler2D normalMap;
-layout(set = 1, binding = 3) uniform sampler2D shininessMap;
-
-
 #include "common.glsl"
 #include "pcs_gbuffer_fill.glsl"
 

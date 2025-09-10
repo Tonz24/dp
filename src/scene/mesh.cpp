@@ -53,8 +53,6 @@ void Mesh::stage(const VkUtils::BufferAlloc& stagingBuffer) const {
 void Mesh::recordDrawCommands(vk::raii::CommandBuffer& cmdBuf, const vk::raii::PipelineLayout& pipelineLayout) const {
     cmdBuf.bindVertexBuffers(0,vertexBuffer_.buffer,{0});
     cmdBuf.bindIndexBuffer(indexBuffer_.buffer,0,vk::IndexType::eUint32);
-    //  bind per mesh descriptor set
-    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 1, *getMaterial()->getDescriptorSet(), nullptr);
 
     const PcsGBufferFill pcs = {
         .modelMat = transform_.getModelMat(),
