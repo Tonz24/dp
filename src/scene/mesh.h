@@ -10,6 +10,7 @@
 #include "transform.h"
 #include "Vertex.h"
 #include "../engine/iDrawGui.h"
+#include "../engine/vk/accelerationStructure.h"
 #include "../engine/vk/vkUtils.h"
 
 
@@ -25,7 +26,6 @@ public:
     void stage(const VkUtils::BufferAlloc& stagingBuffer) const;
     void initBLAS();
 
-
     void recordDrawCommands(vk::raii::CommandBuffer& cmdBuf, const vk::raii::PipelineLayout& pipelineLayout) const;
 
     [[nodiscard]] const std::vector<Vertex3D>& getVertices() const {return vertices_;}
@@ -35,6 +35,7 @@ public:
     [[nodiscard]] const vk::Buffer & getVertexBuffer() const { return vertexBuffer_.buffer; }
     [[nodiscard]] const vk::Buffer & getIndexBuffer() const { return indexBuffer_.buffer; }
     std::shared_ptr<Material> getMaterial() const {return material_;}
+    [[nodiscard]] const vk::AccelerationStructureInstanceKHR& getBLASInstance() const { return blasInstance_; }
 
     friend class MeshManager;
 private:
@@ -50,7 +51,10 @@ private:
 
     Transform transform_{};
 
-    vk::raii::AccelerationStructureKHR blas_{nullptr};
-    VkUtils::BufferAlloc blasStorageBuffer_{};
+    /*vk::raii::AccelerationStructureKHR blas_{nullptr};
+    VkUtils::BufferAlloc blasStorageBuffer_{};*/
+
+    AccelerationStructure blas_{};
+
     vk::AccelerationStructureInstanceKHR blasInstance_{};
 };

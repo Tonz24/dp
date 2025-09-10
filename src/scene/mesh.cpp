@@ -16,9 +16,6 @@ Mesh::Mesh(std::vector<Vertex3D>&& vertexList, std::vector<uint32_t>&& indexList
 Mesh::~Mesh() {
     VkUtils::destroyBufferVMA(std::move(vertexBuffer_));
     VkUtils::destroyBufferVMA(std::move(indexBuffer_));
-
-    blas_.release();
-    VkUtils::destroyBufferVMA(std::move(blasStorageBuffer_));
 }
 
 bool Mesh::drawGUI() {
@@ -103,7 +100,9 @@ void Mesh::initBLAS() {
     geometryData.setGeometry(triangleData);
     geometryData.setFlags(vk::GeometryFlagBitsKHR::eOpaque); //TODO: change to no opaque if transparent materials are present
 
-    //  specify the range of primitives to build the BLAS from (entire buffer in this case)
+    blas_ = AccelerationStructure( vk::AccelerationStructureTypeKHR::eBottomLevel,geometryData,maxPrimitiveCount);
+
+    /*//  specify the range of primitives to build the BLAS from (entire buffer in this case)
     vk::AccelerationStructureBuildRangeInfoKHR buildRangeInfo{
         .primitiveCount = maxPrimitiveCount,
         .primitiveOffset = 0,
@@ -126,16 +125,14 @@ void Mesh::initBLAS() {
 
     //  get build size, setup buffer flags
     auto buildSize = VkUtils::getDevice().getAccelerationStructureBuildSizesKHR(vk::AccelerationStructureBuildTypeKHR::eDevice,buildInfo,{maxPrimitiveCount});
-    vk::BufferUsageFlags blasFlags = vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress;
-    vk::BufferUsageFlags scratchFlags = vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress;
 
     // get the minimum scratch alignment
     auto props = VkUtils::getPhysicalDevice().getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceAccelerationStructurePropertiesKHR>();
     vk::DeviceAddress minimumScratchAlignment = props.get<vk::PhysicalDeviceAccelerationStructurePropertiesKHR>().minAccelerationStructureScratchOffsetAlignment;
 
     // create blas and scratch buffers (blas buffer is a member)
-    blasStorageBuffer_ = VkUtils::createBufferVMA(buildSize.accelerationStructureSize,blasFlags);
-    VkUtils::BufferAlloc blasScratchBuffer = VkUtils::createBufferVMA(buildSize.buildScratchSize, scratchFlags, minimumScratchAlignment);
+    blasStorageBuffer_ = VkUtils::createBufferVMA(buildSize.accelerationStructureSize,VkUtils::accelStructStorageFlags);
+    VkUtils::BufferAlloc blasScratchBuffer = VkUtils::createBufferVMA(buildSize.buildScratchSize, VkUtils::scratchBufferFlags, minimumScratchAlignment);
     vk::DeviceAddress scratchBufferAddress = VkUtils::getDevice().getBufferAddress({.buffer =  blasScratchBuffer.buffer});
 
 
@@ -163,9 +160,9 @@ void Mesh::initBLAS() {
 
 
     VkUtils::destroyBufferVMA(std::move(blasScratchBuffer));
+    */
 
     // setup instance
-
     vk::TransformMatrixKHR transformMatrix{
         .matrix = std::array{
             std::array{1.0f,0.0f,0.0f,0.0f},
@@ -180,6 +177,6 @@ void Mesh::initBLAS() {
         .instanceCustomIndex = getCID(),
         .mask = 0xFF,
         .flags = static_cast<VkGeometryInstanceFlagsKHR>(vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable),
-        .accelerationStructureReference = blasStorageBuffer_.deviceAddress,
+        .accelerationStructureReference = blas_.getStorageBuffer().deviceAddress,
     };
 }

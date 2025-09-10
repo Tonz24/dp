@@ -10,6 +10,15 @@
 #include "../engine/renderers/renderer.h"
 
 
+Scene::Scene(const std::vector<std::shared_ptr<Mesh>>&& meshes, std::shared_ptr<Camera> camera, std::shared_ptr<Texture> sky): meshes_(std::move(meshes)), camera_(std::move(camera)), sky_(std::move(sky)) {
+
+    initDescriptorSet();
+    initTLAS();
+
+    if (!meshes_.empty())
+        selectedObject_ = meshes_[0];
+}
+
 bool Scene::drawGUI() {
 
     if (ImGui::CollapsingHeader("Scene")) {
@@ -58,4 +67,22 @@ void Scene::initDescriptorSet() {
 
         VkUtils::getDevice().updateDescriptorSets(writeDescriptorSet,{});
     }
+}
+
+void Scene::initTLAS() {
+
+    std::vector<vk::AccelerationStructureInstanceKHR> instances{};
+    instances.reserve(meshes_.size());
+
+    for (const auto & mesh : meshes_)
+        instances.emplace_back(mesh->getBLASInstance());
+
+    vk::DeviceSize instanceBufferSize = meshes_.size() * sizeof(vk::AccelerationStructureInstanceKHR);
+    VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(instanceBufferSize,vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingAllocFlagsVMA);
+
+    memcpy(stagingBuffer.allocationInfo.pMappedData,instances.data(),instanceBufferSize);
+
+    VkUtils::destroyBufferVMA(std::move(stagingBuffer));
+
+    //tlasStorageBuffer_ = VkUtils::createBufferVMA(buildSize.accelerationStructureSize,VkUtils::accelStructStorageFlags);
 }

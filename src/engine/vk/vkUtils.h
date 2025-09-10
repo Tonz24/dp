@@ -15,12 +15,69 @@ public:
         VmaAllocation allocation{};
         VmaAllocationInfo allocationInfo;
         vk::DeviceAddress deviceAddress{};
+
+        BufferAlloc() = default;
+
+        BufferAlloc(const BufferAlloc& other) = delete;
+        BufferAlloc& operator=(const BufferAlloc& other) = delete;
+
+
+        BufferAlloc(BufferAlloc&& other) noexcept : buffer(std::move(other.buffer)), allocation(other.allocation), allocationInfo(std::move(other.allocationInfo)),
+              deviceAddress(other.deviceAddress)
+        {
+            other.buffer = nullptr;
+            other.allocation = nullptr;
+            other.allocationInfo = {};
+            other.deviceAddress = 0;
+        }
+
+
+        BufferAlloc& operator=(BufferAlloc&& other) noexcept {
+            if (this == &other) return *this;
+            buffer = std::move(other.buffer);
+            allocation = other.allocation;
+            allocationInfo = std::move(other.allocationInfo);
+            deviceAddress = other.deviceAddress;
+
+            other.buffer = nullptr;
+            other.allocation = nullptr;
+            other.allocationInfo = {};
+            other.deviceAddress = 0;
+
+            return *this;
+        }
     };
 
     struct ImageAlloc    {
         vk::Image image{nullptr};
         VmaAllocation allocation{};
         VmaAllocationInfo allocationInfo;
+
+        ImageAlloc() = default;
+
+        ImageAlloc(const ImageAlloc& other) = delete;
+        ImageAlloc& operator=(const ImageAlloc& other) = delete;
+
+        ImageAlloc(ImageAlloc&& other) noexcept : image(std::move(other.image)), allocation(other.allocation), allocationInfo(std::move(other.allocationInfo))
+        {
+            other.image = nullptr;
+            other.allocation = nullptr;
+            other.allocationInfo = {};
+        }
+
+
+        ImageAlloc& operator=(ImageAlloc&& other) noexcept {
+            if (this == &other) return *this;
+            image = std::move(other.image);
+            allocation = other.allocation;
+            allocationInfo = std::move(other.allocationInfo);
+
+            other.image = nullptr;
+            other.allocation = nullptr;
+            other.allocationInfo = {};
+
+            return *this;
+        }
     };
 
     enum class QueueType : uint8_t {
@@ -83,6 +140,8 @@ public:
 
 
     static constexpr VmaAllocationCreateFlags stagingAllocFlagsVMA{VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT};
+    static constexpr vk::BufferUsageFlags accelStructStorageFlags{vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress};
+    static constexpr vk::BufferUsageFlags scratchBufferFlags{vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress};
 
     static const vk::raii::Device& getDevice() {return *device_;}
     static const vk::raii::PhysicalDevice& getPhysicalDevice() {return *physicalDevice_;}

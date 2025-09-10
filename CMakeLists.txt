@@ -66,6 +66,8 @@ add_executable(dp
         src/engine/renderers/deferredRenderer.cpp
         src/engine/renderers/deferredRenderer.h
         src/engine/constants.h
+        src/engine/vk/accelerationStructure.cpp
+        src/engine/vk/accelerationStructure.h
 )
 
 # add shader compilation as a build step

@@ -633,7 +633,7 @@ Engine::debugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::Deb
 
     std::string msg;
 
-;    msg.append( "==============================Debug callback==============================\n");
+    msg.append( "==============================Debug callback==============================\n");
     msg.append( "\tSeverity: " +  to_string(severity) + "\n");
     msg.append( "\tType: " + to_string(type) + "\n");
     msg.append( "\tObjects:\n");

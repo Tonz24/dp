@@ -13,14 +13,7 @@
 class Scene : public IDrawGui {
 public:
 
-    explicit Scene(const std::vector<std::shared_ptr<Mesh>>&& meshes, std::shared_ptr<Camera> camera, std::shared_ptr<Texture> sky = {nullptr})
-        : meshes_(std::move(meshes)), camera_(std::move(camera)), sky_(std::move(sky)) {
-
-        initDescriptorSet();
-
-        if (!meshes_.empty())
-            selectedObject_ = meshes_[0];
-    }
+    explicit Scene(const std::vector<std::shared_ptr<Mesh>>&& meshes, std::shared_ptr<Camera> camera, std::shared_ptr<Texture> sky = {nullptr});
 
     [[nodiscard]] Camera& getCamera() const { return *camera_; }
     void setCamera(std::shared_ptr<Camera> camera) { std::swap(camera_, camera);}
@@ -43,6 +36,7 @@ public:
 private:
 
     void initDescriptorSet();
+    void initTLAS();
 
     std::vector<std::shared_ptr<Mesh>> meshes_{};
     std::shared_ptr<Camera> camera_{};
@@ -52,4 +46,9 @@ private:
 
     vk::raii::DescriptorSet skyDescriptorSet_{nullptr};
 
+    /*vk::raii::AccelerationStructureKHR tlas_{nullptr};
+    VkUtils::BufferAlloc tlasStorageBuffer_{};
+    */
+
+    AccelerationStructure tlas_{};
 };

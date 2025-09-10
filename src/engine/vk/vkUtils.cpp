@@ -24,8 +24,8 @@ VkUtils::BufferAlloc VkUtils::createBufferVMA(vk::DeviceSize bufferSize, vk::Buf
     if (createResult != vk::Result::eSuccess)
         throw std::runtime_error("ERROR: failed to create buffer!");
 
-
-    bufferAlloc.deviceAddress = VkUtils::getDevice().getBufferAddress({.buffer =  bufferAlloc.buffer});
+    if (bufferUsage & vk::BufferUsageFlagBits::eShaderDeviceAddress)
+        bufferAlloc.deviceAddress = getDevice().getBufferAddress({.buffer =  bufferAlloc.buffer});
     return bufferAlloc;
 }
 
@@ -48,7 +48,9 @@ VkUtils::BufferAlloc VkUtils::createBufferVMA(vk::DeviceSize bufferSize, vk::Buf
     if (createResult != vk::Result::eSuccess)
         throw std::runtime_error("ERROR: failed to create buffer!");
 
-    bufferAlloc.deviceAddress = VkUtils::getDevice().getBufferAddress({.buffer =  bufferAlloc.buffer});
+    if (bufferUsage & vk::BufferUsageFlagBits::eShaderDeviceAddress)
+        bufferAlloc.deviceAddress = getDevice().getBufferAddress({.buffer =  bufferAlloc.buffer});
+
     return bufferAlloc;
 }
 
@@ -70,7 +72,14 @@ VkUtils::ImageAlloc VkUtils::createImageVMA(const vk::ImageCreateInfo& imageInfo
 }
 
 void VkUtils::destroyImageVMA(ImageAlloc&& image) {
-    vmaDestroyImage(allocator_,image.image,image.allocation);
+    if (image.image && image.allocation)
+        vmaDestroyImage(allocator_,image.image,image.allocation);
+    else
+        throw std::runtime_error("ERROR: trying to destroy an invalid VMA image!");
+
+    image.image = nullptr;
+    image.allocation = nullptr;
+    image.allocationInfo = {};
 }
 
 void VkUtils::mapMemory(const BufferAlloc& buffer, void*& ptr) {
@@ -82,7 +91,15 @@ void VkUtils::unmapMemory(const BufferAlloc& buffer) {
 }
 
 void VkUtils::destroyBufferVMA(BufferAlloc&& buffer) {
-    vmaDestroyBuffer(allocator_,buffer.buffer,buffer.allocation);
+    if (buffer.buffer && buffer.allocation)
+        vmaDestroyBuffer(allocator_,buffer.buffer,buffer.allocation);
+    else
+        throw std::runtime_error("ERROR: trying to destroy an invalid VMA buffer!");
+
+    buffer.buffer = nullptr;
+    buffer.allocation = nullptr;
+    buffer.allocationInfo = {};
+    buffer.deviceAddress = 0;
 }
 
 
