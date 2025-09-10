@@ -33,3 +33,6 @@ layout (set=0,binding=1, std140) uniform MaterialUBO {
 } materialUBO;
 
 layout(set = 0, binding = 2) uniform sampler2D textures[1024];
+
+
+layout(set = 0, binding = 3) uniform accelerationStructureEXT topLevelAS;

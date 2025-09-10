@@ -1,4 +1,5 @@
-#version 450
+#version 460
+#extension GL_EXT_ray_query : require
 
 layout(location = 0) in vec2 inNDCxy;
 
@@ -24,6 +25,29 @@ const int OVERLAY_WS_POS = 4;
 //  https://stackoverflow.com/questions/51108596/linearize-depth
 float linearizeDepth(float depth, float zNear, float zFar){
     return zNear * zFar / (zFar + depth * (zNear - zFar));
+}
+
+/** https://github.com/KhronosGroup/Vulkan-Samples/blob/main/shaders/ray_queries/glsl/ray_shadow.frag
+ * @brief Calculates shadow factors for given hit point and light position. If in shadow, the diffuse factor is 0.33 to prevent the surface from being pitch black
+ * @param posWS world space hit point
+ * @param lightPos world space light position
+ * @return vec2(diffuseFactor,specularFactor)
+ */
+vec2 getShadowFactor(vec3 posWS, vec3 lightPos){
+
+    vec3 toLightUnnorm = lightPos - posWS;
+    vec3 dirToLight = normalize(toLightUnnorm);
+    float dstToLight = length(toLightUnnorm);
+    float tMin = 0.01;
+
+    rayQueryEXT query;
+    rayQueryInitializeEXT(query,topLevelAS,gl_RayFlagsTerminateOnFirstHitEXT,0xFF,posWS,tMin,dirToLight,dstToLight);
+    rayQueryProceedEXT(query);
+
+    vec2 inShadow = vec2(0.33f,0.0f);
+    vec2 noShadow = vec2(1.0f);
+
+    return mix(noShadow,inShadow,float((rayQueryGetIntersectionTypeEXT(query, true) != gl_RayQueryCommittedIntersectionNoneEXT)));
 }
 
 
@@ -68,8 +92,7 @@ void main() {
         fragColor = vec4(linDepth, linDepth, linDepth,1.0);
     }
     if (pcs.overlayIndex == OVERLAY_WS_POS){
-        fragColor = vec4(texCoord,0,1);
-        //fragColor = vec4(posWS,1);
+        fragColor = vec4(posWS,1);
     }
 
     if (pcs.overlayIndex == OVERLAY_DEBUG_PHONG){
@@ -77,6 +100,7 @@ void main() {
 
         vec3 L_unnorm = pcs.lightPosWS - posWS;
         float inv_r_sqr = 1.0 / dot(L_unnorm,L_unnorm);
+        float dstToLight = length(L_unnorm);
         vec3 L = normalize(L_unnorm);
         vec3 V = normalize(cameraUBO.posWS - posWS);
         vec3 R = normalize(reflect(-V,normal));
@@ -86,8 +110,12 @@ void main() {
         float cos_theta_r = max(dot(R,L),0.0);
         float cos_theta_i = max(dot(L,normal),0.0);
 
+        vec2 shadow = getShadowFactor(posWS,pcs.lightPosWS);
+
         vec3 albedoSpec = vec3(1) - albedo;
-        vec3 f_r = albedo * INVPI + INV2PI * albedoSpec * (shininess + 2) * pow(cos_theta_r,shininess);
+        vec3 f_r_diffuse = albedo * INVPI * shadow.x;
+        vec3 f_r_specular = INV2PI * albedoSpec * (shininess + 2) * pow(cos_theta_r,shininess) * shadow.y;
+        vec3 f_r = f_r_diffuse + f_r_specular;
         vec3 L_i = pcs.lightEmission;
 
         vec3 L_o = L_i * f_r * cos_theta_i * inv_r_sqr;

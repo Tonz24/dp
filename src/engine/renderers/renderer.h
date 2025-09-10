@@ -30,6 +30,8 @@ public:
 
     [[nodiscard]] static const std::vector<uint8_t*>& getMatUBOsMapped() {return materialUBOsMapped_;}
 
+    static void updateTLASDescriptor(const vk::raii::AccelerationStructureKHR& tlas);
+
 protected:
     Renderer() {
         if (!isDescSetLayoutInit_)
@@ -74,6 +76,12 @@ private:
             .descriptorType = vk::DescriptorType::eCombinedImageSampler,
             .descriptorCount = Constants::bindlessTextureLimit,
             .stageFlags = vk::ShaderStageFlagBits::eFragment
+        },
+        vk::DescriptorSetLayoutBinding { // TLAS
+            .binding = 3,
+            .descriptorType = vk::DescriptorType::eAccelerationStructureKHR,
+            .descriptorCount = 1,
+            .stageFlags = vk::ShaderStageFlagBits::eFragment // TODO: add other stages for ray tracing pipeline
         }
     };
 

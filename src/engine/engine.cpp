@@ -374,7 +374,8 @@ void Engine::initLogicalDevice() {
         vk::PhysicalDeviceRayTracingPipelineFeaturesKHR,
         vk::PhysicalDeviceAccelerationStructureFeaturesKHR,
         vk::PhysicalDeviceMemoryPriorityFeaturesEXT,
-        vk::PhysicalDevicePageableDeviceLocalMemoryFeaturesEXT
+        vk::PhysicalDevicePageableDeviceLocalMemoryFeaturesEXT,
+        vk::PhysicalDeviceRayQueryFeaturesKHR
         >
             featureChain {
                 {.features = {.samplerAnisotropy = vk::True}}, // vk::PhysicalDeviceFeatures2 (empty for now)
@@ -385,6 +386,7 @@ void Engine::initLogicalDevice() {
                 {.accelerationStructure = true},
                 {},
                 {},
+                {.rayQuery = vk::True}
     };
 
     vk::DeviceCreateInfo deviceCreateInfo{

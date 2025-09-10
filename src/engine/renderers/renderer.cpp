@@ -40,6 +40,24 @@ uint8_t* Renderer::getMatUBOsMapped(uint32_t frameInFlightIndex) {
     return materialUBOsMapped_[frameInFlightIndex];
 }
 
+void Renderer::updateTLASDescriptor(const vk::raii::AccelerationStructureKHR& tlas) {
+    for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
+        vk::WriteDescriptorSetAccelerationStructureKHR tlasWriteInfo{
+            .accelerationStructureCount = 1,
+            .pAccelerationStructures = &*tlas
+        };
+
+        vk::WriteDescriptorSet descWrite{
+            .pNext = &tlasWriteInfo,
+            .dstSet = descSetsFrame_[i],
+            .dstBinding = 3,
+            .descriptorCount = 1,
+            .descriptorType =  vk::DescriptorType::eAccelerationStructureKHR
+        };
+        VkUtils::getDevice().updateDescriptorSets(descWrite,{});
+    }
+}
+
 void Renderer::initDescSetLayout() {
 
     //  Frame descriptor layout first

@@ -46,9 +46,5 @@ private:
 
     vk::raii::DescriptorSet skyDescriptorSet_{nullptr};
 
-    /*vk::raii::AccelerationStructureKHR tlas_{nullptr};
-    VkUtils::BufferAlloc tlasStorageBuffer_{};
-    */
-
     AccelerationStructure tlas_{};
 };

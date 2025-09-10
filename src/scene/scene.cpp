@@ -100,4 +100,6 @@ void Scene::initTLAS() {
 
     tlas_ = AccelerationStructure(vk::AccelerationStructureTypeKHR::eTopLevel,instanceGeometry,instances.size());
     VkUtils::destroyBufferVMA(std::move(instanceBuffer));
+
+    Renderer::updateTLASDescriptor(tlas_.getAccelStructure());
 }

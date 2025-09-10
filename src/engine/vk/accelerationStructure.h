@@ -29,6 +29,7 @@ public:
     }
 
     [[nodiscard]] const VkUtils::BufferAlloc& getStorageBuffer() const {return storageBuffer_;}
+    [[nodiscard]] const vk::raii::AccelerationStructureKHR& getAccelStructure() const { return accelStruct_; }
 
 private:
     vk::raii::AccelerationStructureKHR accelStruct_{nullptr};
