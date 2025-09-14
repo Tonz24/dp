@@ -57,10 +57,6 @@ void main() {
     vec3 normal = normalize(normalShininess.xyz);
     float shininess = normalShininess.w;
     float depth = texture(textures[pcs.depthMapHandle], screenTexCoord).x;
-    /**uint materialId = uint(texture(textures[pcs.materialMapHandle], screenTexCoord).x);
-
-    Material mat = materialUBO.materials[materialId];
-    float shininess*/
 
 
     //  this fragment has something to shade only if there's a normal behind it
@@ -83,7 +79,7 @@ void main() {
         fragColor = vec4(mix(normal,normalRemapped,float(pcs.remapNormals)),1.0);
     }
     if (pcs.overlayIndex == OVERLAY_DEPTH_MAP){
-        float linDepth = linearizeDepth(depth, cameraUBO.zNear, cameraUBO.zFar);
+        float linDepth = linearizeDepth(depth, cameraUBO.zNear, cameraUBO.zFar) * 0.125;
         fragColor = vec4(linDepth, linDepth, linDepth,1.0);
     }
     if (pcs.overlayIndex == OVERLAY_WS_POS){
@@ -99,8 +95,6 @@ void main() {
         vec3 L = normalize(L_unnorm);
         vec3 V = normalize(cameraUBO.posWS - posWS);
         vec3 R = normalize(reflect(-V,normal));
-
-        //float shininess = materialUBO.materials[materialId].shininess;
 
         float cos_theta_r = max(dot(R,L),0.0);
         float cos_theta_i = max(dot(L,normal),0.0);
