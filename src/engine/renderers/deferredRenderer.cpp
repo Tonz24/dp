@@ -66,6 +66,12 @@ void DeferredRenderer::initGraphicsPipelines() {
     gBufferFillPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/gbuffer_fill_frag.spv",descSetFillLayouts,pcsFillRange,fillAttachmentFormats,true, GBuffer::depthMapVkFormat};
     skyboxPipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/skypass_frag.spv",descSetLayoutSky,{},{shadeAttachmentFormat.begin(),1}, false};
     gBufferShadePipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/gbuffer_shade_frag.spv",descSetFillLayouts,pcsShadeRange,shadeAttachmentFormat, false};
+
+
+    pcs_.albedoMapHandle = gBuffer_->getAlbedoMap().getCID();
+    pcs_.normalMapHandle = gBuffer_->getNormalMap().getCID();
+    pcs_.depthMapHandle = gBuffer_->getDepthMap().getCID();
+    pcs_.materialMapHandle = gBuffer_->getMaterialMap().getCID();
 }
 
 

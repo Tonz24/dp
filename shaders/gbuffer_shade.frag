@@ -57,17 +57,15 @@ void main() {
     vec2 screenTexCoord = inNDCxy * 0.5 + 0.5;
     screenTexCoord.y = 1.0 - screenTexCoord.y;
 
-    vec4 albedoTexCoordX = texture(albedoMap, screenTexCoord);
-    vec4 normalTexCoordY = texture(normalMap, screenTexCoord);
-    float depth = texture(depthMap, screenTexCoord).x;
-    uint materialId = texture(materialMap, screenTexCoord).x;
-
-    vec3 albedo = albedoTexCoordX.xyz;
-    vec3 normal = normalTexCoordY.xyz;
-
-    vec2 texCoord = vec2(albedoTexCoordX.w,normalTexCoordY.w);
+    vec3 albedo = texture(textures[pcs.albedoMapHandle], screenTexCoord).xyz;
+    vec4 normalShininess = texture(textures[pcs.normalMapHandle], screenTexCoord);
+    vec3 normal = normalize(normalShininess.xyz);
+    float shininess = normalShininess.w;
+    float depth = texture(textures[pcs.depthMapHandle], screenTexCoord).x;
+    /**uint materialId = uint(texture(textures[pcs.materialMapHandle], screenTexCoord).x);
 
     Material mat = materialUBO.materials[materialId];
+    float shininess*/
 
 
     //  this fragment has something to shade only if there's a normal behind it
@@ -107,7 +105,7 @@ void main() {
         vec3 V = normalize(cameraUBO.posWS - posWS);
         vec3 R = normalize(reflect(-V,normal));
 
-        float shininess = materialUBO.materials[materialId].shininess;
+        //float shininess = materialUBO.materials[materialId].shininess;
 
         float cos_theta_r = max(dot(R,L),0.0);
         float cos_theta_i = max(dot(L,normal),0.0);

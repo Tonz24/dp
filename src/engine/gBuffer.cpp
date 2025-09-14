@@ -34,7 +34,6 @@ void GBuffer::recordDescriptorSet() {
     imageInfos.reserve(textures_.size());
     descriptorWrites.reserve(textures_.size());
 
-
     for (uint32_t i = 0; i < textures_.size(); ++i) {
 
         vk::ImageLayout imageLayout = textures_[i] == depthMap_ ?  vk::ImageLayout::eDepthReadOnlyOptimal : vk::ImageLayout::eShaderReadOnlyOptimal;
@@ -54,7 +53,17 @@ void GBuffer::recordDescriptorSet() {
             .pImageInfo = &imageInfos.back()
         };
 
+        vk::WriteDescriptorSet writeDescriptorSetBindless{
+            .dstSet = Renderer::getDescSetFrame(0),
+            .dstBinding = 2,
+            .dstArrayElement = textures_[i]->getCID(),
+            .descriptorCount = 1,
+            .descriptorType = vk::DescriptorType::eCombinedImageSampler,
+            .pImageInfo = &imageInfos.back()
+        };
+
         descriptorWrites.emplace_back(writeDescriptorSet);
+        descriptorWrites.emplace_back(writeDescriptorSetBindless);
     }
 
     VkUtils::getDevice().updateDescriptorSets(descriptorWrites,{});
@@ -186,6 +195,7 @@ void GBuffer::createTextures(const std::string& prefix, uint32_t width, uint32_t
 
 
     VkUtils::endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
+
 }
 
 void GBuffer::resizeContents(uint32_t width, uint32_t height) {

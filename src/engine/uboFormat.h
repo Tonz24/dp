@@ -62,4 +62,9 @@ struct PcsGBufferShade {
     int drawSkybox{true};
 
     int remapNormals{true};
+    uint32_t albedoMapHandle;
+    uint32_t normalMapHandle;
+    uint32_t depthMapHandle;
+
+    uint32_t materialMapHandle;
 };
