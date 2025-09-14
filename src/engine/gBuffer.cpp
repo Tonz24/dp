@@ -12,19 +12,7 @@
 GBuffer::GBuffer(std::string_view resourceName, uint32_t width, uint32_t height) {
     std::string textureNamesPrefix{resourceName};
 
-    allocateDescriptorSet();
     createTextures(textureNamesPrefix,width,height);
-}
-
-void GBuffer::allocateDescriptorSet() {
-    vk::DescriptorSetAllocateInfo allocInfo{
-        .descriptorPool = Engine::getInstance().getDescriptorPool(),
-        .descriptorSetCount = 1,
-        .pSetLayouts = &*Renderer::getDescSetLayoutMaterial(),
-    };
-
-    auto h = VkUtils::getDevice().allocateDescriptorSets(allocInfo);
-    descriptorSet_ = std::move(h.front());
 }
 
 void GBuffer::recordDescriptorSet() {
@@ -44,15 +32,6 @@ void GBuffer::recordDescriptorSet() {
             .imageLayout = imageLayout
         });
 
-        vk::WriteDescriptorSet writeDescriptorSet{
-            .dstSet = descriptorSet_,
-            .dstBinding = i,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-            .pImageInfo = &imageInfos.back()
-        };
-
         vk::WriteDescriptorSet writeDescriptorSetBindless{
             .dstSet = Renderer::getDescSetFrame(0),
             .dstBinding = 2,
@@ -61,8 +40,6 @@ void GBuffer::recordDescriptorSet() {
             .descriptorType = vk::DescriptorType::eCombinedImageSampler,
             .pImageInfo = &imageInfos.back()
         };
-
-        descriptorWrites.emplace_back(writeDescriptorSet);
         descriptorWrites.emplace_back(writeDescriptorSetBindless);
     }
 

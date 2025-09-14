@@ -63,9 +63,6 @@ void Renderer::initDescSetLayout() {
     //  Frame descriptor layout first
     descSetLayoutFrame_ = vk::raii::DescriptorSetLayout(VkUtils::getDevice(),frameLayoutInfo);
 
-    //  Material descriptor layout second
-    descSetLayoutMaterial_ = vk::raii::DescriptorSetLayout(VkUtils::getDevice(),materialLayoutInfo);
-
     // Sky descriptor layout last
     descSetLayoutSky_ = vk::raii::DescriptorSetLayout(VkUtils::getDevice(),skyLayoutInfo);
 

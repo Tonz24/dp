@@ -84,9 +84,6 @@ public:
         .size = static_cast<uint32_t>(sizeof(PcsGBufferShade))
     };
 
-
-    [[nodiscard]] const vk::raii::DescriptorSet& getDescriptorSet() const { return descriptorSet_; }
-
 private:
     friend class GBufferManager;
 
@@ -101,12 +98,9 @@ private:
     std::shared_ptr<Texture> depthMap_{nullptr};
     std::shared_ptr<Texture> objectIdMap_{nullptr};
 
-    vk::raii::DescriptorSet descriptorSet_{nullptr};
-
 
     std::vector<std::shared_ptr<Texture>> textures_{};
 
-    void allocateDescriptorSet();
     void recordDescriptorSet();
     void createTextures(const std::string& prefix, uint32_t width,uint32_t height);
 };

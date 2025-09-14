@@ -54,7 +54,7 @@ void DeferredRenderer::resizeScreen(uint32_t newWidth, uint32_t newHeight) {
 void DeferredRenderer::initGraphicsPipelines() {
 
     std::array pcsFillRange{GBuffer::pcsFillRange};
-    std::vector descSetFillLayouts = {*Renderer::getDescSetLayoutFrame(), *Renderer::getDescSetLayoutMaterial()};
+    std::vector descSetFillLayouts = {*Renderer::getDescSetLayoutFrame()};
     std::array fillAttachmentFormats{GBuffer::attachmentFormats[0], GBuffer::attachmentFormats[1],GBuffer::attachmentFormats[2], GBuffer::attachmentFormats[3]};
 
 
@@ -361,8 +361,6 @@ void DeferredRenderer::recordGBufferShadeCommands(const Scene& scene, const vk::
     //  bind graphics pipeline and global descriptor set
     cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, gBufferShadePipeline_.getGraphicsPipeline());
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, gBufferShadePipeline_.getPipelineLayout(), 0, *getDescSetFrame(frameInFlightIndex), nullptr);
-    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, gBufferShadePipeline_.getPipelineLayout(), 1, *gBuffer_->getDescriptorSet(), nullptr);
-
 
     cmdBuf.pushConstants(gBufferShadePipeline_.getPipelineLayout(), vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const PcsGBufferShade>{pcs_});
     cmdBuf.draw(6, 1, 0, 0);

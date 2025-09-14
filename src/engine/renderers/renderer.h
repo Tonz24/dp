@@ -21,7 +21,6 @@ public:
     virtual glm::vec<2,uint32_t> getRenderDimensions() const = 0;
 
     static const vk::raii::DescriptorSetLayout& getDescSetLayoutFrame() {return descSetLayoutFrame_;}
-    static const vk::raii::DescriptorSetLayout& getDescSetLayoutMaterial() {return descSetLayoutMaterial_;}
     static const vk::raii::DescriptorSetLayout& getDescSetLayoutSky() {return descSetLayoutSky_;}
     static const vk::raii::DescriptorSet& getDescSetFrame(uint32_t frameInFlightIndex);
 
@@ -54,7 +53,6 @@ private:
 
     static void initDescSetLayout();
     inline static vk::raii::DescriptorSetLayout descSetLayoutFrame_{nullptr};
-    inline static vk::raii::DescriptorSetLayout descSetLayoutMaterial_{nullptr};
     inline static vk::raii::DescriptorSetLayout descSetLayoutSky_{nullptr};
     inline static bool isDescSetLayoutInit_{false};
 
@@ -88,38 +86,6 @@ private:
     static constexpr vk::DescriptorSetLayoutCreateInfo frameLayoutInfo{
         .bindingCount = static_cast<uint32_t>(frameDescriptorBindings.size()),
         .pBindings = frameDescriptorBindings.data()
-    };
-
-    static constexpr std::array materialBindings{
-        vk::DescriptorSetLayoutBinding{
-            .binding = 0,
-            .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-            .descriptorCount = 1,
-            .stageFlags = vk::ShaderStageFlagBits::eFragment,
-        },
-        vk::DescriptorSetLayoutBinding {
-            .binding = 1,
-            .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-            .descriptorCount = 1,
-            .stageFlags = vk::ShaderStageFlagBits::eFragment,
-        },
-        vk::DescriptorSetLayoutBinding{
-            .binding = 2,
-            .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-            .descriptorCount = 1,
-            .stageFlags = vk::ShaderStageFlagBits::eFragment,
-        },
-        vk::DescriptorSetLayoutBinding{
-            .binding = 3,
-            .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-            .descriptorCount = 1,
-            .stageFlags = vk::ShaderStageFlagBits::eFragment,
-        }
-    };
-
-    static constexpr vk::DescriptorSetLayoutCreateInfo materialLayoutInfo{
-        .bindingCount = static_cast<uint32_t>(materialBindings.size()),
-        .pBindings = materialBindings.data()
     };
 
 
