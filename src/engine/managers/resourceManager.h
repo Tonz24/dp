@@ -7,15 +7,17 @@
 #include <string>
 #include <unordered_map>
 #include <iostream>
+#include <queue>
 
 #include "managedResource.h"
 #include "resourceManagerBase.h"
+#include "../constants.h"
 #include "../gBuffer.h"
 #include "../../scene/material.h"
 #include "../../scene/mesh.h"
 
 
-template <ManagedResourceConcept T, typename Derived>
+template <ManagedResourceConcept T, typename Derived, uint32_t IdLimit>
 class ResourceManager : public ResourceManagerBase {
 public:
 
@@ -85,15 +87,24 @@ public:
     void deleterFunction(const T& resource) {
 
         std::cout << "Resource [" << resource.getResourceType() << "]: " << resource.getResourceName() << " (cID: " << resource.getCID() << " | gID: " << resource.getGID()  << ")" << " freed" << std::endl;
+        cidRecycleQueue.push(resource.getCID());
         nameToIdMap_.erase(resource.getResourceName());
         idToResourceMap_.erase(resource.getCID());
     }
 
     uint32_t assignCategoryId() {
         std::lock_guard<std::mutex> lock(cidMutex_);
+
+        // try to use a recycled id first
+        if (!cidRecycleQueue.empty()) {
+            uint32_t newId = cidRecycleQueue.front();
+            cidRecycleQueue.pop();
+            return newId;
+        }
+
         uint32_t newId = ++cidCounter_;
 
-        if (newId == std::numeric_limits<uint32_t>::min())
+        if (newId >= IdLimit - 1)
             throw std::runtime_error("ERROR: invalid CID reached!");
 
         return newId;
@@ -122,6 +133,7 @@ protected:
 
     std::unordered_map<uint32_t,std::weak_ptr<T>> idToResourceMap_{};
     std::unordered_map<std::string,uint32_t> nameToIdMap_{};
+    std::queue<uint32_t>  cidRecycleQueue{};
 };
 
 class Mesh;
@@ -130,23 +142,23 @@ class Material;
 class GBuffer;
 
 
-class MeshManager : public ResourceManager<Mesh, MeshManager> {
-    friend class ResourceManager<Mesh, MeshManager>;
+class MeshManager : public ResourceManager<Mesh, MeshManager, Constants::defaultCategoryIdLimit> {
+    friend class ResourceManager<Mesh, MeshManager, Constants::defaultCategoryIdLimit>;
     MeshManager() = default;
 };
 
-class TextureManager : public ResourceManager<Texture, TextureManager> {
-    friend class ResourceManager<Texture, TextureManager>;
+class TextureManager : public ResourceManager<Texture, TextureManager, Constants::bindlessTextureLimit> {
+    friend class ResourceManager<Texture, TextureManager, Constants::bindlessTextureLimit>;
     TextureManager() = default;
 };
 
-class MaterialManager : public ResourceManager<Material, MaterialManager> {
-    friend class ResourceManager<Material, MaterialManager>;
+class MaterialManager : public ResourceManager<Material, MaterialManager, Constants::defaultCategoryIdLimit> {
+    friend class ResourceManager<Material, MaterialManager, Constants::defaultCategoryIdLimit>;
     MaterialManager() = default;
 };
 
-class GBufferManager : public ResourceManager<GBuffer, GBufferManager> {
-    friend class ResourceManager<GBuffer, GBufferManager>;
+class GBufferManager : public ResourceManager<GBuffer, GBufferManager, Constants::defaultCategoryIdLimit> {
+    friend class ResourceManager<GBuffer, GBufferManager, Constants::defaultCategoryIdLimit>;
     GBufferManager() = default;
 
 public:

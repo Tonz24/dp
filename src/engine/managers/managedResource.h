@@ -6,11 +6,13 @@
 #include <cstdint>
 #include <string>
 
+#include "../constants.h"
+
 class ManagedResource;
 
 template <typename T>
 concept ManagedResourceConcept = std::is_base_of_v<ManagedResource,T>;
-template <ManagedResourceConcept T, typename Derived>
+template <ManagedResourceConcept T, typename Derived, uint32_t idLimit>
 class ResourceManager;
 
 class ManagedResource {
@@ -27,7 +29,7 @@ public:
     [[nodiscard]] virtual std::string getResourceType() const = 0;
 
 
-    template <ManagedResourceConcept T, typename Derived>
+    template <ManagedResourceConcept T, typename Derived, uint32_t IdLimit>
     friend class ResourceManager;
 
 protected:

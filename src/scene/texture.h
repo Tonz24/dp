@@ -9,7 +9,6 @@
 #include <string>
 #include <glm/detail/type_vec4.hpp>
 
-#include "camera.h"
 #include "../engine/vk/vkUtils.h"
 #include "../engine/managers/managedResource.h"
 
@@ -23,7 +22,7 @@ public:
     Texture(Texture&&) = delete;
     Texture& operator=(Texture&&) = delete;
 
-    explicit Texture(std::string_view fileName, bool isSrgb);
+    explicit Texture(std::string_view fileName, bool isSrgb, bool generateMipmaps);
     Texture(uint32_t width, uint32_t height, vk::Format format, vk::ImageUsageFlags imageUsage);
 
 

@@ -14,6 +14,8 @@ public:
   static constexpr uint32_t bindlessTextureLimit{1024};
   static constexpr uint32_t textureSamplerLimit{1024};
 
+  static constexpr uint32_t defaultCategoryIdLimit{1000};
+
 
   #ifdef NDEBUG
   static constexpr bool enableValidationLayers{false};

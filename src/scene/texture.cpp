@@ -109,7 +109,7 @@ void Texture::initVkImage() {
 }
 
 
-Texture::Texture(std::string_view fileName, bool isSrgb) : ManagedResource() {
+Texture::Texture(std::string_view fileName, bool isSrgb, bool generateMipmaps) : ManagedResource() {
     //TODO: initialize only once
     FreeImage_Initialise();
 
@@ -164,7 +164,8 @@ Texture::Texture(std::string_view fileName, bool isSrgb) : ManagedResource() {
                 imageUsageFlags_ = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc;
 
                 vkFormat_ = chooseVkFormat(isSrgb);
-                mipLevelCount_ = static_cast<uint32_t>(std::floor(std::log2(std::max(width_, height_)))) + 1;
+                if (generateMipmaps)
+                    mipLevelCount_ = static_cast<uint32_t>(std::floor(std::log2(std::max(width_, height_)))) + 1;
                 initVkImage();
             }
         }

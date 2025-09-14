@@ -205,7 +205,8 @@ void ModelLoader::loadMaterials(const std::string& directory, const aiScene& sce
 
                 if (texture == nullptr) {
                     bool isSrgb = slot != Material::TextureMapSlot::normalMapSlot;
-                    texture  = TextureManager::getInstance()->registerResource(fullName, fullName, isSrgb);
+                    bool generateMipmaps = slot == Material::TextureMapSlot::diffuseMapSlot;
+                    texture  = TextureManager::getInstance()->registerResource(fullName, fullName, isSrgb, generateMipmaps);
 
                     //  this is a new texture, so mark it for staging
                     textureNames.insert(texture->getResourceName());
