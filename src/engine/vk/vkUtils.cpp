@@ -236,7 +236,7 @@ void VkUtils::endSingleTimeCommand(const vk::raii::CommandBuffer& cmdBuf, QueueT
 
 void VkUtils::transitionImageLayout(const vk::Image& image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, vk::PipelineStageFlags2 srcStageMask,
                                     vk::AccessFlags2 srcAccessMask, vk::PipelineStageFlags2 dstStageMask, vk::AccessFlags2 dstAccessMask,
-                                    vk::ImageAspectFlags imageAspectFlags, vk::raii::CommandBuffer& cmdBuf) {
+                                    vk::ImageAspectFlags imageAspectFlags, vk::raii::CommandBuffer& cmdBuf, TransitionMipInfo mipInfo) {
 
     vk::ImageMemoryBarrier2 barrier{
         .srcStageMask = srcStageMask,
@@ -250,8 +250,8 @@ void VkUtils::transitionImageLayout(const vk::Image& image, vk::ImageLayout oldL
         .image = image,
         .subresourceRange = {
             .aspectMask = imageAspectFlags,
-            .baseMipLevel = 0,
-            .levelCount = 1,
+            .baseMipLevel = mipInfo.baseLevel,
+            .levelCount = mipInfo.levelCount,
             .baseArrayLayer = 0,
             .layerCount = 1
         }
@@ -312,6 +312,17 @@ void VkUtils::blit(const vk::raii::CommandBuffer& cmdBuf, const vk::Image& srcIm
         },
         .dstOffsets =  dstOffsets
     };
+    cmdBuf.blitImage(srcImage,
+                     vk::ImageLayout::eTransferSrcOptimal,
+                     dstImage,
+                     vk::ImageLayout::eTransferDstOptimal,
+                     blitRegion,
+                     filter);
+}
+
+void VkUtils::blit(const vk::raii::CommandBuffer& cmdBuf, const vk::Image& srcImage, const vk::Image& dstImage, vk::ImageBlit blitRegion,
+    vk::Filter filter) {
+
     cmdBuf.blitImage(srcImage,
                      vk::ImageLayout::eTransferSrcOptimal,
                      dstImage,

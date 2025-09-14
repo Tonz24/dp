@@ -120,6 +120,11 @@ public:
     static void endSingleTimeCommand(const vk::raii::CommandBuffer& cmdBuf, QueueType queueType);
 
 
+    struct TransitionMipInfo {
+        uint32_t baseLevel{0};
+        uint32_t levelCount{1};
+    };
+
     /**
      * 
      * @param image image to transition
@@ -131,11 +136,12 @@ public:
      * @param dstAccessMask how the resource will be accessed after the transition
      * @param imageAspectFlags
      * @param cmdBuf command buffer where the transition is recorded
+     * @param mipInfo Mip level information
      */
     static void transitionImageLayout(const vk::Image &image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
                                       vk::PipelineStageFlags2 srcStageMask, vk::AccessFlags2 srcAccessMask,
                                       vk::PipelineStageFlags2 dstStageMask, vk::AccessFlags2 dstAccessMask,
-                                      vk::ImageAspectFlags imageAspectFlags, vk::raii::CommandBuffer &cmdBuf);
+                                      vk::ImageAspectFlags imageAspectFlags, vk::raii::CommandBuffer &cmdBuf, TransitionMipInfo mipInfo = {0,1});
 
 
 
@@ -150,6 +156,9 @@ public:
 
     static void blit(const vk::raii::CommandBuffer& cmdBuf, const vk::Image& srcImage, const glm::vec<2,int32_t>& srcSize, vk::ImageAspectFlags srcAspect, const vk::
                      Image& dstImage, const glm::vec<2,int32_t>& dstSize, vk::ImageAspectFlags dstAspect, vk::Filter filter);
+
+    static void blit(const vk::raii::CommandBuffer& cmdBuf, const vk::Image& srcImage, const vk::
+                     Image& dstImage, vk::ImageBlit blitRegion, vk::Filter filter);
 
 private:
     friend class Engine;

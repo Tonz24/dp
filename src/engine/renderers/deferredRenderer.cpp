@@ -115,14 +115,14 @@ void DeferredRenderer::recordCommandBuffer(const Scene& scene, vk::raii::Command
 
     //  transition swapchain image into color attachment optimal for gui write
     VkUtils::transitionImageLayout(swapchainImage,
-                                        vk::ImageLayout::eTransferDstOptimal,
-                                        vk::ImageLayout::eColorAttachmentOptimal,
-                                       vk::PipelineStageFlagBits2::eTransfer,
-                                       vk::AccessFlagBits2::eTransferWrite,
-                                       vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                       vk::AccessFlagBits2::eColorAttachmentRead | vk::AccessFlagBits2::eColorAttachmentWrite,
-                                       vk::ImageAspectFlagBits::eColor,
-                                       cmdBuf);
+                                   vk::ImageLayout::eTransferDstOptimal,
+                                   vk::ImageLayout::eColorAttachmentOptimal,
+                                   vk::PipelineStageFlagBits2::eTransfer,
+                                   vk::AccessFlagBits2::eTransferWrite,
+                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                                   vk::AccessFlagBits2::eColorAttachmentRead | vk::AccessFlagBits2::eColorAttachmentWrite,
+                                   vk::ImageAspectFlagBits::eColor,
+                                   cmdBuf);
 
     // render gui last, into the swapchain frame buffer
     recordGUICommands(scene,cmdBuf,frameInFlightIndex, swapchainImageView, swapchainExtent);
@@ -130,13 +130,13 @@ void DeferredRenderer::recordCommandBuffer(const Scene& scene, vk::raii::Command
     //  transition swapchain image to present
     VkUtils::transitionImageLayout(swapchainImage,
                                    vk::ImageLayout::eColorAttachmentOptimal,
-                                  vk::ImageLayout::ePresentSrcKHR,
-                                  vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                       vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead,
-                                  vk::PipelineStageFlagBits2::eBottomOfPipe,
-                                  vk::AccessFlagBits2::eNone,
-                                  vk::ImageAspectFlagBits::eColor,
-                                  cmdBuf);
+                                   vk::ImageLayout::ePresentSrcKHR,
+                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                                   vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead,
+                                   vk::PipelineStageFlagBits2::eBottomOfPipe,
+                                   vk::AccessFlagBits2::eNone,
+                                   vk::ImageAspectFlagBits::eColor,
+                                   cmdBuf);
 
     cmdBuf.end();
 }

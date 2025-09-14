@@ -29,8 +29,6 @@ public:
 
     ~Texture() override;
 
-    void expand();
-
     [[nodiscard]] std::string getResourceType() const override;
 
     [[nodiscard]] const vk::raii::ImageView & getVkImageView() const { return vkImageView_; }
@@ -46,6 +44,7 @@ public:
 
     uint32_t getTotalSize() const {return data_.size() * sizeof(data_[0]);}
     void stage(const VkUtils::BufferAlloc& stagingBuffer) const;
+    void generateMipmaps() const;
 
 private:
 
@@ -73,6 +72,7 @@ private:
 
     vk::raii::ImageView vkImageView_{nullptr};
     vk::raii::Sampler  vkSampler_{nullptr};
+    uint32_t mipLevelCount_{1};
 
     vk::ImageUsageFlags imageUsageFlags_{};
 };

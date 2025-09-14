@@ -36,6 +36,7 @@ Texture::Texture(uint32_t width, uint32_t height, vk::Format format, vk::ImageUs
 }
 
 void Texture::initVkImage() {
+
     vk::ImageCreateInfo imageInfo{
         .imageType = vk::ImageType::e2D,
         .format = vkFormat_,
@@ -44,7 +45,7 @@ void Texture::initVkImage() {
             .height = height_,
             .depth = 1
         },
-        .mipLevels = 1,
+        .mipLevels = mipLevelCount_,
         .arrayLayers = 1,
         .samples = vk::SampleCountFlagBits::e1,
         .tiling = vk::ImageTiling::eOptimal,
@@ -73,7 +74,7 @@ void Texture::initVkImage() {
         .subresourceRange = vk::ImageSubresourceRange{
             .aspectMask = aspectFlags,
             .baseMipLevel = 0,
-            .levelCount = 1,
+            .levelCount = mipLevelCount_,
             .baseArrayLayer = 0,
             .layerCount = 1
         },
@@ -100,7 +101,7 @@ void Texture::initVkImage() {
         .compareEnable = vk::False,
         .compareOp = vk::CompareOp::eAlways,
         .minLod = 0.0f,
-        .maxLod = 0.0f,
+        .maxLod = static_cast<float>(mipLevelCount_),
         .borderColor = vk::BorderColor::eIntOpaqueBlack,
         .unnormalizedCoordinates = vk::False
     };
@@ -159,9 +160,11 @@ Texture::Texture(std::string_view fileName, bool isSrgb) : ManagedResource() {
                 FreeImage_ConvertToRawBits(data_.data(),bitmap,scanWidth_,pixelSize_ * 8, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, FALSE);
                 isFromDisk_ = true;
 
-                imageUsageFlags_ = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
+                //  transfer src for generating mipmaps!
+                imageUsageFlags_ = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc;
 
                 vkFormat_ = chooseVkFormat(isSrgb);
+                mipLevelCount_ = static_cast<uint32_t>(std::floor(std::log2(std::max(width_, height_)))) + 1;
                 initVkImage();
             }
         }
@@ -177,27 +180,6 @@ std::string Texture::getResourceType() const {
     return "Texture";
 }
 
-void Texture::expand() {
-    #pragma omp parallel for collapse(2)
-    for (int x = 0; x < static_cast<int>(width_) ; ++x) {
-        for (int y = 0; y < static_cast<int>(height_) ; ++y) {
-
-            const uint32_t offset_pixel = y * scanWidth_ + x * pixelSize_;
-
-            for (uint32_t c = 0; c < pixelSize_; ++c){
-                const uint32_t total_offset = offset_pixel + c;
-
-                const uint8_t pixel_b = data_[total_offset];
-                float pixel_f = static_cast<float>(pixel_b) / 255.0f;
-
-                pixel_f = Utils::expand(pixel_f);
-
-                data_[total_offset] = static_cast<uint8_t>(pixel_f * 255.0f);
-            }
-        }
-    }
-}
-
 void Texture::stage(const VkUtils::BufferAlloc& stagingBuffer) const {
 
     if (stagingBuffer.allocationInfo.pMappedData == nullptr)
@@ -209,30 +191,134 @@ void Texture::stage(const VkUtils::BufferAlloc& stagingBuffer) const {
 
     auto cmdBuf = VkUtils::beginSingleTimeCommand();
     VkUtils::transitionImageLayout(
-        imageAlloc_.image,
-        vk::ImageLayout::eUndefined,
-        vk::ImageLayout::eTransferDstOptimal,
-        vk::PipelineStageFlagBits2::eTopOfPipe,
-        vk::AccessFlagBits2::eNone,
-        vk::PipelineStageFlagBits2::eTransfer,
-        vk::AccessFlagBits2::eTransferWrite,
-        vk::ImageAspectFlagBits::eColor,
-        cmdBuf
-    );
+                                   imageAlloc_.image,
+                                   vk::ImageLayout::eUndefined,
+                                   vk::ImageLayout::eTransferDstOptimal,
+                                   vk::PipelineStageFlagBits2::eTopOfPipe,
+                                   vk::AccessFlagBits2::eNone,
+                                   vk::PipelineStageFlagBits2::eTransfer,
+                                   vk::AccessFlagBits2::eTransferWrite,
+                                   vk::ImageAspectFlagBits::eColor,
+                                   cmdBuf, {0,mipLevelCount_});
 
     VkUtils::copyBufferToImage(stagingBuffer,imageAlloc_,width_,height_, cmdBuf);
 
     VkUtils::transitionImageLayout(
-       imageAlloc_.image,
-       vk::ImageLayout::eTransferDstOptimal,
-       vk::ImageLayout::eShaderReadOnlyOptimal,
-       vk::PipelineStageFlagBits2::eTransfer,
-       vk::AccessFlagBits2::eTransferWrite,
-       vk::PipelineStageFlagBits2::eFragmentShader,
-       vk::AccessFlagBits2::eShaderRead,
-       vk::ImageAspectFlagBits::eColor,
-       cmdBuf
-   );
+                                   imageAlloc_.image,
+                                   vk::ImageLayout::eTransferDstOptimal,
+                                   vk::ImageLayout::eShaderReadOnlyOptimal,
+                                   vk::PipelineStageFlagBits2::eTransfer,
+                                   vk::AccessFlagBits2::eTransferWrite,
+                                   vk::PipelineStageFlagBits2::eFragmentShader,
+                                   vk::AccessFlagBits2::eShaderRead,
+                                   vk::ImageAspectFlagBits::eColor,
+                                   cmdBuf, {0,mipLevelCount_});
+
+    VkUtils::endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
+
+    generateMipmaps();
+}
+
+void Texture::generateMipmaps() const {
+
+    if (mipLevelCount_ == 1)
+        return;
+
+    auto cmdBuf = VkUtils::beginSingleTimeCommand();
+
+    //  transition every mip level to transfer dst optimal, then in the loop, transition appropriate ones to src optimal
+    VkUtils::transitionImageLayout(imageAlloc_.image,
+                                  vk::ImageLayout::eShaderReadOnlyOptimal,
+                                  vk::ImageLayout::eTransferDstOptimal,
+                                  vk::PipelineStageFlagBits2::eFragmentShader,
+                                  vk::AccessFlagBits2::eShaderRead,
+                                  vk::PipelineStageFlagBits2::eTransfer,
+                                  vk::AccessFlagBits2::eTransferWrite,
+                                  vk::ImageAspectFlagBits::eColor,
+                                  cmdBuf,
+                                  {0,mipLevelCount_});
+
+    int mipWidth = width_;
+    int mipHeight = height_;
+
+
+    // index i is the dst mip level, i-1 is the src mip level
+    for (uint32_t i = 1; i < mipLevelCount_; ++i) {
+
+        // transition src mip level to transfer src optimal
+        VkUtils::transitionImageLayout(imageAlloc_.image,
+                                 vk::ImageLayout::eTransferDstOptimal,
+                                 vk::ImageLayout::eTransferSrcOptimal,
+                                 vk::PipelineStageFlagBits2::eTransfer,
+                                 vk::AccessFlagBits2::eTransferWrite,
+                                 vk::PipelineStageFlagBits2::eTransfer,
+                                 vk::AccessFlagBits2::eTransferRead,
+                                 vk::ImageAspectFlagBits::eColor,
+                                 cmdBuf,
+                                 {i-1,1});
+
+
+        std::array srcOffsets{
+            vk::Offset3D{.x = 0,.y = 0,.z = 0},
+            vk::Offset3D{.x = mipWidth,.y = mipHeight,.z = 1}
+        };
+
+        std::array dstOffsets{
+            vk::Offset3D{.x = 0,.y = 0,.z = 0},
+            vk::Offset3D{.x = mipWidth > 1 ? mipWidth / 2 : 1, .y = mipHeight  > 1 ? mipHeight / 2 : 1, .z = 1}
+        };
+
+
+        vk::ImageBlit region{
+            .srcSubresource = {
+                .aspectMask = vk::ImageAspectFlagBits::eColor,
+                .mipLevel = i - 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+            .srcOffsets = srcOffsets,
+            .dstSubresource = {
+                .aspectMask = vk::ImageAspectFlagBits::eColor,
+                .mipLevel = i,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+            .dstOffsets = dstOffsets
+        };
+
+
+        VkUtils::blit(cmdBuf,imageAlloc_.image,imageAlloc_.image,region,vk::Filter::eLinear);
+
+
+        if (mipWidth > 1) mipWidth /= 2;
+        if (mipHeight > 1) mipHeight /= 2;
+
+        // transition src mip level back to shader read optimal
+        // the old layout is transfer dst optimal as this level is never used as input into a smaller mip level
+        VkUtils::transitionImageLayout(imageAlloc_.image,
+                                  vk::ImageLayout::eTransferSrcOptimal,
+                                  vk::ImageLayout::eShaderReadOnlyOptimal,
+                                  vk::PipelineStageFlagBits2::eTransfer,
+                                  vk::AccessFlagBits2::eTransferRead,
+                                  vk::PipelineStageFlagBits2::eFragmentShader,
+                                   vk::AccessFlagBits2::eShaderRead,
+                                  vk::ImageAspectFlagBits::eColor,
+                                  cmdBuf,
+                                  {i-1,1});
+    }
+
+    // transition the last mip level back to shader read optimal, since it is not included in the loop
+    VkUtils::transitionImageLayout(imageAlloc_.image,
+                              vk::ImageLayout::eTransferDstOptimal,
+                              vk::ImageLayout::eShaderReadOnlyOptimal,
+                              vk::PipelineStageFlagBits2::eTransfer,
+                              vk::AccessFlagBits2::eTransferWrite,
+                              vk::PipelineStageFlagBits2::eFragmentShader,
+                               vk::AccessFlagBits2::eShaderRead,
+                              vk::ImageAspectFlagBits::eColor,
+                              cmdBuf,
+                              {mipLevelCount_-1,1});
+
 
     VkUtils::endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
 }
