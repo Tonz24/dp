@@ -33,8 +33,6 @@ public:
 
     [[nodiscard]] const std::shared_ptr<Texture>& getSky() const { return sky_; }
 
-    [[nodiscard]] const vk::raii::DescriptorSet& getSkyDescriptorSet() const { return skyDescriptorSet_;}
-
 private:
 
     void initDescriptorSet();
@@ -45,8 +43,6 @@ private:
     std::shared_ptr<Texture> sky_{};
 
     std::shared_ptr<Mesh> selectedObject_{};
-
-    vk::raii::DescriptorSet skyDescriptorSet_{nullptr};
 
     AccelerationStructure tlas_{};
 };

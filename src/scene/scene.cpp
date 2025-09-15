@@ -43,13 +43,6 @@ void Scene::initDescriptorSet() {
         sky_->stage(stagingBuffer);
         VkUtils::destroyBufferVMA(std::move(stagingBuffer));
 
-        vk::DescriptorSetAllocateInfo allocInfo{
-            .descriptorPool = Engine::getInstance().getDescriptorPool(),
-            .descriptorSetCount = 1,
-            .pSetLayouts = &*Renderer::getDescSetLayoutSky()
-        };
-        skyDescriptorSet_ = std::move(VkUtils::getDevice().allocateDescriptorSets(allocInfo).front());
-
         vk::DescriptorImageInfo descInfo{
             .sampler = sky_->getVkSampler(),
             .imageView = sky_->getVkImageView(),

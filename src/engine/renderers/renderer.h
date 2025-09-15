@@ -21,7 +21,6 @@ public:
     virtual glm::vec<2,uint32_t> getRenderDimensions() const = 0;
 
     static const vk::raii::DescriptorSetLayout& getDescSetLayoutFrame() {return descSetLayoutFrame_;}
-    static const vk::raii::DescriptorSetLayout& getDescSetLayoutSky() {return descSetLayoutSky_;}
     static const vk::raii::DescriptorSet& getDescSetFrame(uint32_t frameInFlightIndex);
 
     [[nodiscard]] static uint8_t* getCamUBOsMapped(uint32_t frameInFlightIndex);
@@ -59,7 +58,6 @@ private:
 
     static void initDescSetLayout();
     inline static vk::raii::DescriptorSetLayout descSetLayoutFrame_{nullptr};
-    inline static vk::raii::DescriptorSetLayout descSetLayoutSky_{nullptr};
     inline static bool isDescSetLayoutInit_{false};
 
     static constexpr std::array frameDescriptorBindings{
@@ -93,20 +91,4 @@ private:
         .bindingCount = static_cast<uint32_t>(frameDescriptorBindings.size()),
         .pBindings = frameDescriptorBindings.data()
     };
-
-
-    static constexpr vk::DescriptorSetLayoutBinding skyBinding{
-        .binding = 0,
-        .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-        .descriptorCount = 1,
-        .stageFlags = vk::ShaderStageFlagBits::eFragment,
-    };
-
-    static constexpr vk::DescriptorSetLayoutCreateInfo skyLayoutInfo{
-        .bindingCount = 1,
-        .pBindings = &skyBinding
-    };
-
-
-
 };

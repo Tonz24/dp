@@ -63,9 +63,6 @@ void Renderer::initDescSetLayout() {
     //  Frame descriptor layout first
     descSetLayoutFrame_ = vk::raii::DescriptorSetLayout(VkUtils::getDevice(),frameLayoutInfo);
 
-    // Sky descriptor layout last
-    descSetLayoutSky_ = vk::raii::DescriptorSetLayout(VkUtils::getDevice(),skyLayoutInfo);
-
     // camera UBO
     for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
         vk::DeviceSize bufferSize = sizeof(CameraUBOFormat);
