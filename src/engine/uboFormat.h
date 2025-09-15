@@ -68,3 +68,7 @@ struct PcsGBufferShade {
 
     uint32_t materialMapHandle;
 };
+
+struct PcsSky {
+    uint32_t skyHandle;
+};

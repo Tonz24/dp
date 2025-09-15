@@ -57,9 +57,9 @@ void Scene::initDescriptorSet() {
         };
 
         vk::WriteDescriptorSet writeDescriptorSet{
-            .dstSet = skyDescriptorSet_,
-            .dstBinding = 0,
-            .dstArrayElement = 0,
+            .dstSet = Renderer::getDescSetFrame(0),
+            .dstBinding = 2,
+            .dstArrayElement = sky_->getCID(),
             .descriptorCount = 1,
             .descriptorType = vk::DescriptorType::eCombinedImageSampler,
             .pImageInfo = &descInfo

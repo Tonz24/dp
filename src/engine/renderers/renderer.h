@@ -41,6 +41,12 @@ protected:
                                      swapchainImageView, const vk::Extent2D&
                                      swapchainExtent) = 0;
 
+    static constexpr vk::PushConstantRange pcsSkyRange{
+        .stageFlags = vk::ShaderStageFlagBits::eFragment,
+        .offset = 0,
+        .size = static_cast<uint32_t>(sizeof(PcsSky))
+    };
+
 private:
 
     inline static std::vector<VkUtils::BufferAlloc> cameraUBOs_{};
@@ -100,6 +106,7 @@ private:
         .bindingCount = 1,
         .pBindings = &skyBinding
     };
+
 
 
 };

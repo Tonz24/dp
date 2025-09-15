@@ -53,29 +53,24 @@ void DeferredRenderer::resizeScreen(uint32_t newWidth, uint32_t newHeight) {
 
 void DeferredRenderer::initGraphicsPipelines() {
 
-    std::array pcsFillRange{GBuffer::pcsFillRange};
     std::vector descSetFillLayouts = {*Renderer::getDescSetLayoutFrame()};
     std::array fillAttachmentFormats{GBuffer::attachmentFormats[0], GBuffer::attachmentFormats[1],GBuffer::attachmentFormats[2], GBuffer::attachmentFormats[3]};
 
-
+    std::array pcsFillRange{GBuffer::pcsFillRange};
     std::array pcsShadeRange{GBuffer::pcsShadeRange};
+    std::array pcsSkyRange{Renderer::pcsSkyRange};
+
     std::array shadeAttachmentFormat{GBuffer::targetVkFormat};
 
-
-    std::vector descSetLayoutSky = {*Renderer::getDescSetLayoutFrame(),*Renderer::getDescSetLayoutSky()};
     gBufferFillPipeline_ = GraphicsPipeline{"shaders/shader_vert.spv","shaders/gbuffer_fill_frag.spv",descSetFillLayouts,pcsFillRange,fillAttachmentFormats,true, GBuffer::depthMapVkFormat};
-    skyboxPipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/skypass_frag.spv",descSetLayoutSky,{},{shadeAttachmentFormat.begin(),1}, false};
+    skyboxPipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/skypass_frag.spv",descSetFillLayouts,pcsSkyRange,{shadeAttachmentFormat.begin(),1}, false};
     gBufferShadePipeline_ = GraphicsPipeline{"shaders/skypass_vert.spv","shaders/gbuffer_shade_frag.spv",descSetFillLayouts,pcsShadeRange,shadeAttachmentFormat, false};
-
 
     pcs_.albedoMapHandle = gBuffer_->getAlbedoMap().getCID();
     pcs_.normalMapHandle = gBuffer_->getNormalMap().getCID();
     pcs_.depthMapHandle = gBuffer_->getDepthMap().getCID();
     pcs_.materialMapHandle = gBuffer_->getMaterialMap().getCID();
 }
-
-
-
 
 void DeferredRenderer::recordCommandBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
                                            const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent)
@@ -204,8 +199,8 @@ void DeferredRenderer::recordSkyCommands(const Scene& scene, vk::raii::CommandBu
     cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, skyboxPipeline_.getGraphicsPipeline());
     //  bind global descriptor set
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, skyboxPipeline_.getPipelineLayout(), 0, *getDescSetFrame(frameInFlightIndex), nullptr);
-    //  bind per mesh descriptor set
-    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, skyboxPipeline_.getPipelineLayout(), 1, *scene.getSkyDescriptorSet(), nullptr);
+
+    cmdBuf.pushConstants(skyboxPipeline_.getPipelineLayout(), vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const uint32_t>{scene.getSky()->getCID()});
 
     // draw six vertices making up the screen quad
     cmdBuf.draw(6, 1, 0, 0);
