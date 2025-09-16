@@ -62,13 +62,25 @@ void Camera::updateOrientation(double dx, double dy) {
 
 void Camera::updatePosition(const glm::vec3 &velocity) {
     glm::vec3 oldPos{positionWorld_};
-    positionWorld_ += camRightDir_ * velocity.x;
-    positionWorld_ += camUpDir_ * velocity.y;
-    positionWorld_ += camForwardDir_ * velocity.z;
+    positionWorld_ += camRightDir_ * velocity.x * movementSpeed_ * 10.0f;
+    positionWorld_ += camUpDir_ * velocity.y * movementSpeed_ * 10.0f;
+    positionWorld_ += camForwardDir_ * velocity.z * movementSpeed_* 10.0f;
 
     if (positionWorld_ != oldPos) {
        recalculateMatrices();
     }
+}
+
+bool Camera::drawGUI() {
+    if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Indent();
+        ImGui::DragFloat("Movement speed",&movementSpeed_,0.5f,0.1f,100.0f);
+        if (ImGui::DragFloat("Vertical FOV",&verticalFov_,0.5f,25.0f,100.0f))
+            recalculateMatrices();
+        ImGui::Unindent();
+    }
+
+    return false;
 }
 
 void Camera::recalculateMatrices() {

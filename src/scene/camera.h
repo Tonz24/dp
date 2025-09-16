@@ -7,10 +7,11 @@
 
 #include <glm/glm.hpp>
 
+#include "../engine/iDrawGui.h"
 #include "../engine/uboFormat.h"
 
 
-class Camera : public UBOFormat<CameraUBOFormat> {
+class Camera : public UBOFormat<CameraUBOFormat>, public IDrawGui {
 public:
 
     explicit Camera(const glm::vec3& position, const glm::vec3& viewAt, float verticalFov = 45.0f);
@@ -30,6 +31,7 @@ public:
     void updateOrientation(double dx, double dy);
     void updatePosition(const glm::vec3& velocity);
 
+    bool drawGUI() override;
 
 private:
 
@@ -50,6 +52,7 @@ private:
     float aspectRatio_{16.0f / 9.0f};
 
     float yaw_{0.0f}, pitch_{0.0f};
+    float movementSpeed_{1.0f};
 
     static constexpr glm::vec3 worldUp_{0,1,0};
 

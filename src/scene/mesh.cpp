@@ -18,15 +18,41 @@ Mesh::~Mesh() {
     VkUtils::destroyBufferVMA(std::move(indexBuffer_));
 }
 
+void Mesh::updateBLASInstance() {
+
+    const auto& modelMat = transform_.getModelMat();
+
+
+    vk::TransformMatrixKHR transformMatrix{
+        .matrix = std::array{
+            std::array{modelMat[0][0],modelMat[1][0],modelMat[2][0],modelMat[3][0]},
+            std::array{modelMat[0][1],modelMat[1][1],modelMat[2][1],modelMat[3][1]},
+            std::array{modelMat[0][2],modelMat[1][2],modelMat[2][2],modelMat[3][2]}
+        }
+    };
+
+    //  just one instance per mesh for now
+    blasInstance_ = vk::AccelerationStructureInstanceKHR{
+        .transform = transformMatrix,
+        .instanceCustomIndex = getCID(),
+        .mask = 0xFF,
+        .flags = static_cast<VkGeometryInstanceFlagsKHR>(vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable),
+        .accelerationStructureReference = blas_.getStorageBuffer().deviceAddress,
+    };
+}
+
 bool Mesh::drawGUI() {
-    if (ImGui::CollapsingHeader("Mesh")) {
+    bool changed{false};
+    if (ImGui::CollapsingHeader("Mesh",ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Indent();
-        transform_.drawGUI();
+        changed = transform_.drawGUI();
         material_->drawGUI();
         ImGui::Unindent();
     }
 
-    return false;
+    if (changed) // change BLAS instance transformation matrix
+        updateBLASInstance();
+    return changed;
 }
 
 void Mesh::stage(const VkUtils::BufferAlloc& stagingBuffer) const {
@@ -99,81 +125,6 @@ void Mesh::initBLAS() {
 
     blas_ = AccelerationStructure( vk::AccelerationStructureTypeKHR::eBottomLevel,geometryData,maxPrimitiveCount);
 
-    /*//  specify the range of primitives to build the BLAS from (entire buffer in this case)
-    vk::AccelerationStructureBuildRangeInfoKHR buildRangeInfo{
-        .primitiveCount = maxPrimitiveCount,
-        .primitiveOffset = 0,
-        .firstVertex = 0,
-        .transformOffset = 0
-    };
-
-    //  each mesh is responsible for its own BLAS, TLAS is maintained by scene
-    vk::AccelerationStructureTypeKHR buildType = vk::AccelerationStructureTypeKHR::eBottomLevel;
-
-    //  setup build info (scratchData and dstAccelerationStructure are filled later)
-    vk::AccelerationStructureBuildGeometryInfoKHR buildInfo{
-        .type = buildType,
-        .flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace, // TODO: allow compaction later
-        .mode = vk::BuildAccelerationStructureModeKHR::eBuild,
-        .geometryCount = 1,
-        .pGeometries  = &geometryData,
-    };
-
-
-    //  get build size, setup buffer flags
-    auto buildSize = VkUtils::getDevice().getAccelerationStructureBuildSizesKHR(vk::AccelerationStructureBuildTypeKHR::eDevice,buildInfo,{maxPrimitiveCount});
-
-    // get the minimum scratch alignment
-    auto props = VkUtils::getPhysicalDevice().getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceAccelerationStructurePropertiesKHR>();
-    vk::DeviceAddress minimumScratchAlignment = props.get<vk::PhysicalDeviceAccelerationStructurePropertiesKHR>().minAccelerationStructureScratchOffsetAlignment;
-
-    // create blas and scratch buffers (blas buffer is a member)
-    blasStorageBuffer_ = VkUtils::createBufferVMA(buildSize.accelerationStructureSize,VkUtils::accelStructStorageFlags);
-    VkUtils::BufferAlloc blasScratchBuffer = VkUtils::createBufferVMA(buildSize.buildScratchSize, VkUtils::scratchBufferFlags, minimumScratchAlignment);
-    vk::DeviceAddress scratchBufferAddress = VkUtils::getDevice().getBufferAddress({.buffer =  blasScratchBuffer.buffer});
-
-
-    vk::AccelerationStructureCreateInfoKHR blasCreateInfo{
-        .buffer = blasStorageBuffer_.buffer,
-        .size = buildSize.accelerationStructureSize,
-        .type = buildType,
-    };
-
-    //  create the BLAS
-    blas_ = VkUtils::getDevice().createAccelerationStructureKHR(blasCreateInfo);
-
-    //  fill the remaining buildInfo data with scratch buffer and destination BLAS
-    buildInfo.scratchData = scratchBufferAddress;
-    buildInfo.dstAccelerationStructure = *blas_;
-
-
-    const vk::AccelerationStructureBuildRangeInfoKHR* pRangeInfos[] = { &buildRangeInfo };
-
-    // build the BLAS
-    auto cmdBuf = VkUtils::beginSingleTimeCommand();
-    //cmdBuf.buildAccelerationStructuresKHR(h,p);
-    cmdBuf.buildAccelerationStructuresKHR(buildInfo, pRangeInfos);
-    VkUtils::endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
-
-
-    VkUtils::destroyBufferVMA(std::move(blasScratchBuffer));
-    */
-
     // setup instance
-    vk::TransformMatrixKHR transformMatrix{
-        .matrix = std::array{
-            std::array{1.0f,0.0f,0.0f,0.0f},
-            std::array{0.0f,1.0f,0.0f,0.0f},
-            std::array{0.0f,0.0f,1.0f,0.0f}
-        }
-    };
-
-    //  just one instance per mesh for now
-    blasInstance_ = vk::AccelerationStructureInstanceKHR{
-        .transform = transformMatrix,
-        .instanceCustomIndex = getCID(),
-        .mask = 0xFF,
-        .flags = static_cast<VkGeometryInstanceFlagsKHR>(vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable),
-        .accelerationStructureReference = blas_.getStorageBuffer().deviceAddress,
-    };
+    updateBLASInstance();
 }

@@ -21,6 +21,8 @@ public:
 
     ~Mesh() override;
 
+    void updateBLASInstance();
+
     bool drawGUI() override;
 
     void stage(const VkUtils::BufferAlloc& stagingBuffer) const;

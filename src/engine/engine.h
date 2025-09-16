@@ -43,6 +43,7 @@ public:
 
 
     [[nodiscard]] const vk::raii::PhysicalDevice& getPhysicalDevice() const { return physicalDevice; }
+    [[nodiscard]] float getDeltaTime() const {return deltaTime_;}
 
 private:
     friend class VkUtils;
@@ -229,5 +230,7 @@ private:
 
     float drawFrametime_{};
     float totalFrametime_{};
+    float deltaTime_{};
+    float oldTime_{};
     uint64_t frameCtr_{0};
 };

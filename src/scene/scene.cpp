@@ -28,7 +28,15 @@ bool Scene::drawGUI() {
 
         if (selectedObject_ != nullptr) {
             ImGui::Text(selectedObject_->getResourceName().c_str());
-            selectedObject_->drawGUI();
+
+            // rebuild the TLAS
+            // TODO: just update the instances, do not rebuild the TLAS vk object itself
+            if (selectedObject_->drawGUI())
+                initTLAS();
+        }
+
+        if (camera_ != nullptr) {
+            camera_->drawGUI();
         }
 
         ImGui::Unindent();

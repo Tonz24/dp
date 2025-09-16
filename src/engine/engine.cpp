@@ -740,7 +740,6 @@ void Engine::drawFrame() {
         framebufferResized_ = false;
         recreateSwapchain();
         return;
-
     }
 
     currentFrameIndex_ += 1;
@@ -752,17 +751,17 @@ void Engine::processInput() {
     glm::vec3 velocity{};
 
     if (glfwGetKey(window->getGlfwWindow(),GLFW_KEY_A) == GLFW_PRESS) {
-         velocity.x -= 1.0f;
+         velocity.x -= 1.0f * deltaTime_;
     }
     if (glfwGetKey(window->getGlfwWindow(),GLFW_KEY_D) == GLFW_PRESS) {
-        velocity.x += 1.0f;
+        velocity.x += 1.0f * deltaTime_;
     }
 
     if (glfwGetKey(window->getGlfwWindow(),GLFW_KEY_W) == GLFW_PRESS) {
-        velocity.z += 1.0f;
+        velocity.z += 1.0f * deltaTime_;
     }
     if (glfwGetKey(window->getGlfwWindow(),GLFW_KEY_S) == GLFW_PRESS) {
-        velocity.z -= 1.0f;
+        velocity.z -= 1.0f * deltaTime_;
     }
     if (window->getCursorMode() == Window::CursorMode::disabled)
         scene_->getCamera().updatePosition(velocity);
@@ -773,6 +772,9 @@ void Engine::mainLoop() {
 
     while(!glfwWindowShouldClose(window->getGlfwWindow())) {
         std::chrono::steady_clock::time_point frameStart = std::chrono::steady_clock::now();
+        float currentTime = glfwGetTime();
+        deltaTime_ = currentTime - oldTime_;
+        oldTime_ = currentTime;
 
         glfwPollEvents();
         processInput();
@@ -862,7 +864,6 @@ void Engine::recreateSwapchain() {
     cleanupSwapchain();
     initSwapchain();
     initImageViews();
-    //TODO: recreate g buffer
 }
 
 void Engine::cleanupSwapchain() {
