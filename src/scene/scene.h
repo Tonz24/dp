@@ -35,7 +35,7 @@ public:
 
 private:
 
-    void initDescriptorSet();
+    void initDescriptorSet() const;
     void initTLAS();
 
     std::vector<std::shared_ptr<Mesh>> meshes_{};

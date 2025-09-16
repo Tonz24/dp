@@ -150,3 +150,23 @@ void Renderer::initDescSetLayout() {
 
     isDescSetLayoutInit_ = true;
 }
+
+void Renderer::registerTextureBindless(const Texture& texture) {
+    for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
+        vk::DescriptorImageInfo imageInfo{
+            .sampler = texture.getVkSampler(),
+            .imageView = texture.getVkImageView(),
+            .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
+        };
+
+        vk::WriteDescriptorSet writeDescriptorSetBindless{
+            .dstSet = getDescSetFrame(i),
+            .dstBinding = 2,
+            .dstArrayElement = texture.getCID(),
+            .descriptorCount = 1,
+            .descriptorType = vk::DescriptorType::eCombinedImageSampler,
+            .pImageInfo = &imageInfo
+        };
+        VkUtils::getDevice().updateDescriptorSets(writeDescriptorSetBindless,{});
+    }
+}

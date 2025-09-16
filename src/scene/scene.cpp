@@ -37,28 +37,13 @@ bool Scene::drawGUI() {
     return false;
 }
 
-void Scene::initDescriptorSet() {
+void Scene::initDescriptorSet() const {
     if (sky_) {
         VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(sky_->getTotalSize(),vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingAllocFlagsVMA);
         sky_->stage(stagingBuffer);
         VkUtils::destroyBufferVMA(std::move(stagingBuffer));
 
-        vk::DescriptorImageInfo descInfo{
-            .sampler = sky_->getVkSampler(),
-            .imageView = sky_->getVkImageView(),
-            .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-        };
-
-        vk::WriteDescriptorSet writeDescriptorSet{
-            .dstSet = Renderer::getDescSetFrame(0),
-            .dstBinding = 2,
-            .dstArrayElement = sky_->getCID(),
-            .descriptorCount = 1,
-            .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-            .pImageInfo = &descInfo
-        };
-
-        VkUtils::getDevice().updateDescriptorSets(writeDescriptorSet,{});
+        Renderer::registerTextureBindless(*sky_);
     }
 }
 

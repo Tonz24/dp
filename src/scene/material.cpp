@@ -35,36 +35,12 @@ void Material::setTexture(std::shared_ptr<Texture> texture, TextureMapSlot slot)
 }
 
 void Material::recordDescriptorSet() const {
-
-    std::vector<vk::WriteDescriptorSet>  descriptorWritesBindless{};
-    std::vector<vk::DescriptorImageInfo> imageInfos;
-    imageInfos.reserve(textures_.size());
-    descriptorWritesBindless.reserve(textures_.size());
-
     auto dummy = TextureManager::getInstance()->getResource("dummy");
 
     for (uint32_t i = 0; i < textures_.size(); ++i) {
-
-        imageInfos.emplace_back(vk::DescriptorImageInfo{
-           .sampler = textures_[i] ? textures_[i]->getVkSampler() : dummy->getVkSampler(),
-           .imageView = textures_[i] ? textures_[i]->getVkImageView() : dummy->getVkImageView(),
-           .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-       });
-
-        if (textures_[i] != nullptr) {
-            vk::WriteDescriptorSet writeDescriptorSetBindless{
-                .dstSet = Renderer::getDescSetFrame(0),
-                .dstBinding = 2,
-                .dstArrayElement = textures_[i]->getCID(),
-                .descriptorCount = 1,
-                .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-                .pImageInfo = &imageInfos.back()
-            };
-            descriptorWritesBindless.emplace_back(writeDescriptorSetBindless);
-        }
-
+        const auto& texture = textures_[i] ? textures_[i] : dummy;
+        Renderer::registerTextureBindless(*texture);
     }
-   VkUtils::getDevice().updateDescriptorSets(descriptorWritesBindless,{});
 }
 
 void Material::updateUBO() const {

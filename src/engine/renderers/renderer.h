@@ -30,6 +30,8 @@ public:
 
     static void updateTLASDescriptor(const vk::raii::AccelerationStructureKHR& tlas);
 
+    static void registerTextureBindless(const Texture& texture);
+
 protected:
     Renderer() {
         if (!isDescSetLayoutInit_)
