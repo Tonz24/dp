@@ -156,7 +156,7 @@ void Renderer::registerTextureBindless(const Texture& texture) {
         vk::DescriptorImageInfo imageInfo{
             .sampler = texture.getVkSampler(),
             .imageView = texture.getVkImageView(),
-            .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
+            .imageLayout = texture.getSamplerLayout()
         };
 
         vk::WriteDescriptorSet writeDescriptorSetBindless{

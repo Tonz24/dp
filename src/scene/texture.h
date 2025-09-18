@@ -41,9 +41,15 @@ public:
 
     static std::shared_ptr<Texture> createDummy(std::string_view name,  const glm::vec<4, uint8_t>& color = {255, 0, 255, 255});
 
-    uint32_t getTotalSize() const {return data_.size() * sizeof(data_[0]);}
-    void stage(const VkUtils::BufferAlloc& stagingBuffer) const;
-    void generateMipmaps() const;
+    [[nodiscard]] uint32_t getTotalSize() const {return data_.size() * sizeof(data_[0]);}
+    void stage(const VkUtils::BufferAlloc& stagingBuffer);
+    void generateMipmaps();
+
+    void transitionLayout(vk::ImageLayout newLayout, vk::PipelineStageFlags2 stage, vk::AccessFlags2 accessFlags, vk::raii::CommandBuffer& cmdBuf, const VkUtils::TransitionMipInfo&
+                          mipInfo = {0,1});
+
+    [[nodiscard]] vk::ImageLayout getImageLayout() const { return imageLayout_; }
+    [[nodiscard]] vk::ImageLayout getSamplerLayout() const { return samplerLayout_; }
 
 private:
 
@@ -74,4 +80,11 @@ private:
     uint32_t mipLevelCount_{1};
 
     vk::ImageUsageFlags imageUsageFlags_{};
+    vk::ImageAspectFlags aspectFlags_{vk::ImageAspectFlagBits::eNone};
+
+    vk::ImageLayout samplerLayout_{vk::ImageLayout::eReadOnlyOptimal};
+
+    std::vector<vk::ImageLayout> mipLayouts_{};
+    std::vector<vk::PipelineStageFlags2> mipStageMasks_{};
+    std::vector<vk::AccessFlags2> mipAccessMasks_{};
 };

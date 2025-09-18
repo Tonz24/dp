@@ -17,7 +17,6 @@ public:
     void transitionToFill(vk::raii::CommandBuffer& cmdBuf) const;
     void transitionToShade(vk::raii::CommandBuffer& cmdBuf) const;
     void transitionToBlit(vk::raii::CommandBuffer& cmdBuf) const;
-    void transitionResetTarget(vk::raii::CommandBuffer& cmdBuf) const;
 
     ~GBuffer() override = default;
 
@@ -101,7 +100,7 @@ private:
 
     std::vector<std::shared_ptr<Texture>> textures_{};
 
-    void recordDescriptorSet();
+    void recordDescriptorSet() const;
     void createTextures(const std::string& prefix, uint32_t width,uint32_t height);
 };
 

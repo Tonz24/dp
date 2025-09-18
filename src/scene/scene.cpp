@@ -33,6 +33,7 @@ bool Scene::drawGUI() {
             // TODO: just update the instances, do not rebuild the TLAS vk object itself
             if (selectedObject_->drawGUI())
                 initTLAS();
+                int h = 1;
         }
 
         if (camera_ != nullptr) {

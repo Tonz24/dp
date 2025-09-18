@@ -78,6 +78,8 @@ void DeferredRenderer::recordCommandBuffer(const Scene& scene, vk::raii::Command
     cmdBuf.reset();
     cmdBuf.begin({.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
 
+    gBuffer_->transitionToFill(cmdBuf);
+
     //  g buffer fill and sky pass
     recordSkyCommands(scene,cmdBuf,frameInFlightIndex);
     recordSceneCommands(scene,cmdBuf,frameInFlightIndex);
@@ -86,8 +88,6 @@ void DeferredRenderer::recordCommandBuffer(const Scene& scene, vk::raii::Command
     gBuffer_->transitionToShade(cmdBuf);
 
     recordGBufferShadeCommands(scene,cmdBuf,frameInFlightIndex);
-
-    gBuffer_->transitionToFill(cmdBuf);
 
     //  transition g buffer target to blit
     gBuffer_->transitionToBlit(cmdBuf);
@@ -109,9 +109,6 @@ void DeferredRenderer::recordCommandBuffer(const Scene& scene, vk::raii::Command
                     {swapchainExtent.width,swapchainExtent.height},
                     vk::ImageAspectFlagBits::eColor,
                     vk::Filter::eNearest);
-
-    // transition g buffer target to color attachment (preparation for the next frame)
-    gBuffer_->transitionResetTarget(cmdBuf);
 
 
     //  transition swapchain image into color attachment optimal for gui write

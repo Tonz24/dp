@@ -36,7 +36,6 @@ Texture::Texture(uint32_t width, uint32_t height, vk::Format format, vk::ImageUs
 }
 
 void Texture::initVkImage() {
-
     vk::ImageCreateInfo imageInfo{
         .imageType = vk::ImageType::e2D,
         .format = vkFormat_,
@@ -56,9 +55,11 @@ void Texture::initVkImage() {
 
     imageAlloc_ = VkUtils::createImageVMA(imageInfo);
 
-    vk::ImageAspectFlags aspectFlags{vk::ImageAspectFlagBits::eColor};
-    if (imageUsageFlags_ & vk::ImageUsageFlagBits::eDepthStencilAttachment)
-        aspectFlags = vk::ImageAspectFlagBits::eDepth;
+    aspectFlags_ = vk::ImageAspectFlagBits::eColor;
+    if (imageUsageFlags_ & vk::ImageUsageFlagBits::eDepthStencilAttachment) {
+        aspectFlags_ = vk::ImageAspectFlagBits::eDepth;
+        samplerLayout_ = vk::ImageLayout::eDepthReadOnlyOptimal;
+    }
 
     vk::ImageViewCreateInfo imageViewCreateInfo{
         .flags = vk::ImageViewCreateFlags(),
@@ -72,7 +73,7 @@ void Texture::initVkImage() {
             .a = vk::ComponentSwizzle::eIdentity,
         },
         .subresourceRange = vk::ImageSubresourceRange{
-            .aspectMask = aspectFlags,
+            .aspectMask = aspectFlags_,
             .baseMipLevel = 0,
             .levelCount = mipLevelCount_,
             .baseArrayLayer = 0,
@@ -106,6 +107,11 @@ void Texture::initVkImage() {
         .unnormalizedCoordinates = vk::False
     };
     vkSampler_ = vk::raii::Sampler(device,samplerInfo);
+
+
+    mipLayouts_ = std::vector(mipLevelCount_,vk::ImageLayout::eUndefined);
+    mipStageMasks_ = std::vector(mipLevelCount_,vk::PipelineStageFlags2{vk::PipelineStageFlagBits2::eTopOfPipe});
+    mipAccessMasks_ = std::vector(mipLevelCount_,vk::AccessFlags2{vk::AccessFlagBits2::eNone});
 }
 
 
@@ -181,7 +187,7 @@ std::string Texture::getResourceType() const {
     return "Texture";
 }
 
-void Texture::stage(const VkUtils::BufferAlloc& stagingBuffer) const {
+void Texture::stage(const VkUtils::BufferAlloc& stagingBuffer) {
 
     if (stagingBuffer.allocationInfo.pMappedData == nullptr)
         throw std::runtime_error("ERROR: Mapped pointer points to NULL!");
@@ -191,53 +197,26 @@ void Texture::stage(const VkUtils::BufferAlloc& stagingBuffer) const {
     memcpy(stagingBuffer.allocationInfo.pMappedData,data_.data(),imageSize);
 
     auto cmdBuf = VkUtils::beginSingleTimeCommand();
-    VkUtils::transitionImageLayout(
-                                   imageAlloc_.image,
-                                   vk::ImageLayout::eUndefined,
-                                   vk::ImageLayout::eTransferDstOptimal,
-                                   vk::PipelineStageFlagBits2::eTopOfPipe,
-                                   vk::AccessFlagBits2::eNone,
-                                   vk::PipelineStageFlagBits2::eTransfer,
-                                   vk::AccessFlagBits2::eTransferWrite,
-                                   vk::ImageAspectFlagBits::eColor,
-                                   cmdBuf, {0,mipLevelCount_});
+
+    transitionLayout(vk::ImageLayout::eTransferDstOptimal,vk::PipelineStageFlagBits2::eTransfer,vk::AccessFlagBits2::eTransferWrite,cmdBuf, {0,mipLevelCount_});
 
     VkUtils::copyBufferToImage(stagingBuffer,imageAlloc_,width_,height_, cmdBuf);
 
-    VkUtils::transitionImageLayout(
-                                   imageAlloc_.image,
-                                   vk::ImageLayout::eTransferDstOptimal,
-                                   vk::ImageLayout::eShaderReadOnlyOptimal,
-                                   vk::PipelineStageFlagBits2::eTransfer,
-                                   vk::AccessFlagBits2::eTransferWrite,
-                                   vk::PipelineStageFlagBits2::eFragmentShader,
-                                   vk::AccessFlagBits2::eShaderRead,
-                                   vk::ImageAspectFlagBits::eColor,
-                                   cmdBuf, {0,mipLevelCount_});
+    transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eFragmentShader,vk::AccessFlagBits2::eShaderRead,cmdBuf, {0,mipLevelCount_});
 
     VkUtils::endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
-
     generateMipmaps();
 }
 
-void Texture::generateMipmaps() const {
+void Texture::generateMipmaps() {
 
     if (mipLevelCount_ == 1)
         return;
 
     auto cmdBuf = VkUtils::beginSingleTimeCommand();
 
-    //  transition every mip level to transfer dst optimal, then in the loop, transition appropriate ones to src optimal
-    VkUtils::transitionImageLayout(imageAlloc_.image,
-                                  vk::ImageLayout::eShaderReadOnlyOptimal,
-                                  vk::ImageLayout::eTransferDstOptimal,
-                                  vk::PipelineStageFlagBits2::eFragmentShader,
-                                  vk::AccessFlagBits2::eShaderRead,
-                                  vk::PipelineStageFlagBits2::eTransfer,
-                                  vk::AccessFlagBits2::eTransferWrite,
-                                  vk::ImageAspectFlagBits::eColor,
-                                  cmdBuf,
-                                  {0,mipLevelCount_});
+    //  transition all mip levels to transfer dst optimal, then in the loop, transition appropriate ones to src optimal
+    transitionLayout(vk::ImageLayout::eTransferDstOptimal,vk::PipelineStageFlagBits2::eTransfer,vk::AccessFlagBits2::eTransferWrite,cmdBuf,{0,mipLevelCount_});
 
     int mipWidth = width_;
     int mipHeight = height_;
@@ -245,19 +224,10 @@ void Texture::generateMipmaps() const {
 
     // index i is the dst mip level, i-1 is the src mip level
     for (uint32_t i = 1; i < mipLevelCount_; ++i) {
+        uint32_t srcMipLevel = i-1;
 
         // transition src mip level to transfer src optimal
-        VkUtils::transitionImageLayout(imageAlloc_.image,
-                                 vk::ImageLayout::eTransferDstOptimal,
-                                 vk::ImageLayout::eTransferSrcOptimal,
-                                 vk::PipelineStageFlagBits2::eTransfer,
-                                 vk::AccessFlagBits2::eTransferWrite,
-                                 vk::PipelineStageFlagBits2::eTransfer,
-                                 vk::AccessFlagBits2::eTransferRead,
-                                 vk::ImageAspectFlagBits::eColor,
-                                 cmdBuf,
-                                 {i-1,1});
-
+        transitionLayout(vk::ImageLayout::eTransferSrcOptimal,vk::PipelineStageFlagBits2::eTransfer,vk::AccessFlagBits2::eTransferRead,cmdBuf,{srcMipLevel,1});
 
         std::array srcOffsets{
             vk::Offset3D{.x = 0,.y = 0,.z = 0},
@@ -272,14 +242,14 @@ void Texture::generateMipmaps() const {
 
         vk::ImageBlit region{
             .srcSubresource = {
-                .aspectMask = vk::ImageAspectFlagBits::eColor,
-                .mipLevel = i - 1,
+                .aspectMask = aspectFlags_,
+                .mipLevel = srcMipLevel,
                 .baseArrayLayer = 0,
                 .layerCount = 1,
             },
             .srcOffsets = srcOffsets,
             .dstSubresource = {
-                .aspectMask = vk::ImageAspectFlagBits::eColor,
+                .aspectMask = aspectFlags_,
                 .mipLevel = i,
                 .baseArrayLayer = 0,
                 .layerCount = 1,
@@ -287,41 +257,54 @@ void Texture::generateMipmaps() const {
             .dstOffsets = dstOffsets
         };
 
-
         VkUtils::blit(cmdBuf,imageAlloc_.image,imageAlloc_.image,region,vk::Filter::eLinear);
-
 
         if (mipWidth > 1) mipWidth /= 2;
         if (mipHeight > 1) mipHeight /= 2;
 
         // transition src mip level back to shader read optimal
-        // the old layout is transfer dst optimal as this level is never used as input into a smaller mip level
-        VkUtils::transitionImageLayout(imageAlloc_.image,
-                                  vk::ImageLayout::eTransferSrcOptimal,
-                                  vk::ImageLayout::eShaderReadOnlyOptimal,
-                                  vk::PipelineStageFlagBits2::eTransfer,
-                                  vk::AccessFlagBits2::eTransferRead,
-                                  vk::PipelineStageFlagBits2::eFragmentShader,
-                                   vk::AccessFlagBits2::eShaderRead,
-                                  vk::ImageAspectFlagBits::eColor,
-                                  cmdBuf,
-                                  {i-1,1});
+        transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eFragmentShader,vk::AccessFlagBits2::eShaderRead,cmdBuf,{srcMipLevel,1});
     }
 
     // transition the last mip level back to shader read optimal, since it is not included in the loop
-    VkUtils::transitionImageLayout(imageAlloc_.image,
-                              vk::ImageLayout::eTransferDstOptimal,
-                              vk::ImageLayout::eShaderReadOnlyOptimal,
-                              vk::PipelineStageFlagBits2::eTransfer,
-                              vk::AccessFlagBits2::eTransferWrite,
-                              vk::PipelineStageFlagBits2::eFragmentShader,
-                               vk::AccessFlagBits2::eShaderRead,
-                              vk::ImageAspectFlagBits::eColor,
-                              cmdBuf,
-                              {mipLevelCount_-1,1});
-
+    transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eFragmentShader,vk::AccessFlagBits2::eShaderRead,cmdBuf,{mipLevelCount_-1,1});
 
     VkUtils::endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
+}
+
+void Texture::transitionLayout(vk::ImageLayout newLayout, vk::PipelineStageFlags2 stage, vk::AccessFlags2 accessFlags,
+                               vk::raii::CommandBuffer& cmdBuf, const VkUtils::TransitionMipInfo& mipInfo) {
+
+    if (mipInfo.baseLevel + mipInfo.levelCount > mipLevelCount_)
+        throw std::exception("ERROR: trying to transition nonexistent mip level!");
+
+
+    for (uint32_t i = mipInfo.baseLevel; i < mipInfo.baseLevel + mipInfo.levelCount; ++i) {
+        VkUtils::transitionImageLayout(imageAlloc_.image,
+                                   mipLayouts_[i],
+                                   newLayout,
+                                   mipStageMasks_[i],
+                                   mipAccessMasks_[i],
+                                   stage,
+                                   accessFlags,
+                                   aspectFlags_,
+                                   cmdBuf,
+                                   {i,1});
+        mipLayouts_[i] = newLayout;
+        mipStageMasks_[i] = stage;
+        mipAccessMasks_[i] = accessFlags;
+    }
+
+    /*VkUtils::transitionImageLayout(imageAlloc_.image,
+                                   imageLayout_,
+                                   newLayout,
+                                   stageMask_,
+                                   accessMask_,
+                                   stage,
+                                   accessFlags,
+                                   aspectFlags_,
+                                   cmdBuf,
+                                   mipInfo);*/
 }
 
 
@@ -484,7 +467,6 @@ int Texture::chooseChannelCount(vk::Format format) {
             throw std::runtime_error("ERROR: Unsupported vk::Format in chooseChannelCount!");
     }
 }
-
 
 Texture::~Texture() {
     VkUtils::destroyImageVMA(std::move(imageAlloc_));
