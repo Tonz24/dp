@@ -61,10 +61,13 @@ bool Engine::drawGUI() {
 
         static constexpr std::array items{"G buffer debug","Naive path tracer","NEE path tracer","ReSTIR DI","ReSTIR GI"};
         if (ImGui::Combo("Renderer", &selectedRendererIndex_, items.data(), items.size())) {
-
+            if (selectedRendererIndex_ == 0)
+                selectedRenderer_ = rasterRenderer_.get();
+            if (selectedRendererIndex_ == 1)
+                selectedRenderer_ = rtRenderer_.get();
         }
 
-        if (renderer_)  renderer_->drawGUI();
+        if (selectedRenderer_)  selectedRenderer_->drawGUI();
         if (scene_)     scene_->drawGUI();
         ImGui::Unindent();
     }
@@ -76,13 +79,11 @@ bool Engine::drawGUI() {
         ImGui::Text(("FPS: " + std::to_string(1000.0f / totalFrametime_)).c_str());
         ImGui::Separator();
         ImGui::Text(("Swapchain dimensions: " + std::to_string(swapChainExtent.width) + "x" + std::to_string(swapChainExtent.height)).c_str());
-        auto renderDims = renderer_->getRenderDimensions();
+        auto renderDims = selectedRenderer_->getRenderDimensions();
         ImGui::Text(("Render dimensions: " + std::to_string(renderDims.x) + "x" + std::to_string(renderDims.y)).c_str());
 
         ImGui::Unindent();
     }
-
-
 
     return false;
 }
@@ -199,8 +200,9 @@ void Engine::initVulkan() {
     idMapTransferBuffer_ = VkUtils::createBufferVMA(sizeof(uint32_t),vk::BufferUsageFlagBits::eTransferDst, allocationCreateFlags);
 
     gBuffer_ = GBufferManager::getInstance()->registerResource("gbuffer_test",1280,720);
-    renderer_ = std::make_shared<DeferredRenderer>(gBuffer_);
+    rasterRenderer_ = std::make_shared<DeferredRenderer>(gBuffer_);
     rtRenderer_ = std::make_shared<RaytracingRenderer>(gBuffer_);
+    selectedRenderer_ = rasterRenderer_.get();
 }
 
 void Engine::initVulkanInstance() {
@@ -700,7 +702,7 @@ void Engine::drawFrame() {
     //  record command buffer for this frame
     vk::raii::CommandBuffer& cmdBuf = commandBuffers_[frameInFlightIndex_];
 
-    renderer_->render(*scene_,cmdBuf,frameInFlightIndex_,swapChainImages[imageIndex],swapChainImageViews[imageIndex],swapChainExtent);
+    selectedRenderer_->render(*scene_,cmdBuf,frameInFlightIndex_,swapChainImages[imageIndex],swapChainImageViews[imageIndex],swapChainExtent);
 
     //  set up the submit info for drawing
     //  set up the wait stage mask as color attachment output
@@ -803,7 +805,7 @@ void Engine::cleanup() {
 
     VkUtils::destroyBufferVMA(std::move(idMapTransferBuffer_));
 
-    renderer_.reset();
+    rasterRenderer_.reset();
     rtRenderer_.reset();
     Renderer::destroy();
 
@@ -861,7 +863,7 @@ void Engine::recreateSwapchain() {
 
     device_.waitIdle();
 
-    renderer_->resizeScreen(width,height);
+    selectedRenderer_->resizeScreen(width,height);
     cleanupSwapchain();
     initSwapchain();
     initImageViews();
@@ -881,12 +883,12 @@ void Engine::configureVkUtils() const {
 void Engine::updateUBOs() {
 
     if (dirtyCameraUBO_) {
-        memcpy(renderer_->getCamUBOsMapped(frameInFlightIndex_),&cameraUBOStorage_,sizeof(cameraUBOStorage_));
+        memcpy(selectedRenderer_->getCamUBOsMapped(frameInFlightIndex_),&cameraUBOStorage_,sizeof(cameraUBOStorage_));
         dirtyCameraUBO_ = false;
     }
 
     if (dirtyMaterialUBO_) {
-        uint8_t* dst = renderer_->getMatUBOsMapped(frameInFlightIndex_) + materialUpdateIndex_ * sizeof(materialUBOStorage_);
+        uint8_t* dst = selectedRenderer_->getMatUBOsMapped(frameInFlightIndex_) + materialUpdateIndex_ * sizeof(materialUBOStorage_);
         memcpy(dst, &materialUBOStorage_,sizeof(materialUBOStorage_));
         dirtyMaterialUBO_ = false;
     }
