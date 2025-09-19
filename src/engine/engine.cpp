@@ -699,7 +699,6 @@ void Engine::drawFrame() {
     //  record command buffer for this frame
     vk::raii::CommandBuffer& cmdBuf = commandBuffers_[frameInFlightIndex_];
 
-    //recordCommandBuffer(imageIndex, frameInFlightIndex_, cmdBuf);
     renderer_->render(*scene_,cmdBuf,frameInFlightIndex_,swapChainImages[imageIndex],swapChainImageViews[imageIndex],swapChainExtent);
 
     //  set up the submit info for drawing

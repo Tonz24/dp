@@ -7,11 +7,11 @@
 #include "../../scene/Vertex.h"
 
 
-GraphicsPipeline::GraphicsPipeline(std::string_view vShaderPath, std::string_view fShaderPath,
+GraphicsPipeline::GraphicsPipeline(const std::vector<ShaderStageInfo>& shaderInfos,
                                    std::span<const vk::DescriptorSetLayout> descriptorSetLayouts,  std::span<const vk::PushConstantRange> pcsRange,
                                    std::span<const vk::Format> colorAttachmentFormats, bool hasVertexLayout, vk::Format depthFormat)
 {
-    initShaders(vShaderPath,fShaderPath);
+    initShaderStages(shaderInfos);
 
     vk::PipelineLayoutCreateInfo pipelineLayoutInfo{
         .setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size()),
@@ -32,11 +32,9 @@ GraphicsPipeline::GraphicsPipeline(std::string_view vShaderPath, std::string_vie
         .stencilTestEnable = vk::False,
     };
 
-
-    colorFormatsCopy_.assign(colorAttachmentFormats.begin(), colorAttachmentFormats.end());
     pipelineRenderingCreateInfo_ = vk::PipelineRenderingCreateInfo{
-        .colorAttachmentCount = static_cast<uint32_t>(colorFormatsCopy_.size()),
-        .pColorAttachmentFormats = colorFormatsCopy_.data(),
+        .colorAttachmentCount = static_cast<uint32_t>(colorAttachmentFormats.size()),
+        .pColorAttachmentFormats = colorAttachmentFormats.data(),
         .depthAttachmentFormat = depthFormat
     };
 

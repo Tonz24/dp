@@ -68,6 +68,8 @@ add_executable(dp
         src/engine/constants.h
         src/engine/vk/accelerationStructure.cpp
         src/engine/vk/accelerationStructure.h
+        src/engine/vk/raytracingPipeline.cpp
+        src/engine/vk/raytracingPipeline.h
 )
 
 # add shader compilation as a build step

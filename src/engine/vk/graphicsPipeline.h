@@ -11,7 +11,12 @@
 
 class GraphicsPipeline {
 public:
-    GraphicsPipeline(std::string_view vShaderPath, std::string_view fShaderPath, std::span<const vk::DescriptorSetLayout> descriptorSetLayouts,
+    struct ShaderStageInfo {
+        std::string_view shaderPath{};
+        vk::ShaderStageFlagBits stage{};
+    };
+
+    GraphicsPipeline(const std::vector<ShaderStageInfo>& shaderInfos, std::span<const vk::DescriptorSetLayout> descriptorSetLayouts,
                      std::span<const vk::PushConstantRange> pcsRange, std::span<const vk::Format> colorAttachmentFormats, bool hasVertexLayout,
                      vk::Format depthFormat = vk::Format::eUndefined);
 
@@ -20,44 +25,37 @@ public:
     [[nodiscard]] const vk::raii::Pipeline& getGraphicsPipeline() const { return graphicsPipeline_; }
     [[nodiscard]] const vk::raii::PipelineLayout& getPipelineLayout() const { return pipelineLayout_; }
 
-private:
-    vk::raii::ShaderModule vShaderModule_{nullptr};
-    vk::raii::ShaderModule fShaderModule_{nullptr};
-
-    vk::raii::Pipeline graphicsPipeline_{nullptr};
-    vk::raii::PipelineLayout pipelineLayout_{nullptr};
-    vk::PipelineRenderingCreateInfo pipelineRenderingCreateInfo_{};
-    std::array<vk::PipelineShaderStageCreateInfo,2> shaderStages_{};
-
-    std::vector<vk::Format> colorFormatsCopy_{};
-
-    void initShaders(std::string_view vShaderPath, std::string_view fShaderPath) {
-        auto vertexShaderCode = Utils::readFile(vShaderPath);
-        auto fragmentShaderCode = Utils::readFile(fShaderPath);
-
-        vShaderModule_ = createShaderModule(vertexShaderCode);
-        fShaderModule_ = createShaderModule(fragmentShaderCode);
-
-        shaderStages_ = {
-            vk::PipelineShaderStageCreateInfo{// vertex shader comes first
-                .stage = vk::ShaderStageFlagBits::eVertex,
-                .module = vShaderModule_,
-                .pName = "main"
-            },
-            vk::PipelineShaderStageCreateInfo{// followed by the fragment shader
-                .stage = vk::ShaderStageFlagBits::eFragment,
-                .module = fShaderModule_,
-                .pName = "main"
-            }
-        };
-    }
-
     static vk::raii::ShaderModule createShaderModule(const std::vector<char> &code) {
         vk::ShaderModuleCreateInfo createInfo{
             .codeSize = code.size() * sizeof(char),
             .pCode = reinterpret_cast<const uint32_t*>(code.data())
         };
         return vk::raii::ShaderModule{VkUtils::getDevice(), createInfo};
+    }
+
+protected:
+
+    std::vector<vk::raii::ShaderModule> shaderModules_{};
+
+    vk::raii::Pipeline graphicsPipeline_{nullptr};
+    vk::raii::PipelineLayout pipelineLayout_{nullptr};
+    vk::PipelineRenderingCreateInfo pipelineRenderingCreateInfo_{};
+    std::vector<vk::PipelineShaderStageCreateInfo> shaderStages_{};
+
+    void initShaderStages(const std::vector<ShaderStageInfo>& shaderInfos) {
+
+        for (const auto & shaderInfo : shaderInfos) {
+            auto code = Utils::readFile(shaderInfo.shaderPath);
+
+            shaderModules_.emplace_back(createShaderModule(code));
+
+            vk::PipelineShaderStageCreateInfo createInfo{
+                .stage = shaderInfo.stage,
+                .module = shaderModules_.back(),
+                .pName = "main"
+            };
+            shaderStages_.emplace_back(createInfo);
+        }
     }
 
     static constexpr std::array dynamicStates = {
