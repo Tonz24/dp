@@ -200,6 +200,7 @@ void Engine::initVulkan() {
 
     gBuffer_ = GBufferManager::getInstance()->registerResource("gbuffer_test",1280,720);
     renderer_ = std::make_shared<DeferredRenderer>(gBuffer_);
+    rtRenderer_ = std::make_shared<RaytracingRenderer>(gBuffer_);
 }
 
 void Engine::initVulkanInstance() {
@@ -378,12 +379,12 @@ void Engine::initLogicalDevice() {
         vk::PhysicalDeviceRayQueryFeaturesKHR
         >
             featureChain {
-                {.features = {.samplerAnisotropy = vk::True}}, // vk::PhysicalDeviceFeatures2 (empty for now)
-                {.bufferDeviceAddress = vk::True},
-                {.synchronization2 = vk::True, .dynamicRendering = vk::True},      // Enable dynamic rendering from Vulkan 1.3
+                {.features = {.samplerAnisotropy = vk::True,}}, // vk::PhysicalDeviceFeatures2 (empty for now)
+                {.storageBuffer8BitAccess = vk::True, .timelineSemaphore = vk::True,  .bufferDeviceAddress = vk::True,  .vulkanMemoryModel = vk::True,  .vulkanMemoryModelDeviceScope = vk::True, },
+                {.shaderDemoteToHelperInvocation =  vk::True, .synchronization2 = vk::True, .dynamicRendering = vk::True,},      // Enable dynamic rendering from Vulkan 1.3
                 {.extendedDynamicState = vk::True }, // Enable extended dynamic state from the extension_
-                {},
-                {.accelerationStructure = true},
+                {.rayTracingPipeline = vk::True},
+                {.accelerationStructure = vk::True},
                 {},
                 {},
                 {.rayQuery = vk::True}
@@ -803,6 +804,7 @@ void Engine::cleanup() {
     VkUtils::destroyBufferVMA(std::move(idMapTransferBuffer_));
 
     renderer_.reset();
+    rtRenderer_.reset();
     Renderer::destroy();
 
     VkUtils::destroy();

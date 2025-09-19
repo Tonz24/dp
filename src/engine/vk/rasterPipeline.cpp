@@ -9,18 +9,9 @@
 
 RasterPipeline::RasterPipeline(const std::vector<ShaderStageInfo>& shaderInfos,
                                    std::span<const vk::DescriptorSetLayout> descriptorSetLayouts,  std::span<const vk::PushConstantRange> pcsRange,
-                                   std::span<const vk::Format> colorAttachmentFormats, bool hasVertexLayout, vk::Format depthFormat) : GraphicsPipeline()
+                                   std::span<const vk::Format> colorAttachmentFormats, bool hasVertexLayout, vk::Format depthFormat) : GraphicsPipeline(descriptorSetLayouts, pcsRange)
 {
     initShaderStages(shaderInfos);
-
-    vk::PipelineLayoutCreateInfo pipelineLayoutInfo{
-        .setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size()),
-        .pSetLayouts =  descriptorSetLayouts.data(),
-        .pushConstantRangeCount = static_cast<uint32_t>(pcsRange.size()),
-        .pPushConstantRanges = pcsRange.data()
-    };
-
-    pipelineLayout_ = vk::raii::PipelineLayout( VkUtils::getDevice(), pipelineLayoutInfo );
 
     vk::Bool32 depthTestEnable = depthFormat == vk::Format::eUndefined ? vk::False : vk::True;
 
@@ -87,5 +78,5 @@ RasterPipeline::RasterPipeline(const std::vector<ShaderStageInfo>& shaderInfos,
         .basePipelineHandle = nullptr,
         .basePipelineIndex = -1,
     };
-    graphicsPipeline_ = vk::raii::Pipeline(VkUtils::getDevice(), nullptr, pipelineInfo);
+    pipeline_ = vk::raii::Pipeline(VkUtils::getDevice(), nullptr, pipelineInfo);
 }

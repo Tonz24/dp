@@ -14,14 +14,15 @@ public:
     };
 
     GraphicsPipeline() = default;
+    GraphicsPipeline(std::span<const vk::DescriptorSetLayout> descriptorSetLayouts, std::span<const vk::PushConstantRange> pcsRange);
 
-    [[nodiscard]] const vk::raii::Pipeline& getGraphicsPipeline() const { return graphicsPipeline_; }
+    [[nodiscard]] const vk::raii::Pipeline& getGraphicsPipeline() const { return pipeline_; }
     [[nodiscard]] const vk::raii::PipelineLayout& getPipelineLayout() const { return pipelineLayout_; }
 
 protected:
     std::vector<vk::raii::ShaderModule> shaderModules_{};
 
-    vk::raii::Pipeline graphicsPipeline_{nullptr};
+    vk::raii::Pipeline pipeline_{nullptr};
     vk::raii::PipelineLayout pipelineLayout_{nullptr};
     vk::PipelineRenderingCreateInfo pipelineRenderingCreateInfo_{};
     std::vector<vk::PipelineShaderStageCreateInfo> shaderStages_{};

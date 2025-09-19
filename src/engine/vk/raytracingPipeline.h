@@ -5,12 +5,16 @@
 #pragma once
 #include "graphicsPipeline.h"
 
-
+// https://nvpro-samples.github.io/vk_raytracing_tutorial_KHR/#raytracingpipeline
 class RaytracingPipeline : public GraphicsPipeline{
 public:
     RaytracingPipeline(const std::vector<ShaderStageInfo>& shaderInfos, const std::span<const vk::DescriptorSetLayout>& descriptorSetLayouts,
-        const std::span<const vk::PushConstantRange>& pcsRange, const std::span<const vk::Format>& colorAttachmentFormats, bool hasVertexLayout,
-        vk::Format depthFormat);
+        const std::span<const vk::PushConstantRange>& pcsRange);
 
     RaytracingPipeline() = default;
+
+private:
+    std::vector<vk::RayTracingShaderGroupCreateInfoKHR> shaderGroups_{};
+
+    void initShaderGroups(const std::vector<ShaderStageInfo>& shaderInfos);
 };

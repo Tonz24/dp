@@ -28,6 +28,7 @@ else()
     set(SHADER_COMPILE_FLAGS "-O")
 endif ()
 
+set(TARGET_ENV "--target-env=vulkan1.3")
 set(SHADER_SPV_FILES "")
 foreach (SHADER_SRC ${SHADER_SOURCE_FILES})
 
@@ -41,7 +42,7 @@ foreach (SHADER_SRC ${SHADER_SOURCE_FILES})
 
     add_custom_command(
             OUTPUT ${SHADER_SPV}
-            COMMAND ${GLSLC_COMPILER} ${SHADER_COMPILE_FLAGS} ${SHADER_SRC} -o ${SHADER_SPV}
+            COMMAND ${GLSLC_COMPILER} ${TARGET_ENV} ${SHADER_COMPILE_FLAGS} ${SHADER_SRC} -o ${SHADER_SPV}
             DEPENDS ${SHADER_SRC}
             COMMENT "Compiling ${SHADER_SRC} to ${SHADER_SPV} with flags ${SHADER_COMPILE_FLAGS}"
             VERBATIM

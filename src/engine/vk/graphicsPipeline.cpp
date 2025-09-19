@@ -3,6 +3,17 @@
 //
 
 #include "graphicsPipeline.h"
+GraphicsPipeline::GraphicsPipeline(std::span<const vk::DescriptorSetLayout> descriptorSetLayouts,std::span<const vk::PushConstantRange> pcsRange) {
+    vk::PipelineLayoutCreateInfo pipelineLayoutInfo{
+        .setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size()),
+        .pSetLayouts =  descriptorSetLayouts.data(),
+        .pushConstantRangeCount = static_cast<uint32_t>(pcsRange.size()),
+        .pPushConstantRanges = pcsRange.data()
+    };
+
+    pipelineLayout_ = vk::raii::PipelineLayout( VkUtils::getDevice(), pipelineLayoutInfo );
+}
+
 void GraphicsPipeline::initShaderStages(const std::vector<ShaderStageInfo>& shaderInfos) {
 
     for (const auto & shaderInfo : shaderInfos) {

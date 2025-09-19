@@ -14,11 +14,9 @@ public:
     void render(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage,
         const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) override;
 
-    explicit RaytracingRenderer(const std::shared_ptr<GBuffer>& gBuffer)
-        : DeferredRenderer(gBuffer) {}
+    explicit RaytracingRenderer(const std::shared_ptr<GBuffer>& gBuffer);
 
-    explicit RaytracingRenderer(const std::string_view& gBufferName)
-        : DeferredRenderer(gBufferName) {}
+    explicit RaytracingRenderer(const std::string_view& gBufferName);
 
 protected:
     void initGraphicsPipelines();
@@ -27,5 +25,5 @@ protected:
                              const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) override;
 
 
-    RaytracingPipeline rtPipeline_{};
+    RaytracingPipeline rtPipeline_;
 };

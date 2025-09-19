@@ -17,6 +17,7 @@
 #include "../scene/mesh.h"
 #include "../scene/scene.h"
 #include "renderers/deferredRenderer.h"
+#include "renderers/raytracingRenderer.h"
 #include "vk/rasterPipeline.h"
 
 class Engine : public IDrawGui {
@@ -227,6 +228,7 @@ private:
 
     int selectedRendererIndex_{0};
     std::shared_ptr<DeferredRenderer> renderer_{};
+    std::shared_ptr<RaytracingRenderer> rtRenderer_{};
 
     float drawFrametime_{};
     float totalFrametime_{};
