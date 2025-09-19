@@ -7,7 +7,6 @@
 
 #include "Vertex.h"
 #include "../engine/engine.h"
-#include "../engine/utils.h"
 #include "../engine/managers/resourceManager.h"
 
 std::shared_ptr<Texture> Texture::createDummy(std::string_view name,  const glm::vec<4, uint8_t>& color) {
@@ -218,13 +217,13 @@ void Texture::generateMipmaps() {
     //  transition all mip levels to transfer dst optimal, then in the loop, transition appropriate ones to src optimal
     transitionLayout(vk::ImageLayout::eTransferDstOptimal,vk::PipelineStageFlagBits2::eTransfer,vk::AccessFlagBits2::eTransferWrite,cmdBuf,{0,mipLevelCount_});
 
-    int mipWidth = width_;
-    int mipHeight = height_;
+    //  cast to int here (VkOffset3D expects ints)
+    int mipWidth = static_cast<int>(width_);
+    int mipHeight = static_cast<int>(height_);
 
 
-    // index i is the dst mip level, i-1 is the src mip level
-    for (uint32_t i = 1; i < mipLevelCount_; ++i) {
-        uint32_t srcMipLevel = i-1;
+    for (uint32_t dstMipLevel = 1; dstMipLevel < mipLevelCount_; ++dstMipLevel) {
+        uint32_t srcMipLevel = dstMipLevel-1;
 
         // transition src mip level to transfer src optimal
         transitionLayout(vk::ImageLayout::eTransferSrcOptimal,vk::PipelineStageFlagBits2::eTransfer,vk::AccessFlagBits2::eTransferRead,cmdBuf,{srcMipLevel,1});
@@ -250,7 +249,7 @@ void Texture::generateMipmaps() {
             .srcOffsets = srcOffsets,
             .dstSubresource = {
                 .aspectMask = aspectFlags_,
-                .mipLevel = i,
+                .mipLevel = dstMipLevel,
                 .baseArrayLayer = 0,
                 .layerCount = 1,
             },
@@ -294,17 +293,6 @@ void Texture::transitionLayout(vk::ImageLayout newLayout, vk::PipelineStageFlags
         mipStageMasks_[i] = stage;
         mipAccessMasks_[i] = accessFlags;
     }
-
-    /*VkUtils::transitionImageLayout(imageAlloc_.image,
-                                   imageLayout_,
-                                   newLayout,
-                                   stageMask_,
-                                   accessMask_,
-                                   stage,
-                                   accessFlags,
-                                   aspectFlags_,
-                                   cmdBuf,
-                                   mipInfo);*/
 }
 
 

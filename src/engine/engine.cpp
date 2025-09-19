@@ -910,31 +910,11 @@ void Engine::clickSceneObject(const glm::vec<2,double>& cursorPos) const {
 
     auto cmdBuf = VkUtils::beginSingleTimeCommand();
 
-    const auto& idMap = gBuffer_->getObjectIdMap();
+    gBuffer_->getObjectIdMap().transitionLayout(vk::ImageLayout::eTransferSrcOptimal,vk::PipelineStageFlagBits2::eTransfer,vk::AccessFlagBits2::eTransferRead,cmdBuf);
 
+    VkUtils::copyImageToBuffer(gBuffer_->getObjectIdMap().getVkImage(),idMapTransferBuffer_,xPos,1,yPos,1,cmdBuf);
 
-    VkUtils::transitionImageLayout(idMap.getVkImage().image,
-                                   vk::ImageLayout::eColorAttachmentOptimal,
-                                   vk::ImageLayout::eTransferSrcOptimal,
-                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                   vk::AccessFlagBits2::eColorAttachmentWrite,
-                                   vk::PipelineStageFlagBits2::eTransfer,
-                                   vk::AccessFlagBits2::eTransferRead,
-                                   vk::ImageAspectFlagBits::eColor,
-                                   cmdBuf);
-
-    VkUtils::copyImageToBuffer(idMap.getVkImage(),idMapTransferBuffer_,xPos,1,yPos,1,cmdBuf);
-
-
-    VkUtils::transitionImageLayout(idMap.getVkImage().image,
-                                   vk::ImageLayout::eTransferSrcOptimal,
-                                   vk::ImageLayout::eColorAttachmentOptimal,
-                                   vk::PipelineStageFlagBits2::eTransfer,
-                                   vk::AccessFlagBits2::eTransferRead,
-                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                   vk::AccessFlagBits2::eColorAttachmentWrite,
-                                   vk::ImageAspectFlagBits::eColor,
-                                   cmdBuf);
+    gBuffer_->getObjectIdMap().transitionLayout(vk::ImageLayout::eColorAttachmentOptimal,vk::PipelineStageFlagBits2::eColorAttachmentOutput,vk::AccessFlagBits2::eColorAttachmentWrite,cmdBuf);
 
     VkUtils::endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
 

@@ -80,6 +80,7 @@ void GBuffer::transitionToFill(vk::raii::CommandBuffer& cmdBuf) const {
     target_->transitionLayout(vk::ImageLayout::eColorAttachmentOptimal,vk::PipelineStageFlagBits2::eColorAttachmentOutput,vk::AccessFlagBits2::eColorAttachmentWrite,cmdBuf);
     albedoMap_->transitionLayout(vk::ImageLayout::eColorAttachmentOptimal,vk::PipelineStageFlagBits2::eColorAttachmentOutput,vk::AccessFlagBits2::eColorAttachmentWrite,cmdBuf);
     normalMap_->transitionLayout(vk::ImageLayout::eColorAttachmentOptimal,vk::PipelineStageFlagBits2::eColorAttachmentOutput,vk::AccessFlagBits2::eColorAttachmentWrite,cmdBuf);
+    objectIdMap_->transitionLayout(vk::ImageLayout::eColorAttachmentOptimal,vk::PipelineStageFlagBits2::eColorAttachmentOutput,vk::AccessFlagBits2::eColorAttachmentWrite,cmdBuf);
     materialIdMap_->transitionLayout(vk::ImageLayout::eColorAttachmentOptimal,vk::PipelineStageFlagBits2::eColorAttachmentOutput,vk::AccessFlagBits2::eColorAttachmentWrite,cmdBuf);
     depthMap_->transitionLayout(vk::ImageLayout::eDepthAttachmentOptimal,vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,vk::AccessFlagBits2::eDepthStencilAttachmentWrite | vk::AccessFlagBits2::eDepthStencilAttachmentRead,cmdBuf);
 }

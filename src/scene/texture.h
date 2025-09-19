@@ -48,7 +48,6 @@ public:
     void transitionLayout(vk::ImageLayout newLayout, vk::PipelineStageFlags2 stage, vk::AccessFlags2 accessFlags, vk::raii::CommandBuffer& cmdBuf, const VkUtils::TransitionMipInfo&
                           mipInfo = {0,1});
 
-    [[nodiscard]] vk::ImageLayout getImageLayout() const { return imageLayout_; }
     [[nodiscard]] vk::ImageLayout getSamplerLayout() const { return samplerLayout_; }
 
 private:
