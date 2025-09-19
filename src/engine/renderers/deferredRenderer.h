@@ -4,7 +4,7 @@
 
 #pragma once
 #include "renderer.h"
-#include "../vk/graphicsPipeline.h"
+#include "../vk/RasterPipeline.h"
 
 
 class DeferredRenderer : public Renderer {
@@ -22,7 +22,6 @@ public:
     [[nodiscard]] glm::vec<2, uint32_t> getRenderDimensions() const override {return {gBuffer_->getTarget().getWidth(),gBuffer_->getTarget().getHeight()};}
 
 protected:
-    void initGraphicsPipelines();
 
     void recordSceneCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex);
 
@@ -37,12 +36,15 @@ protected:
 
     void recordSkyCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex);
 
-    GraphicsPipeline skyboxPipeline_;
-    GraphicsPipeline gBufferFillPipeline_;
-    GraphicsPipeline gBufferShadePipeline_;
+    RasterPipeline skyboxPipeline_;
+    RasterPipeline gBufferFillPipeline_;
+    RasterPipeline gBufferShadePipeline_;
 
     std::shared_ptr<GBuffer> gBuffer_{nullptr};
 
     PcsGBufferShade pcs_{};
+
+private:
+    void initGraphicsPipelines();
 };
 

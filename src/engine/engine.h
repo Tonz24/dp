@@ -17,7 +17,7 @@
 #include "../scene/mesh.h"
 #include "../scene/scene.h"
 #include "renderers/deferredRenderer.h"
-#include "vk/graphicsPipeline.h"
+#include "vk/rasterPipeline.h"
 
 class Engine : public IDrawGui {
 public:

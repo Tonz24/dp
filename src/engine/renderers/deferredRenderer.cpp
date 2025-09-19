@@ -63,12 +63,12 @@ void DeferredRenderer::initGraphicsPipelines() {
     std::array shadeAttachmentFormat{GBuffer::targetVkFormat};
 
 
-    auto gBufferFillStages = std::vector<GraphicsPipeline::ShaderStageInfo>{
+    auto gBufferFillStages = std::vector<RasterPipeline::ShaderStageInfo>{
         {"shaders/shader_vert.spv",vk::ShaderStageFlagBits::eVertex},
         {"shaders/gbuffer_fill_frag.spv",vk::ShaderStageFlagBits::eFragment}
     };
 
-    GraphicsPipeline::ShaderStageInfo screenQuadVertexShader{"shaders/skypass_vert.spv",vk::ShaderStageFlagBits::eVertex};
+    RasterPipeline::ShaderStageInfo screenQuadVertexShader{"shaders/skypass_vert.spv",vk::ShaderStageFlagBits::eVertex};
 
     auto skyboxStages = std::vector{
             screenQuadVertexShader,
@@ -79,9 +79,9 @@ void DeferredRenderer::initGraphicsPipelines() {
         {"shaders/gbuffer_shade_frag.spv",vk::ShaderStageFlagBits::eFragment}
     };
 
-    gBufferFillPipeline_ = GraphicsPipeline{gBufferFillStages,descSetFillLayouts,pcsFillRange,fillAttachmentFormats,true, GBuffer::depthMapVkFormat};
-    skyboxPipeline_ = GraphicsPipeline{skyboxStages,descSetFillLayouts,pcsSkyRange,{shadeAttachmentFormat.begin(),1}, false};
-    gBufferShadePipeline_ = GraphicsPipeline{shadeStages,descSetFillLayouts,pcsShadeRange,shadeAttachmentFormat, false};
+    gBufferFillPipeline_ = RasterPipeline{gBufferFillStages,descSetFillLayouts,pcsFillRange,fillAttachmentFormats,true, GBuffer::depthMapVkFormat};
+    skyboxPipeline_ = RasterPipeline{skyboxStages,descSetFillLayouts,pcsSkyRange,{shadeAttachmentFormat.begin(),1}, false};
+    gBufferShadePipeline_ = RasterPipeline{shadeStages,descSetFillLayouts,pcsShadeRange,shadeAttachmentFormat, false};
 
     pcs_.albedoMapHandle = gBuffer_->getAlbedoMap().getCID();
     pcs_.normalMapHandle = gBuffer_->getNormalMap().getCID();

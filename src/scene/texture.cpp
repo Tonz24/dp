@@ -275,8 +275,7 @@ void Texture::transitionLayout(vk::ImageLayout newLayout, vk::PipelineStageFlags
                                vk::raii::CommandBuffer& cmdBuf, const VkUtils::TransitionMipInfo& mipInfo) {
 
     if (mipInfo.baseLevel + mipInfo.levelCount > mipLevelCount_)
-        throw std::exception("ERROR: trying to transition nonexistent mip level!");
-
+        throw std::runtime_error("ERROR: trying to transition nonexistent mip level!");
 
     for (uint32_t i = mipInfo.baseLevel; i < mipInfo.baseLevel + mipInfo.levelCount; ++i) {
         VkUtils::transitionImageLayout(imageAlloc_.image,

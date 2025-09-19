@@ -37,4 +37,5 @@ layout (set=0,binding=1, std140) uniform MaterialUBO {
 layout(set = 0, binding = 2) uniform sampler2D textures[1024];
 
 
+#extension GL_EXT_ray_query : require
 layout(set = 0, binding = 3) uniform accelerationStructureEXT topLevelAS;
