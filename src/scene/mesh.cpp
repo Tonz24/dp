@@ -103,7 +103,7 @@ void Mesh::initBuffers() {
 
 void Mesh::initBLAS() {
 
-    uint32_t maxPrimitiveCount = static_cast<uint32_t>(indices_.size() / 3);
+    auto maxPrimitiveCount = static_cast<uint32_t>(indices_.size() / 3);
 
 
     //  setup triangle data (consume the whole vertex/index buffer pair for one BLAS)

@@ -36,7 +36,7 @@ public:
     std::string getResourceType() const override { return "Mesh"; }
     [[nodiscard]] const vk::Buffer & getVertexBuffer() const { return vertexBuffer_.buffer; }
     [[nodiscard]] const vk::Buffer & getIndexBuffer() const { return indexBuffer_.buffer; }
-    std::shared_ptr<Material> getMaterial() const {return material_;}
+    [[nodiscard]] std::shared_ptr<Material> getMaterial() const {return material_;}
     [[nodiscard]] const vk::AccelerationStructureInstanceKHR& getBLASInstance() const { return blasInstance_; }
 
     friend class MeshManager;
@@ -52,9 +52,6 @@ private:
     VkUtils::BufferAlloc indexBuffer_{};
 
     Transform transform_{};
-
-    /*vk::raii::AccelerationStructureKHR blas_{nullptr};
-    VkUtils::BufferAlloc blasStorageBuffer_{};*/
 
     AccelerationStructure blas_{};
 

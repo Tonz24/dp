@@ -150,6 +150,8 @@ public:
     static constexpr vk::BufferUsageFlags scratchBufferFlags{vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress};
     static constexpr vk::BufferUsageFlags accelStructInputFlags{ vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR};
 
+    static constexpr vk::BufferUsageFlags sbtFlags{ vk::BufferUsageFlagBits::eShaderBindingTableKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress};
+
     static const vk::raii::Device& getDevice() {return *device_;}
     static const vk::raii::PhysicalDevice& getPhysicalDevice() {return *physicalDevice_;}
 
