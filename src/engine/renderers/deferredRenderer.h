@@ -46,5 +46,10 @@ protected:
 
 private:
     void initGraphicsPipelines();
+
+
+protected:
+    void recordPresentCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
+                                           const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent);
 };
 

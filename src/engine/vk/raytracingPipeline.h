@@ -15,6 +15,10 @@ public:
 
     RaytracingPipeline() = default;
 
+    [[nodiscard]] const VkUtils::BufferAlloc& getSBTBuffer() const { return sbtBuffer_; }
+    [[nodiscard]] const vk::StridedDeviceAddressRegionKHR& getRaygenRegion() const { return raygenRegion_; }
+    [[nodiscard]] const vk::StridedDeviceAddressRegionKHR& getMissRegion() const { return missRegion_; }
+    [[nodiscard]] const vk::StridedDeviceAddressRegionKHR& getHitRegion() const { return hitRegion_; }
 
 private:
     std::vector<vk::RayTracingShaderGroupCreateInfoKHR> shaderGroups_{};

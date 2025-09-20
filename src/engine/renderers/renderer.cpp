@@ -151,6 +151,7 @@ void Renderer::initDescSetLayout() {
     isDescSetLayoutInit_ = true;
 }
 
+
 void Renderer::registerTextureBindless(const Texture& texture) {
     for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
         vk::DescriptorImageInfo imageInfo{

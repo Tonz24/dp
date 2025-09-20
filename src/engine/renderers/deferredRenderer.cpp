@@ -32,6 +32,7 @@ bool DeferredRenderer::drawGUI() {
 void DeferredRenderer::render(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage,
                               const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) {
     recordCommandBuffer(scene,cmdBuf,frameInFlightIndex,swapchainImage,swapchainImageView,swapchainExtent);
+    recordPresentCommands(scene,cmdBuf,frameInFlightIndex,swapchainImage,swapchainImageView,swapchainExtent);
 }
 
 DeferredRenderer::DeferredRenderer(std::shared_ptr<GBuffer> gBuffer) : gBuffer_(std::move(gBuffer)) {
@@ -89,6 +90,36 @@ void DeferredRenderer::initGraphicsPipelines() {
     pcs_.materialMapHandle = gBuffer_->getMaterialMap().getCID();
 }
 
+void DeferredRenderer::recordPresentCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
+                                           const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) {
+    //  transition swapchain image into color attachment optimal for gui write
+    VkUtils::transitionImageLayout(swapchainImage,
+                                   vk::ImageLayout::eTransferDstOptimal,
+                                   vk::ImageLayout::eColorAttachmentOptimal,
+                                   vk::PipelineStageFlagBits2::eTransfer,
+                                   vk::AccessFlagBits2::eTransferWrite,
+                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                                   vk::AccessFlagBits2::eColorAttachmentRead | vk::AccessFlagBits2::eColorAttachmentWrite,
+                                   vk::ImageAspectFlagBits::eColor,
+                                   cmdBuf);
+
+    // render gui last, into the swapchain frame buffer
+    recordGUICommands(scene,cmdBuf,frameInFlightIndex, swapchainImageView, swapchainExtent);
+
+    //  transition swapchain image to present
+    VkUtils::transitionImageLayout(swapchainImage,
+                                   vk::ImageLayout::eColorAttachmentOptimal,
+                                   vk::ImageLayout::ePresentSrcKHR,
+                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                                   vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead,
+                                   vk::PipelineStageFlagBits2::eBottomOfPipe,
+                                   vk::AccessFlagBits2::eNone,
+                                   vk::ImageAspectFlagBits::eColor,
+                                   cmdBuf);
+
+    cmdBuf.end();
+}
+
 void DeferredRenderer::recordCommandBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
                                            const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent)
 {
@@ -126,34 +157,6 @@ void DeferredRenderer::recordCommandBuffer(const Scene& scene, vk::raii::Command
                     {swapchainExtent.width,swapchainExtent.height},
                     vk::ImageAspectFlagBits::eColor,
                     vk::Filter::eNearest);
-
-
-    //  transition swapchain image into color attachment optimal for gui write
-    VkUtils::transitionImageLayout(swapchainImage,
-                                   vk::ImageLayout::eTransferDstOptimal,
-                                   vk::ImageLayout::eColorAttachmentOptimal,
-                                   vk::PipelineStageFlagBits2::eTransfer,
-                                   vk::AccessFlagBits2::eTransferWrite,
-                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                   vk::AccessFlagBits2::eColorAttachmentRead | vk::AccessFlagBits2::eColorAttachmentWrite,
-                                   vk::ImageAspectFlagBits::eColor,
-                                   cmdBuf);
-
-    // render gui last, into the swapchain frame buffer
-    recordGUICommands(scene,cmdBuf,frameInFlightIndex, swapchainImageView, swapchainExtent);
-
-    //  transition swapchain image to present
-    VkUtils::transitionImageLayout(swapchainImage,
-                                   vk::ImageLayout::eColorAttachmentOptimal,
-                                   vk::ImageLayout::ePresentSrcKHR,
-                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                   vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead,
-                                   vk::PipelineStageFlagBits2::eBottomOfPipe,
-                                   vk::AccessFlagBits2::eNone,
-                                   vk::ImageAspectFlagBits::eColor,
-                                   cmdBuf);
-
-    cmdBuf.end();
 }
 void DeferredRenderer::recordSkyCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex) {
      vk::ClearValue clearColor = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
