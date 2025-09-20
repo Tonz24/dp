@@ -25,5 +25,7 @@ protected:
                              const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) override;
 
 
+    void recordTraceCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex);
+
     RaytracingPipeline rtPipeline_;
 };

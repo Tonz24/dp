@@ -32,7 +32,7 @@ bool DeferredRenderer::drawGUI() {
 void DeferredRenderer::render(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage,
                               const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) {
     recordCommandBuffer(scene,cmdBuf,frameInFlightIndex,swapchainImage,swapchainImageView,swapchainExtent);
-    recordPresentCommands(scene,cmdBuf,frameInFlightIndex,swapchainImage,swapchainImageView,swapchainExtent);
+    recordPresentBuffer(scene,cmdBuf,frameInFlightIndex,swapchainImage,swapchainImageView,swapchainExtent);
 }
 
 DeferredRenderer::DeferredRenderer(std::shared_ptr<GBuffer> gBuffer) : gBuffer_(std::move(gBuffer)) {
@@ -90,8 +90,31 @@ void DeferredRenderer::initGraphicsPipelines() {
     pcs_.materialMapHandle = gBuffer_->getMaterialMap().getCID();
 }
 
-void DeferredRenderer::recordPresentCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
+void DeferredRenderer::recordPresentBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
                                            const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) {
+
+    //  transition g buffer target to blit
+    gBuffer_->transitionToBlit(cmdBuf);
+
+    VkUtils::transitionImageLayout(swapchainImage,
+                                   vk::ImageLayout::eUndefined,
+                                   vk::ImageLayout::eTransferDstOptimal,
+                                   vk::PipelineStageFlagBits2::eBottomOfPipe,
+                                   vk::AccessFlagBits2::eNone,
+                                   vk::PipelineStageFlagBits2::eTransfer,
+                                   vk::AccessFlagBits2::eTransferWrite,
+                                   vk::ImageAspectFlagBits::eColor,
+                                   cmdBuf);
+
+    VkUtils::blit(cmdBuf,gBuffer_->getTarget().getVkImage().image,
+                    {gBuffer_->getTarget().getWidth(),gBuffer_->getTarget().getHeight()},
+                    vk::ImageAspectFlagBits::eColor,
+                    swapchainImage,
+                    {swapchainExtent.width,swapchainExtent.height},
+                    vk::ImageAspectFlagBits::eColor,
+                    vk::Filter::eNearest);
+
+
     //  transition swapchain image into color attachment optimal for gui write
     VkUtils::transitionImageLayout(swapchainImage,
                                    vk::ImageLayout::eTransferDstOptimal,
@@ -136,27 +159,6 @@ void DeferredRenderer::recordCommandBuffer(const Scene& scene, vk::raii::Command
     gBuffer_->transitionToShade(cmdBuf);
 
     recordGBufferShadeCommands(scene,cmdBuf,frameInFlightIndex);
-
-    //  transition g buffer target to blit
-    gBuffer_->transitionToBlit(cmdBuf);
-
-    VkUtils::transitionImageLayout(swapchainImage,
-                                   vk::ImageLayout::eUndefined,
-                                   vk::ImageLayout::eTransferDstOptimal,
-                                   vk::PipelineStageFlagBits2::eBottomOfPipe,
-                                   vk::AccessFlagBits2::eNone,
-                                   vk::PipelineStageFlagBits2::eTransfer,
-                                   vk::AccessFlagBits2::eTransferWrite,
-                                   vk::ImageAspectFlagBits::eColor,
-                                   cmdBuf);
-
-    VkUtils::blit(cmdBuf,gBuffer_->getTarget().getVkImage().image,
-                    {gBuffer_->getTarget().getWidth(),gBuffer_->getTarget().getHeight()},
-                    vk::ImageAspectFlagBits::eColor,
-                    swapchainImage,
-                    {swapchainExtent.width,swapchainExtent.height},
-                    vk::ImageAspectFlagBits::eColor,
-                    vk::Filter::eNearest);
 }
 void DeferredRenderer::recordSkyCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex) {
      vk::ClearValue clearColor = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
@@ -374,7 +376,7 @@ void DeferredRenderer::recordGBufferShadeCommands(const Scene& scene, const vk::
     cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, gBufferShadePipeline_.getGraphicsPipeline());
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, gBufferShadePipeline_.getPipelineLayout(), 0, *getDescSetFrame(frameInFlightIndex), nullptr);
 
-    cmdBuf.pushConstants(gBufferShadePipeline_.getPipelineLayout(), vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const PcsGBufferShade>{pcs_});
+    cmdBuf.pushConstants(gBufferShadePipeline_.getPipelineLayout(), vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const PcsGBufferShade>{pcs_});
     cmdBuf.draw(6, 1, 0, 0);
     cmdBuf.endRendering();
 }

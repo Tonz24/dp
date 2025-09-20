@@ -19,6 +19,7 @@ void GBuffer::recordDescriptorSet() const {
     for (const auto & texture : textures_) {
         Renderer::registerTextureBindless(*texture);
     }
+    Renderer::registerTextureStorage(*target_);
 }
 
 void GBuffer::createTextures(const std::string& prefix, uint32_t width, uint32_t height) {
@@ -53,7 +54,7 @@ void GBuffer::createTextures(const std::string& prefix, uint32_t width, uint32_t
     target_ = TextureManager::getInstance()->registerResource(prefix + "_shading_target",
                                                                  width,
                                                                  height,
-                                                                 targetVkFormat,
+                                                                 getTargetVkFormat(),
                                                                  targetUsageFlags);
 
     depthMap_ = TextureManager::getInstance()->registerResource(prefix + "_depth",
@@ -70,6 +71,21 @@ void GBuffer::createTextures(const std::string& prefix, uint32_t width, uint32_t
 
     textures_ = {albedoMap_,normalMap_,depthMap_,materialIdMap_};
     recordDescriptorSet();
+}
+
+vk::Format GBuffer::getTargetVkFormat() {
+    const auto& device = VkUtils::getPhysicalDevice();
+    for (const auto & format : targetAcceptableFormats) {
+        vk::FormatProperties props = device.getFormatProperties(format);
+
+        //  all images are hardcoded to be tiled so use tiled features
+        auto features = props.optimalTilingFeatures;
+
+        //  return first found suitable format
+        if ((features & targetFormatFlags) == targetFormatFlags)
+            return format;
+    }
+    throw std::runtime_error("ERROR: no suitable format for G buffer target texture!");
 }
 
 void GBuffer::resizeContents(uint32_t width, uint32_t height) {
@@ -95,4 +111,13 @@ void GBuffer::transitionToShade(vk::raii::CommandBuffer& cmdBuf) const {
 
 void GBuffer::transitionToBlit(vk::raii::CommandBuffer& cmdBuf) const {
     target_->transitionLayout(vk::ImageLayout::eTransferSrcOptimal,vk::PipelineStageFlagBits2::eTransfer,vk::AccessFlagBits2::eTransferRead,cmdBuf);
+}
+
+void GBuffer::transitionToTrace(vk::raii::CommandBuffer& cmdBuf) const {
+    target_->transitionLayout(vk::ImageLayout::eGeneral,vk::PipelineStageFlagBits2::eRayTracingShaderKHR,vk::AccessFlagBits2::eShaderStorageWrite,cmdBuf);
+
+    albedoMap_->transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eFragmentShader,vk::AccessFlagBits2::eShaderSampledRead,cmdBuf);
+    normalMap_->transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eFragmentShader,vk::AccessFlagBits2::eShaderSampledRead,cmdBuf);
+    materialIdMap_->transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eFragmentShader,vk::AccessFlagBits2::eShaderSampledRead,cmdBuf);
+    depthMap_->transitionLayout(vk::ImageLayout::eDepthReadOnlyOptimal,vk::PipelineStageFlagBits2::eFragmentShader,vk::AccessFlagBits2::eShaderSampledRead | vk::AccessFlagBits2::eDepthStencilAttachmentRead,cmdBuf);
 }

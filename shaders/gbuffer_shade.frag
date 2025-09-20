@@ -59,7 +59,7 @@ void main() {
     float depth = texture(textures[pcs.depthMapHandle], screenTexCoord).x;
 
 
-    //  this fragment has something to shade only if there's a normal behind it
+    //  this fragment has something to shade only if there's a valid normal underneath it
     bool hasValidGeometry = (bool((normal.x > 0 || normal.x < 0) || (normal.y > 0 || normal.y < 0) || (normal.z > 0 || normal.z < 0)));
     if (!hasValidGeometry) {
         if (pcs.drawSkybox == 0){

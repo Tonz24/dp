@@ -17,6 +17,7 @@ public:
     void transitionToFill(vk::raii::CommandBuffer& cmdBuf) const;
     void transitionToShade(vk::raii::CommandBuffer& cmdBuf) const;
     void transitionToBlit(vk::raii::CommandBuffer& cmdBuf) const;
+    void transitionToTrace(vk::raii::CommandBuffer& cmdBuf) const;
 
     ~GBuffer() override = default;
 
@@ -29,6 +30,7 @@ public:
     [[nodiscard]] Texture& getTarget() const { return *target_; }
     [[nodiscard]] Texture& getDepthMap() const { return *depthMap_; }
     [[nodiscard]] Texture& getObjectIdMap() const { return *objectIdMap_; }
+
 
     static constexpr vk::ImageUsageFlags defaultAttachmentUsageFlags{
         vk::ImageUsageFlagBits::eSampled | //  will be sampled in a shader later
@@ -49,12 +51,20 @@ public:
     static constexpr vk::ImageUsageFlags materialMapUsageFlags{defaultAttachmentUsageFlags};  // transfer src for retrieving id at cursor position
 
     static constexpr uint32_t targetChannelCount{4};
-    static constexpr vk::Format targetVkFormat{vk::Format::eA2R10G10B10UnormPack32};
-    static constexpr vk::ImageUsageFlags targetUsageFlags{vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc}; // transfer src for blitting into swapchain
+    static constexpr vk::Format targetVkFormat{vk::Format::eB10G11R11UfloatPack32};
+    // transfer src for blitting into swapchain, storage for RT pipeline
+    static constexpr vk::ImageUsageFlags targetUsageFlags{vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage};
+    static constexpr vk::FormatFeatureFlags targetFormatFlags{vk::FormatFeatureFlagBits::eColorAttachment | vk::FormatFeatureFlagBits::eTransferSrc | vk::FormatFeatureFlagBits::eStorageImage};
 
 
-
-
+    //  acceptable formats for target G buffer texture
+    //  in descending order
+    static constexpr std::array targetAcceptableFormats{
+        vk::Format::eB10G11R11UfloatPack32,
+        vk::Format::eR16G16B16A16Sfloat,
+        vk::Format::eR32G32B32A32Sfloat,
+        vk::Format::eR8G8B8A8Unorm
+    };
 
 
     static constexpr uint32_t depthMapChannelCount{1};
@@ -65,11 +75,7 @@ public:
     static constexpr uint32_t idMapChannelCount{1};
     static constexpr vk::ImageUsageFlags idMapUsageFlags{vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc};  // transfer src for retrieving id at cursor position
 
-
-
-
     static constexpr std::array attachmentFormats{albedoMapVkFormat, normalMapVkFormat, idMapVkFormat, materialMapVkFormat};
-
 
     static constexpr vk::PushConstantRange pcsFillRange{
         .stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
@@ -78,7 +84,7 @@ public:
     };
 
     static constexpr vk::PushConstantRange pcsShadeRange{
-        .stageFlags = vk::ShaderStageFlagBits::eFragment,
+        .stageFlags = vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eRaygenKHR,
         .offset = 0,
         .size = static_cast<uint32_t>(sizeof(PcsGBufferShade))
     };
@@ -102,6 +108,8 @@ private:
 
     void recordDescriptorSet() const;
     void createTextures(const std::string& prefix, uint32_t width,uint32_t height);
+
+    static vk::Format getTargetVkFormat();
 };
 
 

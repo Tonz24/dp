@@ -838,6 +838,10 @@ void Engine::initDescriptorPool() {
         vk::DescriptorPoolSize {
             .type = vk::DescriptorType::eAccelerationStructureKHR,
             .descriptorCount = 1
+        },
+        vk::DescriptorPoolSize {
+            .type = vk::DescriptorType::eStorageImage,
+            .descriptorCount = 1
         }
     };
 

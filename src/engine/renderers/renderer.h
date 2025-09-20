@@ -31,6 +31,7 @@ public:
     static void updateTLASDescriptor(const vk::raii::AccelerationStructureKHR& tlas);
 
     static void registerTextureBindless(const Texture& texture);
+    static void registerTextureStorage(const Texture& texture);
 
 protected:
     Renderer() {
@@ -67,7 +68,7 @@ private:
             .binding = 0,
             .descriptorType = vk::DescriptorType::eUniformBuffer,
             .descriptorCount = 1,
-            .stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment
+            .stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eRaygenKHR
         },
         vk::DescriptorSetLayoutBinding { // material UBO
             .binding = 1,
@@ -79,13 +80,19 @@ private:
             .binding = 2,
             .descriptorType = vk::DescriptorType::eCombinedImageSampler,
             .descriptorCount = Constants::bindlessTextureLimit,
-            .stageFlags = vk::ShaderStageFlagBits::eFragment
+            .stageFlags = vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eRaygenKHR
         },
         vk::DescriptorSetLayoutBinding { // TLAS
             .binding = 3,
             .descriptorType = vk::DescriptorType::eAccelerationStructureKHR,
             .descriptorCount = 1,
-            .stageFlags = vk::ShaderStageFlagBits::eFragment // TODO: add other stages for ray tracing pipeline
+            .stageFlags = vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eRaygenKHR // TODO: add other stages for ray tracing pipeline
+        },
+        vk::DescriptorSetLayoutBinding { // Ray tracing target
+            .binding = 4,
+            .descriptorType = vk::DescriptorType::eStorageImage,
+            .descriptorCount = 1,
+            .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR // TODO: add other stages for ray tracing pipeline
         }
     };
 

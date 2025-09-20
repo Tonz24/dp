@@ -171,3 +171,23 @@ void Renderer::registerTextureBindless(const Texture& texture) {
         VkUtils::getDevice().updateDescriptorSets(writeDescriptorSetBindless,{});
     }
 }
+
+void Renderer::registerTextureStorage(const Texture& texture) {
+    for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
+        vk::DescriptorImageInfo imageInfo{
+            .sampler = texture.getVkSampler(),
+            .imageView = texture.getVkImageView(),
+            .imageLayout = vk::ImageLayout::eGeneral
+        };
+
+        vk::WriteDescriptorSet writeDescriptorSetBindless{
+            .dstSet = getDescSetFrame(i),
+            .dstBinding = 4,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = vk::DescriptorType::eStorageImage,
+            .pImageInfo = &imageInfo
+        };
+        VkUtils::getDevice().updateDescriptorSets(writeDescriptorSetBindless,{});
+    }
+}
