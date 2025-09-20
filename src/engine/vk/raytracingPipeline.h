@@ -5,6 +5,7 @@
 #pragma once
 #include "graphicsPipeline.h"
 #include "graphicsPipeline.h"
+#include "../uboFormat.h"
 
 // https://nvpro-samples.github.io/vk_raytracing_tutorial_KHR/#raytracingpipeline
 // https://github.com/yknishidate/single-file-vulkan-pathtracing/blob/master/main.cpp
@@ -36,4 +37,5 @@ private:
     void extractGroupCounts(const ShaderStageInfo& stageInfo);
 
     static uint32_t alignUp(uint32_t size, uint32_t alignment);
+
 };

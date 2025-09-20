@@ -1,14 +1,16 @@
 #version 460
 #extension GL_EXT_ray_tracing : enable
 #extension GL_GOOGLE_include_directive : enable
-//#include "common.glsl"
+
+#include "common.glsl"
+#include "raycommon.glsl"
 
 //layout(binding = 2, set = 0) buffer Vertices{float vertices[];};
 //layout(binding = 3, set = 0) buffer Indices{uint indices[];};
 //layout(binding = 4, set = 0) buffer Faces{float faces[];};
 
-//layout(location = 0) rayPayloadInEXT HitPayload payload;
-hitAttributeEXT vec2 attribs;
+layout(location = 0) rayPayloadInEXT HitPayload payload;
+//hitAttributeEXT vec2 attribs;
 
 struct Vertex
 {
@@ -63,4 +65,6 @@ void main()
     payload.emission = face.emission;
     payload.position = position;
     payload.normal = normal;*/
+
+    payload.hitValue = vec3(1.0);
 }

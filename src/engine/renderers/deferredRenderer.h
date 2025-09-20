@@ -36,20 +36,18 @@ protected:
 
     void recordSkyCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex);
 
+    void recordPresentBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
+                                           const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent);
+
     RasterPipeline skyboxPipeline_;
     RasterPipeline gBufferFillPipeline_;
     RasterPipeline gBufferShadePipeline_;
 
     std::shared_ptr<GBuffer> gBuffer_{nullptr};
 
-    PcsGBufferShade pcs_{};
 
 private:
     void initGraphicsPipelines();
-
-
-protected:
-    void recordPresentBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
-                                           const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent);
+    PcsGBufferShade pcs_{};
 };
 

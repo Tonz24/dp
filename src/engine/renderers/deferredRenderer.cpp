@@ -376,7 +376,7 @@ void DeferredRenderer::recordGBufferShadeCommands(const Scene& scene, const vk::
     cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, gBufferShadePipeline_.getGraphicsPipeline());
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, gBufferShadePipeline_.getPipelineLayout(), 0, *getDescSetFrame(frameInFlightIndex), nullptr);
 
-    cmdBuf.pushConstants(gBufferShadePipeline_.getPipelineLayout(), vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const PcsGBufferShade>{pcs_});
+    cmdBuf.pushConstants(gBufferShadePipeline_.getPipelineLayout(), vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const PcsGBufferShade>{pcs_});
     cmdBuf.draw(6, 1, 0, 0);
     cmdBuf.endRendering();
 }

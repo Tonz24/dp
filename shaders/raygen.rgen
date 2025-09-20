@@ -1,12 +1,16 @@
 #version 460
 #extension GL_EXT_ray_tracing : enable
 #extension GL_GOOGLE_include_directive : enable
+
 #include "common.glsl"
-#include "pcs_gbuffer_shade.glsl"
+#include "math_constants.glsl"
+#include "rt/pcs_raygen.glsl"
+#include "raycommon.glsl"
+#include "sampling.glsl"
 
 layout(set = 0, binding = 4, r11f_g11f_b10f) uniform image2D outputImage;
 
-//layout(location = 0) rayPayloadEXT HitPayload payload;
+layout(location = 0) rayPayloadEXT HitPayload payload;
 
 
 //  all zero normals are invalid
@@ -28,21 +32,7 @@ float linearizeDepth(float depth, float zNear, float zFar){
 }
 
 void main()
-{
-   /*  traceRayEXT(
-        topLevelAS,
-        gl_RayFlagsOpaqueEXT,
-        0xff, // cullMask
-        0,    // sbtRecordOffset
-        0,    // sbtRecordStride
-        0,    // missIndex
-        origin.xyz,
-        0.001,
-        direction.xyz,
-        10000.0,
-        0     // payloadLocation
-    );*/
-    
+{ 
     //  calculate texture coordinate for sampling
     vec2 imageSize = vec2(imageSize(outputImage));
     vec2 imageCoord = vec2(gl_LaunchIDEXT.xy);
@@ -65,10 +55,36 @@ void main()
     vec3 albedo = texture(textures[pcs.albedoMapHandle], uv).xyz;
     float depth = texture(textures[pcs.depthMapHandle], uv).x;
 
-    vec3 posWS = reconstructPositionWS(uv,depth);
-    float linDepth = linearizeDepth(depth, cameraUBO.zNear, cameraUBO.zFar) * 0.125;
 
-    imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(vec3((uv),0.0), 1.0));
-    imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(vec3((linDepth)), 1.0));
-    imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(vec3((posWS)), 1.0));
+    // Calc seed
+    uvec2 s = pcg2d(ivec2(gl_LaunchIDEXT.xy) * (pcs.seed));
+    uint seed = s.x + s.y;
+
+
+    vec3 posWS = reconstructPositionWS(uv,depth);
+    vec3 direction = sampleHemisphereCosineWeighted(normal,seed).xyz;
+
+    payload.hitValue = vec3(0.0);
+
+    traceRayEXT(
+        topLevelAS,
+        gl_RayFlagsOpaqueEXT,
+        0xff, // cullMask
+        0,    // sbtRecordOffset
+        0,    // sbtRecordStride
+        0,    // missIndex
+        posWS.xyz,
+        0.001,
+        direction.xyz /*vec3(0,1,0)*/,
+        0.1,
+        0     // payloadLocation
+    );
+
+
+
+    float seedf = float(seed) / float(uint(0xffffffff));
+
+    imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(vec3((seedf)), 1.0));
+    imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(direction, 1.0));
+    imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(1.0 - payload.hitValue, 1.0));
 }

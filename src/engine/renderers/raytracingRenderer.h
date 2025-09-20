@@ -3,6 +3,8 @@
 //
 
 #pragma once
+#include <random>
+
 #include "deferredRenderer.h"
 #include "../vk/raytracingPipeline.h"
 
@@ -28,4 +30,16 @@ protected:
     void recordTraceCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex);
 
     RaytracingPipeline rtPipeline_;
+
+    std::random_device rngDevice_;
+    std::mt19937 generator_;
+    std::uniform_int_distribution<uint32_t> distr_;
+
+    PcsRaygen pcs_{};
+
+    static constexpr vk::PushConstantRange pcsRaygenRange{
+        .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR,
+        .offset = 0,
+        .size = static_cast<uint32_t>(sizeof(PcsRaygen))
+    };
 };

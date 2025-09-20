@@ -72,3 +72,12 @@ struct PcsGBufferShade {
 struct PcsSky {
     uint32_t skyHandle;
 };
+
+struct PcsRaygen {
+    uint32_t albedoMapHandle;
+    uint32_t normalMapHandle;
+    uint32_t depthMapHandle;
+    uint32_t materialMapHandle;
+
+    uint32_t seed;
+};

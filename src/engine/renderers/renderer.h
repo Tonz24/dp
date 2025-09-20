@@ -86,13 +86,13 @@ private:
             .binding = 3,
             .descriptorType = vk::DescriptorType::eAccelerationStructureKHR,
             .descriptorCount = 1,
-            .stageFlags = vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eRaygenKHR // TODO: add other stages for ray tracing pipeline
+            .stageFlags = vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eRaygenKHR
         },
         vk::DescriptorSetLayoutBinding { // Ray tracing target
             .binding = 4,
             .descriptorType = vk::DescriptorType::eStorageImage,
             .descriptorCount = 1,
-            .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR // TODO: add other stages for ray tracing pipeline
+            .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR
         }
     };
 

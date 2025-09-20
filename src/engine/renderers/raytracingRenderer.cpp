@@ -24,19 +24,22 @@ RaytracingRenderer::RaytracingRenderer(const std::string_view& gBufferName): Def
 void RaytracingRenderer::initGraphicsPipelines() {
     std::vector descSetFillLayouts = {*Renderer::getDescSetLayoutFrame()};
 
-    std::array pcsFillRange{GBuffer::pcsShadeRange};
+    std::array raygenRange{pcsRaygenRange};
 
     auto rtStages = std::vector<RasterPipeline::ShaderStageInfo>{
             {"shaders/raygen_rgen.spv",vk::ShaderStageFlagBits::eRaygenKHR},
+            {"shaders/miss_rmiss.spv",vk::ShaderStageFlagBits::eMissKHR},
             {"shaders/closesthit_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
-            {"shaders/miss_rmiss.spv",vk::ShaderStageFlagBits::eMissKHR}
     };
-    rtPipeline_ = RaytracingPipeline{rtStages,descSetFillLayouts,pcsFillRange};
+    rtPipeline_ = RaytracingPipeline{rtStages,descSetFillLayouts,raygenRange};
 
     pcs_.albedoMapHandle = gBuffer_->getAlbedoMap().getCID();
     pcs_.normalMapHandle = gBuffer_->getNormalMap().getCID();
     pcs_.depthMapHandle = gBuffer_->getDepthMap().getCID();
     pcs_.materialMapHandle = gBuffer_->getMaterialMap().getCID();
+
+    generator_ = std::mt19937(rngDevice_());
+    distr_ = std::uniform_int_distribution(std::numeric_limits<uint32_t>::min(),std::numeric_limits<uint32_t>::max());
 }
 
 void RaytracingRenderer::recordCommandBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
@@ -61,7 +64,10 @@ void RaytracingRenderer::recordTraceCommands(const Scene& scene, vk::raii::Comma
 
     cmdBuf.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR,rtPipeline_.getGraphicsPipeline());
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, rtPipeline_.getPipelineLayout(), 0, *getDescSetFrame(frameInFlightIndex), nullptr);
-    cmdBuf.pushConstants(gBufferShadePipeline_.getPipelineLayout(), vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const PcsGBufferShade>{pcs_});
+
+    pcs_.seed = distr_(generator_);
+
+    cmdBuf.pushConstants(gBufferShadePipeline_.getPipelineLayout(), vk::ShaderStageFlagBits::eRaygenKHR ,0, vk::ArrayProxy<const PcsRaygen>{pcs_});
 
     auto renderDims = getRenderDimensions();
 

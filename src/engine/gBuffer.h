@@ -84,7 +84,7 @@ public:
     };
 
     static constexpr vk::PushConstantRange pcsShadeRange{
-        .stageFlags = vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eRaygenKHR,
+        .stageFlags = vk::ShaderStageFlagBits::eFragment,
         .offset = 0,
         .size = static_cast<uint32_t>(sizeof(PcsGBufferShade))
     };
