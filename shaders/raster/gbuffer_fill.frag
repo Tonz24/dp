@@ -1,4 +1,5 @@
 #version 460
+#extension GL_GOOGLE_include_directive : enable
 
 layout(location = 0) in vec3 inNormal;
 layout(location = 1) in vec2 inTexCoord;
@@ -10,8 +11,8 @@ layout(location = 2) out uint outMeshId;
 layout(location = 3) out uint outMaterialId;
 
 
-#include "common.glsl"
-#include "pcs_gbuffer_fill.glsl"
+#include "../common/common.glsl"
+#include "pcs/pcs_gbuffer_fill.glsl"
 
 void main() {
     Material mat = materialUBO.materials[pcs.matIndex];

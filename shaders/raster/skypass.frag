@@ -1,15 +1,15 @@
 #version 460
+#extension GL_GOOGLE_include_directive : enable
 
 layout(location = 0) in vec2 inNDCxy;
 
 layout(location = 0) out vec4 fragColor;
 
-//layout(set = 1, binding = 0) uniform sampler2D skyTexture;
 
-#include "common.glsl"
-#include "tonemappers.glsl"
-#include "math_constants.glsl"
-#include "pcs_skypass.glsl"
+#include "../common/common.glsl"
+#include "../common/tonemappers.glsl"
+#include "../common/math_constants.glsl"
+#include "pcs/pcs_skypass.glsl"
 
 vec2 dirToUv(vec3 dir){
     const float u = 0.5f + 0.5f * atan(dir.z, dir.x) * INVPI;
@@ -19,7 +19,6 @@ vec2 dirToUv(vec3 dir){
 
 vec3 sampleSphericalMap(vec3 dir, sampler2D sphericalTex){
     vec2 uv = dirToUv(dir);
-    //return texture(sphericalTex,uv).xyz;
     return texture(textures[pcs.skyIndex],uv).xyz;
 }
 

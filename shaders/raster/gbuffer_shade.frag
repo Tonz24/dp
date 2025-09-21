@@ -1,14 +1,15 @@
 #version 460
 #extension GL_EXT_ray_query : require
+#extension GL_GOOGLE_include_directive : enable
 
 layout(location = 0) in vec2 inNDCxy;
 
 layout(location = 0) out vec4 fragColor;
 
-#include "common.glsl"
-#include "pcs_gbuffer_shade.glsl"
-#include "tonemappers.glsl"
-#include "math_constants.glsl"
+#include "../common/common.glsl"
+#include "pcs/pcs_gbuffer_shade.glsl"
+#include "../common/tonemappers.glsl"
+#include "../common/math_constants.glsl"
 
 const int OVERLAY_DEBUG_PHONG = 0;
 const int OVERLAY_ALBEDO_MAP = 1;

@@ -1,8 +1,9 @@
 #version 460
+#extension GL_GOOGLE_include_directive : enable
 
 layout(location = 0) out vec2 outNDCxy;
 
-#include "common.glsl"
+#include "../common/common.glsl"
 
 vec2 positions[6] = vec2[](
     vec2(-1.0f, 1.0f),

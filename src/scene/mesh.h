@@ -33,7 +33,7 @@ public:
     [[nodiscard]] const std::vector<Vertex3D>& getVertices() const {return vertices_;}
     [[nodiscard]] const std::vector<uint32_t >& getIndices() const { return indices_; }
     [[nodiscard]] Transform& getTransform() { return transform_;}
-    std::string getResourceType() const override { return "Mesh"; }
+    [[nodiscard]] std::string getResourceType() const override { return "Mesh"; }
     [[nodiscard]] const vk::Buffer & getVertexBuffer() const { return vertexBuffer_.buffer; }
     [[nodiscard]] const vk::Buffer & getIndexBuffer() const { return indexBuffer_.buffer; }
     [[nodiscard]] std::shared_ptr<Material> getMaterial() const {return material_;}

@@ -1,4 +1,5 @@
 #version 460
+#extension GL_GOOGLE_include_directive : enable
 
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNormal;
@@ -10,8 +11,8 @@ layout(location = 1) out vec2 outTexCoord;
 layout(location = 2) out mat3 outTBN;
 
 
-#include "common.glsl"
-#include "pcs_gbuffer_fill.glsl"
+#include "../common/common.glsl"
+#include "pcs/pcs_gbuffer_fill.glsl"
 
 void main() {
     gl_Position = cameraUBO.matVP * pcs.matM * vec4(inPosition,1);

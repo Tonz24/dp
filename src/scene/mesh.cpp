@@ -93,11 +93,13 @@ void Mesh::recordDrawCommands(vk::raii::CommandBuffer& cmdBuf, const vk::raii::P
 }
 
 void Mesh::initBuffers() {
+    vk::BufferUsageFlags commonFlags = vk::BufferUsageFlagBits::eTransferDst | VkUtils::accelStructInputFlags | vk::BufferUsageFlagBits::eStorageBuffer;
+
     vk::DeviceSize vertexBufferSize = sizeof(vertices_[0]) * vertices_.size();
-    vertexBuffer_ = VkUtils::createBufferVMA(vertexBufferSize,vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst | VkUtils::accelStructInputFlags);
+    vertexBuffer_ = VkUtils::createBufferVMA(vertexBufferSize,vk::BufferUsageFlagBits::eVertexBuffer | commonFlags);
 
     vk::DeviceSize indexBufferSize = sizeof(indices_[0]) * indices_.size();
-    indexBuffer_ = VkUtils::createBufferVMA(indexBufferSize,vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst |  VkUtils::accelStructInputFlags);
+    indexBuffer_ = VkUtils::createBufferVMA(indexBufferSize,vk::BufferUsageFlagBits::eIndexBuffer | commonFlags);
 }
 
 
