@@ -32,6 +32,7 @@ public:
 
     static void registerTextureBindless(const Texture& texture);
     static void registerTextureStorage(const Texture& texture);
+    static void uploadObjDescription(const Mesh& mesh);
 
 protected:
     Renderer() {
@@ -42,6 +43,9 @@ protected:
     virtual void recordCommandBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage, const vk::ImageView&
                                      swapchainImageView, const vk::Extent2D&
                                      swapchainExtent) = 0;
+
+    virtual void recordPresentBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
+                                           const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) = 0;
 
     static constexpr vk::PushConstantRange pcsSkyRange{
         .stageFlags = vk::ShaderStageFlagBits::eFragment,
@@ -59,6 +63,9 @@ private:
 
     inline static std::vector<vk::raii::DescriptorSet> descSetsFrame_{};
 
+    inline static std::vector<VkUtils::BufferAlloc> objDescSSBOs_{};
+    inline static std::vector<uint8_t*> objDescSSBOsMapped_{};
+
     static void initDescSetLayout();
     inline static vk::raii::DescriptorSetLayout descSetLayoutFrame_{nullptr};
     inline static bool isDescSetLayoutInit_{false};
@@ -74,7 +81,7 @@ private:
             .binding = 1,
             .descriptorType = vk::DescriptorType::eUniformBuffer,
             .descriptorCount = 1,
-            .stageFlags = vk::ShaderStageFlagBits::eFragment
+            .stageFlags = vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eClosestHitKHR
         },
         vk::DescriptorSetLayoutBinding { // Bindless textures
             .binding = 2,
@@ -93,6 +100,12 @@ private:
             .descriptorType = vk::DescriptorType::eStorageImage,
             .descriptorCount = 1,
             .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR
+        },
+        vk::DescriptorSetLayoutBinding { // per mesh object description
+            .binding = 5,
+            .descriptorType = vk::DescriptorType::eStorageBuffer,
+            .descriptorCount = 1,
+            .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR
         }
     };
 

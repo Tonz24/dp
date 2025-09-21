@@ -8,7 +8,7 @@
 
 #include "material.h"
 #include "transform.h"
-#include "Vertex.h"
+#include "vertex.h"
 #include "../engine/iDrawGui.h"
 #include "../engine/vk/accelerationStructure.h"
 #include "../engine/vk/vkUtils.h"
@@ -39,7 +39,18 @@ public:
     [[nodiscard]] std::shared_ptr<Material> getMaterial() const {return material_;}
     [[nodiscard]] const vk::AccelerationStructureInstanceKHR& getBLASInstance() const { return blasInstance_; }
 
+    void updateDescription() const;
+
     friend class MeshManager;
+
+    struct ObjDescription {
+        vk::DeviceAddress vertexBufferAddress;
+        vk::DeviceAddress indexBufferAddress;
+        uint32_t materialId;
+    };
+
+    [[nodiscard]] const ObjDescription& getDescription() const { return description_; }
+
 private:
     void initBuffers();
 
@@ -56,4 +67,6 @@ private:
     AccelerationStructure blas_{};
 
     vk::AccelerationStructureInstanceKHR blasInstance_{};
+
+    ObjDescription description_{};
 };

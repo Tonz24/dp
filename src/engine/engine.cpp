@@ -382,7 +382,7 @@ void Engine::initLogicalDevice() {
         >
             featureChain {
                 {.features = {.samplerAnisotropy = vk::True,}}, // vk::PhysicalDeviceFeatures2 (empty for now)
-                {.storageBuffer8BitAccess = vk::True, .timelineSemaphore = vk::True,  .bufferDeviceAddress = vk::True,  .vulkanMemoryModel = vk::True,  .vulkanMemoryModelDeviceScope = vk::True, },
+                {.storageBuffer8BitAccess = vk::True, .scalarBlockLayout = true, .timelineSemaphore = vk::True,  .bufferDeviceAddress = vk::True,  .vulkanMemoryModel = vk::True,  .vulkanMemoryModelDeviceScope = vk::True,},
                 {.shaderDemoteToHelperInvocation =  vk::True, .synchronization2 = vk::True, .dynamicRendering = vk::True,},      // Enable dynamic rendering from Vulkan 1.3
                 {.extendedDynamicState = vk::True }, // Enable extended dynamic state from the extension_
                 {.rayTracingPipeline = vk::True},
@@ -842,6 +842,10 @@ void Engine::initDescriptorPool() {
         vk::DescriptorPoolSize {
             .type = vk::DescriptorType::eStorageImage,
             .descriptorCount = 1
+        },
+        vk::DescriptorPoolSize {
+            .type = vk::DescriptorType::eStorageBuffer,
+            .descriptorCount = 10
         }
     };
 

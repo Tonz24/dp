@@ -4,5 +4,9 @@ layout(push_constant, std140) uniform PushConstants {
     uint depthMapHandle;
     uint materialMapHandle;
 
+    uint skyHandle;
+
     uint seed;
+    uint accumulate;
+    uint frameCtr;
 } pcs;

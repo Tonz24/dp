@@ -1,70 +1,50 @@
 #version 460
-#extension GL_EXT_ray_tracing : enable
-#extension GL_GOOGLE_include_directive : enable
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_ray_tracing : require
 
 #include "../common/common.glsl"
 #include "raycommon.glsl"
-
-//layout(binding = 2, set = 0) buffer Vertices{float vertices[];};
-//layout(binding = 3, set = 0) buffer Indices{uint indices[];};
-//layout(binding = 4, set = 0) buffer Faces{float faces[];};
+#include "structs/payload.glsl"
 
 layout(location = 0) rayPayloadInEXT HitPayload payload;
 hitAttributeEXT vec2 attribs;
 
-struct Vertex
-{
-    vec3 position;
-};
 
-struct Face
-{
-    vec3 diffuse;
-    vec3 emission;
-};
-
-/*
-Vertex unpackVertex(uint index)
-{
-    uint stride = 3;
-    uint offset = index * stride;
-    Vertex v;
-    v.position = vec3(vertices[offset +  0], vertices[offset +  1], vertices[offset + 2]);
-    return v;
+vec3 getPositionWS(vec3 uv, Vertex v0, Vertex v1, Vertex v2){
+    vec3 pos = uv.x * v0.position + uv.y * v1.position + uv.z * v2.position;
+    vec3 posWS = vec3(gl_ObjectToWorldEXT * vec4(pos, 1.0));
+    return posWS;
 }
 
-Face unpackFace(uint index)
-{
-    uint stride = 6;
-    uint offset = index * stride;
-    Face f;
-    f.diffuse = vec3(faces[offset +  0], faces[offset +  1], faces[offset + 2]);
-    f.emission = vec3(faces[offset +  3], faces[offset +  4], faces[offset + 5]);
-    return f;
+vec3 getNormalWS(vec3 uv, Vertex v0, Vertex v1, Vertex v2){
+    vec3 normal = uv.x * v0.normal + uv.y * v1.normal + uv.z * v2.normal;
+    vec3 normalWS = normalize(vec3(normal * gl_WorldToObjectEXT));
+    return normalWS;
 }
-
-vec3 calcNormal(Vertex v0, Vertex v1, Vertex v2)
-{
-    vec3 e01 = v1.position - v0.position;
-    vec3 e02 = v2.position - v0.position;
-    return -normalize(cross(e01, e02));
-}*/
 
 void main()
 {
-    /*const Vertex v0 = unpackVertex(indices[3 * gl_PrimitiveID + 0]);
-    const Vertex v1 = unpackVertex(indices[3 * gl_PrimitiveID + 1]);
-    const Vertex v2 = unpackVertex(indices[3 * gl_PrimitiveID + 2]);
-
-    const vec3 barycentricCoords = vec3(1.0f - attribs.x - attribs.y, attribs.x, attribs.y);
-    const vec3 position = v0.position * barycentricCoords.x + v1.position * barycentricCoords.y + v2.position * barycentricCoords.z;
-    const vec3 normal = calcNormal(v0, v1, v2);
-
-    const Face face = unpackFace(gl_PrimitiveID);
+/*
     payload.brdf = face.diffuse / M_PI;
     payload.emission = face.emission;
     payload.position = position;
     payload.normal = normal;*/
 
-    payload.hitValue = vec3(1.0);
+    ObjDesc object = objDesc.i[gl_InstanceCustomIndexEXT];
+
+    Material material = materialUBO.materials[object.materialId];
+    Indices indices = Indices(object.indexBufferAddr);
+    Vertices vertices = Vertices(object.vertexBufferAddr);
+
+    ivec3 ind = indices.i[gl_PrimitiveID];
+    Vertex v0 = vertices.v[ind.x];
+    Vertex v1 = vertices.v[ind.y];
+    Vertex v2 = vertices.v[ind.z];
+
+    vec3 uv = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
+
+    vec3 posWS = getPositionWS(uv, v0, v1, v2);
+    vec3 normal = getNormalWS(uv, v0, v1, v2);
+
+    payload.position = normal;
 }

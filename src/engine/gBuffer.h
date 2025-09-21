@@ -89,6 +89,9 @@ public:
         .size = static_cast<uint32_t>(sizeof(PcsGBufferShade))
     };
 
+    static vk::Format getTargetVkFormat();
+
+
 private:
     friend class GBufferManager;
 
@@ -109,7 +112,6 @@ private:
     void recordDescriptorSet() const;
     void createTextures(const std::string& prefix, uint32_t width,uint32_t height);
 
-    static vk::Format getTargetVkFormat();
 };
 
 

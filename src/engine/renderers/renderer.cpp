@@ -85,6 +85,18 @@ void Renderer::initDescSetLayout() {
         materialUBOs_.emplace_back(std::move(buffer));
     }
 
+    // objDesc SSBO
+    for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
+
+        vk::DeviceSize bufferSize = sizeof(Mesh::ObjDescription) * Constants::objDescLimit;
+        VmaAllocationCreateFlags allocationCreateFlags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT ;
+        auto buffer = VkUtils::createBufferVMA(bufferSize,vk::BufferUsageFlagBits::eStorageBuffer, allocationCreateFlags);
+
+        objDescSSBOsMapped_.emplace_back(static_cast<unsigned char*>(buffer.allocationInfo.pMappedData));
+        objDescSSBOs_.emplace_back(std::move(buffer));
+    }
+
+
     std::vector<vk::DescriptorSetLayout> layouts(Constants::maxFramesInFlight,*descSetLayoutFrame_);
     vk::DescriptorSetAllocateInfo allocInfo{
         .descriptorPool = Engine::getInstance().getDescriptorPool(),
@@ -145,7 +157,22 @@ void Renderer::initDescSetLayout() {
             .pBufferInfo = &matBufferInfo,
         };
 
-        VkUtils::getDevice().updateDescriptorSets({writeDescriptorSetCam, writeDescriptorSetDummy, writeDescriptorSetMat},{});
+        vk::DescriptorBufferInfo objDescBufferInfo{
+            .buffer = objDescSSBOs_[i].buffer,
+            .offset = 0,
+            .range = sizeof(Mesh::ObjDescription) * Constants::objDescLimit
+        };
+
+        vk::WriteDescriptorSet writeDescriptorSetObjDesc{
+            .dstSet = descSetsFrame_[i], //  which descriptor set to update
+            .dstBinding = 5, // which binding to update
+            .dstArrayElement = 0, //  what element the update starts at
+            .descriptorCount = 1, //  how many descriptors are affected
+            .descriptorType = vk::DescriptorType::eStorageBuffer,
+            .pBufferInfo = &objDescBufferInfo,
+        };
+
+        VkUtils::getDevice().updateDescriptorSets({writeDescriptorSetCam, writeDescriptorSetDummy, writeDescriptorSetMat, writeDescriptorSetObjDesc},{});
     }
 
     isDescSetLayoutInit_ = true;
@@ -189,5 +216,12 @@ void Renderer::registerTextureStorage(const Texture& texture) {
             .pImageInfo = &imageInfo
         };
         VkUtils::getDevice().updateDescriptorSets(writeDescriptorSetBindless,{});
+    }
+}
+
+void Renderer::uploadObjDescription(const Mesh& mesh) {
+    for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
+        uint8_t* dst = objDescSSBOsMapped_[i] + mesh.getCID() * sizeof(Mesh::ObjDescription);
+        memcpy(dst,&mesh.getDescription(), sizeof(Mesh::ObjDescription));
     }
 }

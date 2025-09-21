@@ -79,5 +79,9 @@ struct PcsRaygen {
     uint32_t depthMapHandle;
     uint32_t materialMapHandle;
 
+    uint32_t skyHandle;
+
     uint32_t seed;
+    uint32_t accumulate{0};
+    uint32_t frameCtr{0};
 };

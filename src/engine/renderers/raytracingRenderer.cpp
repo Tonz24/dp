@@ -4,8 +4,23 @@
 
 #include "raytracingRenderer.h"
 
+#include "imgui/imgui.h"
+
 bool RaytracingRenderer::drawGUI() {
-    return DeferredRenderer::drawGUI();
+    if (ImGui::CollapsingHeader("Path tracer")) {
+        ImGui::Indent();
+
+        ImGui::Checkbox("Accumulate",reinterpret_cast<bool*>(&pcs_.accumulate));
+
+        pcs_.frameCtr += 1;
+
+        if (!pcs_.accumulate)
+            pcs_.frameCtr = 0;
+
+
+        ImGui::Unindent();
+    }
+    return false;
 }
 
 void RaytracingRenderer::render(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage,
@@ -40,11 +55,18 @@ void RaytracingRenderer::initGraphicsPipelines() {
 
     generator_ = std::mt19937(rngDevice_());
     distr_ = std::uniform_int_distribution(std::numeric_limits<uint32_t>::min(),std::numeric_limits<uint32_t>::max());
+
+    accumulator_ = TextureManager::getInstance()->registerResource("accumulator",
+                                                                 gBuffer_->getTarget().getWidth(),
+                                                                 gBuffer_->getTarget().getHeight(),
+                                                                 GBuffer::getTargetVkFormat(),
+                                                                 GBuffer::targetUsageFlags);
+
+   registerTextureStorage(*accumulator_);
 }
 
 void RaytracingRenderer::recordCommandBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
     const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) {
-    //DeferredRenderer::recordCommandBuffer(scene, cmdBuf, frameInFlightIndex, swapchainImage, swapchainImageView, swapchainExtent);
 
     cmdBuf.reset();
     cmdBuf.begin({.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
@@ -56,8 +78,64 @@ void RaytracingRenderer::recordCommandBuffer(const Scene& scene, vk::raii::Comma
     recordSceneCommands(scene,cmdBuf,frameInFlightIndex);
 
     gBuffer_->transitionToTrace(cmdBuf);
+    accumulator_->transitionLayout(vk::ImageLayout::eGeneral,vk::PipelineStageFlagBits2::eRayTracingShaderKHR,vk::AccessFlagBits2::eShaderStorageWrite,cmdBuf);
 
     recordTraceCommands(scene,cmdBuf,frameInFlightIndex);
+}
+
+void RaytracingRenderer::recordPresentBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
+    const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent)
+{
+   //  transition g buffer target to blit
+    //gBuffer_->transitionToBlit(cmdBuf);
+
+    accumulator_->transitionLayout(vk::ImageLayout::eTransferSrcOptimal,vk::PipelineStageFlagBits2::eTransfer,vk::AccessFlagBits2::eTransferRead,cmdBuf);
+
+    VkUtils::transitionImageLayout(swapchainImage,
+                                   vk::ImageLayout::eUndefined,
+                                   vk::ImageLayout::eTransferDstOptimal,
+                                   vk::PipelineStageFlagBits2::eBottomOfPipe,
+                                   vk::AccessFlagBits2::eNone,
+                                   vk::PipelineStageFlagBits2::eTransfer,
+                                   vk::AccessFlagBits2::eTransferWrite,
+                                   vk::ImageAspectFlagBits::eColor,
+                                   cmdBuf);
+
+    VkUtils::blit(cmdBuf,accumulator_->getVkImage().image,
+                    {accumulator_->getWidth(),accumulator_->getHeight()},
+                    vk::ImageAspectFlagBits::eColor,
+                    swapchainImage,
+                    {swapchainExtent.width,swapchainExtent.height},
+                    vk::ImageAspectFlagBits::eColor,
+                    vk::Filter::eNearest);
+
+
+    //  transition swapchain image into color attachment optimal for gui write
+    VkUtils::transitionImageLayout(swapchainImage,
+                                   vk::ImageLayout::eTransferDstOptimal,
+                                   vk::ImageLayout::eColorAttachmentOptimal,
+                                   vk::PipelineStageFlagBits2::eTransfer,
+                                   vk::AccessFlagBits2::eTransferWrite,
+                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                                   vk::AccessFlagBits2::eColorAttachmentRead | vk::AccessFlagBits2::eColorAttachmentWrite,
+                                   vk::ImageAspectFlagBits::eColor,
+                                   cmdBuf);
+
+    // render gui last, into the swapchain frame buffer
+    recordGUICommands(scene,cmdBuf,frameInFlightIndex, swapchainImageView, swapchainExtent);
+
+    //  transition swapchain image to present
+    VkUtils::transitionImageLayout(swapchainImage,
+                                   vk::ImageLayout::eColorAttachmentOptimal,
+                                   vk::ImageLayout::ePresentSrcKHR,
+                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                                   vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead,
+                                   vk::PipelineStageFlagBits2::eBottomOfPipe,
+                                   vk::AccessFlagBits2::eNone,
+                                   vk::ImageAspectFlagBits::eColor,
+                                   cmdBuf);
+
+    cmdBuf.end();
 }
 
 void RaytracingRenderer::recordTraceCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex) {
@@ -66,6 +144,7 @@ void RaytracingRenderer::recordTraceCommands(const Scene& scene, vk::raii::Comma
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, rtPipeline_.getPipelineLayout(), 0, *getDescSetFrame(frameInFlightIndex), nullptr);
 
     pcs_.seed = distr_(generator_);
+    pcs_.skyHandle = scene.getSky()->getCID();
 
     cmdBuf.pushConstants(gBufferShadePipeline_.getPipelineLayout(), vk::ShaderStageFlagBits::eRaygenKHR ,0, vk::ArrayProxy<const PcsRaygen>{pcs_});
 

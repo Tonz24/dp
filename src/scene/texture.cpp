@@ -5,7 +5,7 @@
 #include "texture.h"
 #include <iostream>
 
-#include "Vertex.h"
+#include "vertex.h"
 #include "../engine/engine.h"
 #include "../engine/managers/resourceManager.h"
 

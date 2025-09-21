@@ -4,12 +4,12 @@
 
 #include "rasterPipeline.h"
 
-#include "../../scene/Vertex.h"
+#include "../../scene/vertex.h"
 
 
 RasterPipeline::RasterPipeline(const std::vector<ShaderStageInfo>& shaderInfos,
-                                   std::span<const vk::DescriptorSetLayout> descriptorSetLayouts,  std::span<const vk::PushConstantRange> pcsRange,
-                                   std::span<const vk::Format> colorAttachmentFormats, bool hasVertexLayout, vk::Format depthFormat) : GraphicsPipeline(descriptorSetLayouts, pcsRange)
+                               std::span<const vk::DescriptorSetLayout> descriptorSetLayouts,  std::span<const vk::PushConstantRange> pcsRange,
+                               std::span<const vk::Format> colorAttachmentFormats, bool hasVertexLayout, vk::Format depthFormat) : GraphicsPipeline(descriptorSetLayouts, pcsRange)
 {
     initShaderStages(shaderInfos);
 

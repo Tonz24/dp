@@ -11,6 +11,12 @@ Mesh::Mesh(std::vector<Vertex3D>&& vertexList, std::vector<uint32_t>&& indexList
     vertices_(std::move(vertexList)), indices_(std::move(indexList)), material_(std::move(material)) {
 
     initBuffers();
+
+    description_ = ObjDescription{
+        .vertexBufferAddress = vertexBuffer_.deviceAddress,
+        .indexBufferAddress = indexBuffer_.deviceAddress,
+        .materialId = material_->getCID()
+    };
 }
 
 Mesh::~Mesh() {
@@ -90,6 +96,10 @@ void Mesh::recordDrawCommands(vk::raii::CommandBuffer& cmdBuf, const vk::raii::P
     cmdBuf.pushConstants(pipelineLayout,vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const PcsGBufferFill>{pcs});
 
     cmdBuf.drawIndexed(indices_.size(), 1, 0, 0, 0);
+}
+
+void Mesh::updateDescription() const {
+    Renderer::uploadObjDescription(*this);
 }
 
 void Mesh::initBuffers() {

@@ -19,7 +19,7 @@ void GBuffer::recordDescriptorSet() const {
     for (const auto & texture : textures_) {
         Renderer::registerTextureBindless(*texture);
     }
-    Renderer::registerTextureStorage(*target_);
+    //Renderer::registerTextureStorage(*target_);
 }
 
 void GBuffer::createTextures(const std::string& prefix, uint32_t width, uint32_t height) {
@@ -114,7 +114,7 @@ void GBuffer::transitionToBlit(vk::raii::CommandBuffer& cmdBuf) const {
 }
 
 void GBuffer::transitionToTrace(vk::raii::CommandBuffer& cmdBuf) const {
-    target_->transitionLayout(vk::ImageLayout::eGeneral,vk::PipelineStageFlagBits2::eRayTracingShaderKHR,vk::AccessFlagBits2::eShaderStorageWrite,cmdBuf);
+    //target_->transitionLayout(vk::ImageLayout::eGeneral,vk::PipelineStageFlagBits2::eRayTracingShaderKHR,vk::AccessFlagBits2::eShaderStorageWrite,cmdBuf);
 
     albedoMap_->transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eFragmentShader,vk::AccessFlagBits2::eShaderSampledRead,cmdBuf);
     normalMap_->transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eFragmentShader,vk::AccessFlagBits2::eShaderSampledRead,cmdBuf);

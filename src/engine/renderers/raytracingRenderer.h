@@ -26,6 +26,8 @@ protected:
     void recordCommandBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage,
                              const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) override;
 
+    void recordPresentBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage,
+        const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) override;
 
     void recordTraceCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex);
 
@@ -36,6 +38,8 @@ protected:
     std::uniform_int_distribution<uint32_t> distr_;
 
     PcsRaygen pcs_{};
+
+    std::shared_ptr<Texture> accumulator_{nullptr};
 
     static constexpr vk::PushConstantRange pcsRaygenRange{
         .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR,
