@@ -61,10 +61,8 @@ public:
     //  in descending order
 
     static constexpr std::array targetAcceptableFormats{
-        vk::Format::eB10G11R11UfloatPack32,
         vk::Format::eR32G32B32A32Sfloat,
-        vk::Format::eR16G16B16A16Sfloat,
-        vk::Format::eR8G8B8A8Unorm
+        vk::Format::eR16G16B16A16Sfloat
     };
 
 

@@ -477,8 +477,8 @@ vk::PresentModeKHR Engine::chooseSwapPresentMode() {
 //    }
 
     //eFifo is guaranteed to be available (https://docs.vulkan.org/tutorial/latest/03_Drawing_a_triangle/01_Presentation/01_Swap_chain.html)
-    //return vk::PresentModeKHR::eImmediate;
-    return vk::PresentModeKHR::eFifo;
+    return vk::PresentModeKHR::eImmediate;
+    //return vk::PresentModeKHR::eFifo;
 }
 
 vk::Extent2D Engine::chooseSwapExtent() {

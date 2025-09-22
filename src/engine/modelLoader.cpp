@@ -24,7 +24,7 @@ std::vector<std::shared_ptr<Mesh>> ModelLoader::loadModel(std::string_view path,
                                              aiProcess_Triangulate |
                                              //aiProcess_GenSmoothNormals |
                                              aiProcess_JoinIdenticalVertices |
-                                             //aiProcess_OptimizeGraph |
+                                             aiProcess_OptimizeGraph |
                                              aiProcess_OptimizeMeshes |
                                              aiProcess_CalcTangentSpace);
 
