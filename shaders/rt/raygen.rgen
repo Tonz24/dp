@@ -38,14 +38,13 @@ void main() {
     vec2 imageCoord = vec2(gl_LaunchIDEXT.xy) + 0.5; // add half pixel offset (sample pixel centers, not corners)
     vec2 uv = imageCoord / imageSize;
 
-
     //  early exit if there's no geometry ()
     vec4 normalShininess = texture(textures[pcs.normalMapHandle], uv);
     if (!isGeometryValid(normalShininess.xyz)){
         vec3 sky = texture(textures[pcs.skyHandle],uv).xyz;
         imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(sky, 1.0));
+        return;
     }
-
 
     //  load the rest of the textures
     vec3 normal = normalize(normalShininess.xyz);

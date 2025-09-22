@@ -56,9 +56,7 @@ void RaytracingRenderer::initGraphicsPipelines() {
     generator_ = std::mt19937(rngDevice_());
     distr_ = std::uniform_int_distribution(std::numeric_limits<uint32_t>::min(),std::numeric_limits<uint32_t>::max());
 
-    vk::ImageUsageFlags accumulatorUsage = vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage;
-
-    accumulator_ = TextureManager::getInstance()->registerResource("accumulator",
+    accumulator_ = TextureManager::getInstance()->registerResource(gBuffer_->getResourceName() + "_accumulator",
                                                                  gBuffer_->getTarget().getWidth(),
                                                                  gBuffer_->getTarget().getHeight(),
                                                                  GBuffer::getTargetVkFormat(),

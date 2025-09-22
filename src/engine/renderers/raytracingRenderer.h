@@ -46,4 +46,5 @@ protected:
         .offset = 0,
         .size = static_cast<uint32_t>(sizeof(PcsRaygen))
     };
+    static constexpr vk::ImageUsageFlags accumulatorUsage{vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage};
 };
