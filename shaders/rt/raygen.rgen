@@ -52,6 +52,8 @@ void main() {
         imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(mat.emission, 1.0));
         return;
     }
+    //imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(mat.diffuseAlbedo,1.0));
+    //return;
 
     //  load the rest of the textures
     vec3 normal = normalize(normalShininess.xyz);
@@ -67,9 +69,20 @@ void main() {
     // initial origin is the world space position of first hit (first hit is rasterized by G buffer fill step)
     // initial direction is sampled according to material at ray origin
     vec3 posWS = reconstructPositionWS(uv,depth);
-    vec3 direction = sampleHemisphereCosineWeighted(normal,seed).xyz;
+
+    vec3 camRayDirWS =  normalize(posWS - cameraUBO.posWS);
+    //  flip normal on backside hit
+    if (dot(-camRayDirWS,normal) < 0.0)
+        normal *= -1.0;
+
+    vec4 sampled = sampleHemisphereCosineWeighted(normal,seed);
+    vec3 direction = sampled.xyz;
+    float pdf = sampled.w;
 
     resetPayload(payload);
+
+    float tMin = 0.01f;
+    float tMax = 10000.0f;
 
     traceRayEXT(
         topLevelAS,
@@ -78,21 +91,25 @@ void main() {
         0,    // sbtRecordOffset
         0,    // sbtRecordStride
         0,    // missIndex
-        posWS.xyz,
-        0.001,
-        /*direction.xyz*/ normal,
-        100.0,
+        posWS,
+        tMin,
+        direction /*normal*/,
+        tMax,
         0     // payloadLocation
     );
 
-    vec3 radiance = direction.xyz * 0.5 + 0.5;
-    radiance = normal;
-    radiance = payload.hitEmission;
+    vec3 L = normalize(payload.hitPosition - posWS);
+    float cosThetaI = max(dot(L,normal),0.0);
 
-    if (pcs.accumulate == 1 && pcs.frameCtr > 0){
+    vec3 radiance = payload.hitBrdf * payload.hitEmission * cosThetaI / pdf;
+
+    if (pcs.accumulate == 1){
         vec3 oldRadiance = imageLoad(outputImage, ivec2(gl_LaunchIDEXT.xy)).xyz;
         radiance = mix(oldRadiance,radiance, 1.0f / float(pcs.frameCtr + 1));
     }
 
     imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(radiance, 1.0));
+    //imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(payload.hitBrdf, 1.0));
+    //imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(pdf));
+    //imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(payload.hitNormal, 1.0));
 }

@@ -21,22 +21,22 @@ struct CameraUBOFormat {
     glm::mat4 matInvViewProj{};
 
     glm::vec3 positionWorld{};
-    float zNear{0.01f};
+    float zNear{0.1f};
 
-    float zFar{150.0f};
+    float zFar{700.0f};
 };
 
 struct alignas(16) MaterialUBOFormat {
-    glm::vec3 diffuseAlbedo{};
+    glm::vec3 diffuseAlbedo{0};
     float shininess{32};
 
-    glm::vec3 specularAlbedo{};
+    glm::vec3 specularAlbedo{0};
     float ior{};
 
-    glm::vec3 emission{};
+    glm::vec3 emission{0};
     uint32_t diffuseAlbedoMapHandle{0};
 
-    glm::vec3 attenuation;
+    glm::vec3 attenuation{0};
     uint32_t specularALbedoMapHandle{0};
 
     uint32_t shininessMapHandle{0};

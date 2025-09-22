@@ -12,11 +12,6 @@ bool RaytracingRenderer::drawGUI() {
 
         ImGui::Checkbox("Accumulate",reinterpret_cast<bool*>(&pcs_.accumulate));
 
-        pcs_.frameCtr += 1;
-
-        if (!pcs_.accumulate)
-            pcs_.frameCtr = 0;
-
 
         ImGui::Unindent();
     }
@@ -149,4 +144,10 @@ void RaytracingRenderer::recordTraceCommands(const Scene& scene, vk::raii::Comma
     auto renderDims = getRenderDimensions();
 
     cmdBuf.traceRaysKHR(rtPipeline_.getRaygenRegion(),rtPipeline_.getMissRegion(),rtPipeline_.getHitRegion(),rtPipeline_.getHitRegion(),renderDims.x,renderDims.y,1);
+
+    pcs_.frameCtr += 1;
+
+    if (!pcs_.accumulate)
+        pcs_.frameCtr = 0;
+
 }

@@ -46,7 +46,7 @@ protected:
         .depthClampEnable = vk::False,
         .rasterizerDiscardEnable = vk::False,
         .polygonMode = vk::PolygonMode::eFill,
-        .cullMode = vk::CullModeFlagBits::eBack,
+        .cullMode = vk::CullModeFlagBits::eNone,
         .frontFace = vk::FrontFace::eCounterClockwise,
         .depthBiasEnable = vk::False,
         .depthBiasSlopeFactor = 1.0f,

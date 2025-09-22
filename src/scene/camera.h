@@ -52,7 +52,7 @@ private:
     float aspectRatio_{16.0f / 9.0f};
 
     float yaw_{0.0f}, pitch_{0.0f};
-    float movementSpeed_{1.0f};
+    float movementSpeed_{5.0f};
 
     static constexpr glm::vec3 worldUp_{0,1,0};
 

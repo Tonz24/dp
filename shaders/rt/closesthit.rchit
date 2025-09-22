@@ -3,6 +3,7 @@
 #extension GL_EXT_ray_tracing : require
 
 #include "../common/common.glsl"
+#include "../common/math_constants.glsl"
 #include "raycommon.glsl"
 #include "structs/payload.glsl"
 
@@ -47,6 +48,11 @@ void main() {
     vec3 uv = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
     vec2 texCoord = getTexCoord(uv, v0, v1, v2);
     vec3 hitNormal = getNormalWS(uv, v0, v1, v2);
+    vec3 posWS = getPositionWS(uv, v0, v1, v2);
+
+    if (dot(-gl_WorldRayDirectionEXT,hitNormal) < 0.0)
+        hitNormal *= -1.0;
+
     vec3 hitTangent = getTangentWS(uv, v0, v1, v2);
 
     vec3 T = hitTangent - dot(hitTangent, hitNormal) * hitNormal;
@@ -56,8 +62,13 @@ void main() {
 
     ShadeParams params = unpackMaterial(material, hitNormal, TBN, texCoord);
 
-    payload.hitPosition = getPositionWS(uv, v0, v1, v2);
+     if (dot(-gl_WorldRayDirectionEXT,params.normal) < 0.0)
+        params.normal *= -1.0;
+
+    payload.hitPosition = posWS;
     payload.hitNormal = params.normal;
     payload.hitEmission = material.emission;
-    
+    payload.hitBrdf = params.albedo * INVPI;
+    //payload.hitBrdf = vec3(float(object.materialId));
+    //payload.hitBrdf = params.albedo;
 }
