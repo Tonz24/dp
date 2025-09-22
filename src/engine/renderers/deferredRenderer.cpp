@@ -61,7 +61,7 @@ void DeferredRenderer::initGraphicsPipelines() {
     std::array pcsShadeRange{GBuffer::pcsShadeRange};
     std::array pcsSkyRange{Renderer::pcsSkyRange};
 
-    std::array shadeAttachmentFormat{GBuffer::targetVkFormat};
+    std::array shadeAttachmentFormat{gBuffer_->getTarget().getVkFormat()};
 
 
     auto gBufferFillStages = std::vector<RasterPipeline::ShaderStageInfo>{

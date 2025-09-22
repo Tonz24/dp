@@ -62,7 +62,8 @@ void main() {
 
     ShadeParams params = unpackMaterial(material, hitNormal, TBN, texCoord);
 
-     if (dot(-gl_WorldRayDirectionEXT,params.normal) < 0.0)
+    // flip normal if backside is hit
+    if (dot(-gl_WorldRayDirectionEXT,params.normal) < 0.0)
         params.normal *= -1.0;
 
     payload.hitPosition = posWS;
