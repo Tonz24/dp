@@ -38,30 +38,31 @@ void main() {
     vec2 imageCoord = vec2(gl_LaunchIDEXT.xy) + 0.5; // add half pixel offset (sample pixel centers, not corners)
     vec2 uv = imageCoord / imageSize;
 
-    //  early exit if there's no geometry ()
+    //  if there's no geometry, draw the sky into the output image and early exit (no rays traced)
+    //  (in this case, the sky texture is already pre-rendered in the G buffer shading target texture) 
     vec4 normalShininess = texture(textures[pcs.normalMapHandle], uv);
     if (!isGeometryValid(normalShininess.xyz)){
         vec3 sky = texture(textures[pcs.skyHandle],uv).xyz;
         imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(sky, 1.0));
         return;
     }
-
     //  load the rest of the textures
     vec3 normal = normalize(normalShininess.xyz);
     float shininess = normalShininess.w;
-
     vec3 albedo = texture(textures[pcs.albedoMapHandle], uv).xyz;
     float depth = texture(textures[pcs.depthMapHandle], uv).x;
-
 
     // Calc seed
     uvec2 s = pcg2d(ivec2(gl_LaunchIDEXT.xy) * (pcs.seed));
     uint seed = s.x + s.y;
 
+    // initialize ray
+    // initial origin is the world space position of first hit (first hit is rasterized by G buffer fill step)
+    // initial direction is sampled according to material at ray origin
     vec3 posWS = reconstructPositionWS(uv,depth);
     vec3 direction = sampleHemisphereCosineWeighted(normal,seed).xyz;
 
-    payload.position = vec3(0.0);
+    resetPayload(payload);
 
     traceRayEXT(
         topLevelAS,
@@ -79,7 +80,7 @@ void main() {
 
     vec3 radiance = direction.xyz * 0.5 + 0.5;
     radiance = normal;
-
+    radiance = payload.hitEmission;
 
     if (pcs.accumulate == 1 && pcs.frameCtr > 0){
         vec3 oldRadiance = imageLoad(outputImage, ivec2(gl_LaunchIDEXT.xy)).xyz;

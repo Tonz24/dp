@@ -1,5 +1,3 @@
-
-
 layout(push_constant, std140) uniform PushConstants {
     vec3 lightPosWS;
     int overlayIndex;

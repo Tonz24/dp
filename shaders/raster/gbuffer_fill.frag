@@ -10,29 +10,15 @@ layout(location = 1) out vec4 outNormal;
 layout(location = 2) out uint outMeshId;
 layout(location = 3) out uint outMaterialId;
 
-
 #include "../common/common.glsl"
 #include "pcs/pcs_gbuffer_fill.glsl"
 
 void main() {
     Material mat = materialUBO.materials[pcs.matIndex];
-
-    float hasAlbedoMap = clamp(float(mat.diffuseAlbedoMapHandle),0.0f,1.0f);
-    vec3 albedo = mix(mat.diffuseAlbedo, texture(textures[mat.diffuseAlbedoMapHandle], inTexCoord).rgb, hasAlbedoMap);
-
-
-    float hasNormalMap = clamp(float(mat.normalMapHandle),0.0f,1.0f);
-    vec3 normal = mix(normalize(inNormal),normalize(inTBN * (texture(textures[mat.normalMapHandle],inTexCoord).xyz * 2.0 - 1.0)),hasNormalMap);
-
-    float hasShininessMap = clamp(float(mat.shininessMapHandle),0.0f,1.0f);
-    float shininess = mix(mat.shininess, texture(textures[mat.shininessMapHandle], inTexCoord).r, hasShininessMap);
-
-    // roughness to shininess remapping https://simonstechblog.blogspot.com/2011/12/microfacet-brdf.html
-    shininess = mix(shininess,2.0f / (shininess * shininess) - 2.0f,hasShininessMap);
-
-    // smuggle tex coords for bindless test
-    outAlbedo = vec4(albedo, inTexCoord.x);
-    outNormal = vec4(normal,shininess);
+    ShadeParams params = unpackMaterial(mat, inNormal, inTBN, inTexCoord);
+    
+    outAlbedo = vec4(params.albedo, 1.0);
+    outNormal = vec4(params.normal,params.shininess); // smuggle shininess into normal texture
     outMeshId = pcs.meshId;
     outMaterialId = pcs.matIndex;
 }

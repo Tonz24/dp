@@ -10,7 +10,6 @@ layout(location = 0) out vec3 outNormal;
 layout(location = 1) out vec2 outTexCoord;
 layout(location = 2) out mat3 outTBN;
 
-
 #include "../common/common.glsl"
 #include "pcs/pcs_gbuffer_fill.glsl"
 

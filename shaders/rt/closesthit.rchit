@@ -9,7 +9,6 @@
 layout(location = 0) rayPayloadInEXT HitPayload payload;
 hitAttributeEXT vec2 attribs;
 
-
 vec3 getPositionWS(vec3 uv, Vertex v0, Vertex v1, Vertex v2){
     vec3 pos = uv.x * v0.position + uv.y * v1.position + uv.z * v2.position;
     vec3 posWS = vec3(gl_ObjectToWorldEXT * vec4(pos, 1.0));
@@ -22,14 +21,18 @@ vec3 getNormalWS(vec3 uv, Vertex v0, Vertex v1, Vertex v2){
     return normalWS;
 }
 
-void main()
-{
-/*
-    payload.brdf = face.diffuse / M_PI;
-    payload.emission = face.emission;
-    payload.position = position;
-    payload.normal = normal;*/
+vec3 getTangentWS(vec3 uv, Vertex v0, Vertex v1, Vertex v2){
+    vec3 tangent = uv.x * v0.tangent + uv.y * v1.tangent + uv.z * v2.tangent;
+    vec3 tangentWS = normalize(vec3(tangent * gl_WorldToObjectEXT));
+    return tangentWS;
+}
 
+vec2 getTexCoord(vec3 uv, Vertex v0, Vertex v1, Vertex v2){
+    vec2 texCoord = uv.x * v0.texCoord + uv.y * v1.texCoord + uv.z * v2.texCoord;
+    return texCoord;
+}
+
+void main() {
     ObjDesc object = objDesc.i[gl_InstanceCustomIndexEXT];
 
     Material material = materialUBO.materials[object.materialId];
@@ -42,9 +45,19 @@ void main()
     Vertex v2 = vertices.v[ind.z];
 
     vec3 uv = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
+    vec2 texCoord = getTexCoord(uv, v0, v1, v2);
+    vec3 hitNormal = getNormalWS(uv, v0, v1, v2);
+    vec3 hitTangent = getTangentWS(uv, v0, v1, v2);
 
-    vec3 posWS = getPositionWS(uv, v0, v1, v2);
-    vec3 normal = getNormalWS(uv, v0, v1, v2);
+    vec3 T = hitTangent - dot(hitTangent, hitNormal) * hitNormal;
+    T = normalize(T);
+    vec3 B = normalize(cross(hitNormal, T));
+    mat3 TBN = mat3(T, B, hitNormal);
 
-    payload.position = normal;
+    ShadeParams params = unpackMaterial(material, hitNormal, TBN, texCoord);
+
+    payload.hitPosition = getPositionWS(uv, v0, v1, v2);
+    payload.hitNormal = params.normal;
+    payload.hitEmission = material.emission;
+    //payload.hitEmission = v0.hitEmission
 }
