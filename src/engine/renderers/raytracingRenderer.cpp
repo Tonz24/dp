@@ -56,11 +56,13 @@ void RaytracingRenderer::initGraphicsPipelines() {
     generator_ = std::mt19937(rngDevice_());
     distr_ = std::uniform_int_distribution(std::numeric_limits<uint32_t>::min(),std::numeric_limits<uint32_t>::max());
 
+    vk::ImageUsageFlags accumulatorUsage = vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage;
+
     accumulator_ = TextureManager::getInstance()->registerResource("accumulator",
                                                                  gBuffer_->getTarget().getWidth(),
                                                                  gBuffer_->getTarget().getHeight(),
                                                                  GBuffer::getTargetVkFormat(),
-                                                                 GBuffer::targetUsageFlags);
+                                                                 accumulatorUsage);
 
    registerTextureStorage(*accumulator_);
 }
@@ -78,7 +80,7 @@ void RaytracingRenderer::recordCommandBuffer(const Scene& scene, vk::raii::Comma
     recordSceneCommands(scene,cmdBuf,frameInFlightIndex);
 
     gBuffer_->transitionToTrace(cmdBuf);
-    accumulator_->transitionLayout(vk::ImageLayout::eGeneral,vk::PipelineStageFlagBits2::eRayTracingShaderKHR,vk::AccessFlagBits2::eShaderStorageWrite,cmdBuf);
+    accumulator_->transitionLayout(vk::ImageLayout::eGeneral,vk::PipelineStageFlagBits2::eRayTracingShaderKHR,vk::AccessFlagBits2::eShaderStorageWrite | vk::AccessFlagBits2::eShaderStorageRead,cmdBuf);
 
     recordTraceCommands(scene,cmdBuf,frameInFlightIndex);
 }
@@ -86,9 +88,7 @@ void RaytracingRenderer::recordCommandBuffer(const Scene& scene, vk::raii::Comma
 void RaytracingRenderer::recordPresentBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
     const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent)
 {
-   //  transition g buffer target to blit
-    //gBuffer_->transitionToBlit(cmdBuf);
-
+   //  transition accumulator to blit
     accumulator_->transitionLayout(vk::ImageLayout::eTransferSrcOptimal,vk::PipelineStageFlagBits2::eTransfer,vk::AccessFlagBits2::eTransferRead,cmdBuf);
 
     VkUtils::transitionImageLayout(swapchainImage,
@@ -144,9 +144,9 @@ void RaytracingRenderer::recordTraceCommands(const Scene& scene, vk::raii::Comma
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, rtPipeline_.getPipelineLayout(), 0, *getDescSetFrame(frameInFlightIndex), nullptr);
 
     pcs_.seed = distr_(generator_);
-    pcs_.skyHandle = scene.getSky()->getCID();
+    pcs_.skyHandle = gBuffer_->getTarget().getCID();
 
-    cmdBuf.pushConstants(gBufferShadePipeline_.getPipelineLayout(), vk::ShaderStageFlagBits::eRaygenKHR ,0, vk::ArrayProxy<const PcsRaygen>{pcs_});
+    cmdBuf.pushConstants(rtPipeline_.getPipelineLayout(), vk::ShaderStageFlagBits::eRaygenKHR ,0, vk::ArrayProxy<const PcsRaygen>{pcs_});
 
     auto renderDims = getRenderDimensions();
 

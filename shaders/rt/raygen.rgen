@@ -32,22 +32,18 @@ float linearizeDepth(float depth, float zNear, float zFar){
     return zNear * zFar / (zFar + depth * (zNear - zFar));
 }
 
-void main()
-{ 
+void main() { 
     //  calculate texture coordinate for sampling
     vec2 imageSize = vec2(imageSize(outputImage));
-    vec2 imageCoord = vec2(gl_LaunchIDEXT.xy);
-    vec2 halfPixelOffset = 1.0 / imageSize * 0.5; 
-    // without this offset the render is slightly warped compared to the rasterizer output
-    vec2 uv = imageCoord / imageSize + halfPixelOffset;
+    vec2 imageCoord = vec2(gl_LaunchIDEXT.xy) + 0.5; // add half pixel offset (sample pixel centers, not corners)
+    vec2 uv = imageCoord / imageSize;
 
 
-    //  early exit if there's no geometry
+    //  early exit if there's no geometry ()
     vec4 normalShininess = texture(textures[pcs.normalMapHandle], uv);
     if (!isGeometryValid(normalShininess.xyz)){
         vec3 sky = texture(textures[pcs.skyHandle],uv).xyz;
         imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(sky, 1.0));
-        //return;
     }
 
 
