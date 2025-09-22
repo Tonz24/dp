@@ -59,5 +59,5 @@ void main() {
     payload.hitPosition = getPositionWS(uv, v0, v1, v2);
     payload.hitNormal = params.normal;
     payload.hitEmission = material.emission;
-    //payload.hitEmission = v0.hitEmission
+    
 }

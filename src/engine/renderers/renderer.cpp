@@ -181,6 +181,13 @@ void Renderer::initDescSetLayout() {
 
 void Renderer::registerTextureBindless(const Texture& texture) {
     for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
+
+        // TODO: handle other unsigned formats
+        uint32_t dstBinding = texture.getVkFormat() == vk::Format::eR32Uint ? 6 : 2;
+
+        if (dstBinding == 6)
+            int h = 10;
+
         vk::DescriptorImageInfo imageInfo{
             .sampler = texture.getVkSampler(),
             .imageView = texture.getVkImageView(),
@@ -189,7 +196,7 @@ void Renderer::registerTextureBindless(const Texture& texture) {
 
         vk::WriteDescriptorSet writeDescriptorSetBindless{
             .dstSet = getDescSetFrame(i),
-            .dstBinding = 2,
+            .dstBinding = dstBinding,
             .dstArrayElement = texture.getCID(),
             .descriptorCount = 1,
             .descriptorType = vk::DescriptorType::eCombinedImageSampler,

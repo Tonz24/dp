@@ -81,7 +81,7 @@ private:
             .binding = 1,
             .descriptorType = vk::DescriptorType::eUniformBuffer,
             .descriptorCount = 1,
-            .stageFlags = vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eClosestHitKHR
+            .stageFlags = vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eClosestHitKHR |  vk::ShaderStageFlagBits::eRaygenKHR
         },
         vk::DescriptorSetLayoutBinding { // Bindless textures
             .binding = 2,
@@ -106,7 +106,13 @@ private:
             .descriptorType = vk::DescriptorType::eStorageBuffer,
             .descriptorCount = 1,
             .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR
-        }
+        },
+        vk::DescriptorSetLayoutBinding { // Bindless textures
+            .binding = 6,
+            .descriptorType = vk::DescriptorType::eCombinedImageSampler,
+            .descriptorCount = Constants::bindlessTextureUintLimit,
+            .stageFlags = vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR
+        },
     };
 
     static constexpr vk::DescriptorSetLayoutCreateInfo frameLayoutInfo{

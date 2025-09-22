@@ -46,6 +46,13 @@ void main() {
         imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(sky, 1.0));
         return;
     }
+
+    Material mat = materialUBO.materials[uint(texture(utextures[pcs.materialMapHandle],uv).r)];
+    if (any(notEqual(mat.emission,vec3(0.0)))){
+        imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(mat.emission, 1.0));
+        return;
+    }
+
     //  load the rest of the textures
     vec3 normal = normalize(normalShininess.xyz);
     float shininess = normalShininess.w;

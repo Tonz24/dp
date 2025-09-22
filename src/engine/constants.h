@@ -13,6 +13,7 @@ public:
   static constexpr uint32_t materialLimit{100};
   static constexpr uint32_t objDescLimit{100};
   static constexpr uint32_t bindlessTextureLimit{1024};
+  static constexpr uint32_t bindlessTextureUintLimit{1024};
   static constexpr uint32_t textureSamplerLimit{1024};
 
   static constexpr uint32_t defaultCategoryIdLimit{1000};

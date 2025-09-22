@@ -68,7 +68,7 @@ void GBuffer::createTextures(const std::string& prefix, uint32_t width, uint32_t
                                                                  idMapVkFormat,
                                                                  idMapUsageFlags);
 
-    textures_ = {albedoMap_,normalMap_,depthMap_,materialIdMap_, target_};
+    textures_ = {albedoMap_,normalMap_,depthMap_,materialIdMap_, objectIdMap_, target_};
     recordDescriptorSet();
 }
 

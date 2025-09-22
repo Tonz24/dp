@@ -33,6 +33,7 @@ public:
     [[nodiscard]] const vk::raii::ImageView & getVkImageView() const { return vkImageView_; }
     [[nodiscard]] const vk::raii::Sampler & getVkSampler() const { return vkSampler_; }
     [[nodiscard]] const VkUtils::ImageAlloc& getVkImage() const { return imageAlloc_; }
+    [[nodiscard]] vk::Format getVkFormat() const { return vkFormat_; }
 
     [[nodiscard]] uint32_t getWidth() const { return width_; }
     [[nodiscard]] uint32_t getHeight() const { return height_; }
