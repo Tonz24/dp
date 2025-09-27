@@ -10,6 +10,7 @@ layout(location = 0) out vec4 fragColor;
 #include "pcs/pcs_gbuffer_shade.glsl"
 #include "../common/tonemappers.glsl"
 #include "../common/math_constants.glsl"
+#include "../rt/raycommon.glsl"
 
 const int OVERLAY_DEBUG_PHONG = 0;
 const int OVERLAY_ALBEDO_MAP = 1;
@@ -50,6 +51,11 @@ vec2 getShadowFactor(vec3 posWS, vec3 lightPos){
 
 
 void main() {
+
+/*
+    fragColor = vec4(emissiveBuffer.tris[0].v0eR.xyz + emissiveCDF.cdf[0].cdfVal,1.0);
+    return;*/
+
     vec2 screenTexCoord = inNDCxy * 0.5 + 0.5;
     screenTexCoord.y = 1.0 - screenTexCoord.y;
 

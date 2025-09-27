@@ -63,13 +63,13 @@ void Renderer::updateEmissiveCDF(const VkUtils::BufferAlloc& trianglesBuffer, co
         vk::DescriptorBufferInfo triBufferInfo{
             .buffer = trianglesBuffer.buffer,
             .offset =  0,
-            .range =  trianglesBuffer.allocationInfo.size
+            .range =  vk::WholeSize
         };
 
         vk::DescriptorBufferInfo cdfBufferInfo{
             .buffer = cdfBuffer.buffer,
             .offset =  0,
-            .range =  cdfBuffer.allocationInfo.size
+            .range =  vk::WholeSize
         };
 
         vk::WriteDescriptorSet triBufferWrite{

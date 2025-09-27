@@ -120,13 +120,13 @@ void Scene::extractEmissiveMeshes() {
                     .v2 = {v2Pos,emission.z},
                 };
 
-                emissiveTriangles_.emplace_back(tri);
-
                 glm::vec3 u = tri.v1 - tri.v0;
                 glm::vec3 v = tri.v2 - tri.v0;
 
                 tri.area = 0.5f * glm::length(glm::cross(u, v));
                 surfaceAreaTotal += tri.area;
+
+                emissiveTriangles_.emplace_back(tri);
             }
         }
     }
@@ -139,7 +139,7 @@ void Scene::extractEmissiveMeshes() {
 
     uint32_t triangleBufferCount = emissiveTriangles_.size();
     memcpy(emissiveBuffer_.allocationInfo.pMappedData,&triangleBufferCount,sizeof(triangleBufferCount));
-    memcpy(static_cast<uint8_t*>(emissiveBuffer_.allocationInfo.pMappedData) + sizeof(uint32_t) * 4,emissiveTriangles_.data(),emissiveTriangles_.size() * sizeof(emissiveTriangles_[0]));
+    memcpy(static_cast<uint8_t*>(emissiveBuffer_.allocationInfo.pMappedData) + sizeof(uint32_t)*4,emissiveTriangles_.data(),emissiveTriangles_.size() * sizeof(emissiveTriangles_[0]));
 
 
     //normalize each triangle area, accumulate cdf
@@ -163,7 +163,7 @@ void Scene::extractEmissiveMeshes() {
 
     uint32_t cdfBufferCount = cdf_.size();
     memcpy(cdfBuffer_.allocationInfo.pMappedData,&cdfBufferCount,sizeof(cdfBufferCount));
-    memcpy(static_cast<uint8_t*>(cdfBuffer_.allocationInfo.pMappedData) + sizeof(uint32_t) * 4,cdf_.data(),cdf_.size() * sizeof(cdf_[0]));
+    memcpy(static_cast<uint8_t*>(cdfBuffer_.allocationInfo.pMappedData) + sizeof(uint32_t),cdf_.data(),cdf_.size() * sizeof(cdf_[0]));
 
     Renderer::updateEmissiveCDF(emissiveBuffer_,cdfBuffer_);
 }

@@ -34,14 +34,15 @@ public:
 
 private:
 
-    struct TrianglePacked {
+    struct alignas(16) TrianglePacked {
         glm::vec4 v0;
         glm::vec4 v1;
         glm::vec4 v2;
         float area{0.0f};
+        float pad[3]{0,0,0};
     };
 
-    struct CDFElement {
+    struct alignas(4) CDFElement {
         uint32_t triIndex;
         float pdf;
     };

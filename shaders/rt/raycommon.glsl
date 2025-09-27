@@ -47,18 +47,18 @@ TrianglePacked packTriangle(TriangleUnpacked tri){
 
 struct CDFElement {
     uint triIndex;
-    float pdf;
+    float cdfVal;
 };
 
 
-layout(set = 0, binding = 5, scalar) buffer ObjDesc_ { ObjDesc i[]; } objDesc;
+layout(set = 0, binding = 5, scalar) readonly buffer ObjDesc_ { ObjDesc i[]; } objDesc;
 
-layout(set = 0, binding = 7, scalar) buffer EmissiveTriangles {
+layout(set = 0, binding = 7, std430) readonly buffer EmissiveTriangles {
     uint size;
     TrianglePacked tris[];
 } emissiveBuffer;
 
-layout(set = 0, binding = 8, scalar) buffer EmissiveCDF {
+layout(set = 0, binding = 8, std430) readonly buffer EmissiveCDF {
     uint size;
     CDFElement cdf[];
 } emissiveCDF;

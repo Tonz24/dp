@@ -33,6 +33,21 @@ float linearizeDepth(float depth, float zNear, float zFar){
     return zNear * zFar / (zFar + depth * (zNear - zFar));
 }
 
+CDFElement sampleLight(float rnd){
+    uint left = 0;
+    uint right = emissiveCDF.size - 1;
+
+    while (left < right){
+        uint mid = left + (right - left) / 2;
+
+        if (rnd < emissiveCDF.cdf[mid].cdfVal)
+            right = mid;
+        else
+            left = mid + 1;
+    }
+    return emissiveCDF.cdf[left];
+}
+
 void main() { 
     //  calculate texture coordinate for sampling
     vec2 imageSize = vec2(imageSize(outputImage));
@@ -148,5 +163,5 @@ void main() {
     }
     int huh = 10;
     imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(radiance, 1.0));
-    imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(emissiveBuffer.tris[0].v0eR.xyz + emissiveCDF.cdf[0].pdf, 1.0 * huh));
+    //imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(emissiveBuffer.tris[0].v0eR.xyz + emissiveCDF.cdf[0].cdfVal, 1.0 * huh));
 }
