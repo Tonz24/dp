@@ -1,3 +1,5 @@
+#include "math_constants.glsl"
+
 //====================MATERIAL====================
 struct Material{
     vec3 diffuseAlbedo;
@@ -67,3 +69,15 @@ ShadeParams unpackMaterial(Material mat,vec3 normal, mat3 tbn, vec2 texCoord){
     return params;
 }
 //================================================
+
+
+vec2 dirToUv(vec3 dir){
+    const float u = 0.5f + 0.5f * atan(dir.z, dir.x) * INVPI;
+    const float v = 1.0f - acos(dir.y) * INVPI;
+    return vec2(u,v);
+}
+
+vec3 sampleSphericalMap(vec3 dir, uint skyTextureIndex){
+    vec2 uv = dirToUv(dir);
+    return texture(textures[skyTextureIndex],uv).xyz;
+}

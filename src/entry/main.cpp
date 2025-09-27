@@ -9,7 +9,7 @@ int main() {
     auto sky = TextureManager::getInstance()->registerResource("sky", "../assets/sky/lebombo_4k.exr", false, false);
     //auto scene = std::make_shared<Scene>(ModelLoader::loadModel("room/room.obj", false),cam,std::move(sky));
     //auto scene = std::make_shared<Scene>(ModelLoader::loadModel("living_room/living_room.obj", false),cam,std::move(sky));
-    auto scene = std::make_shared<Scene>(ModelLoader::loadModel("cornell/cornell_scaled.obj", false),cam,std::move(sky));
+    auto scene = std::make_shared<Scene>(ModelLoader::loadModel("cornell/cornell_full.obj", false),cam,std::move(sky));
 
     Engine::getInstance().setScene(std::move(scene));
     Engine::getInstance().run();

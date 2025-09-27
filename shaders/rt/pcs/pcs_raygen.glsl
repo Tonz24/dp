@@ -4,9 +4,12 @@ layout(push_constant, std140) uniform PushConstants {
     uint depthMapHandle;
     uint materialMapHandle;
 
+    uint targetHandle;
     uint skyHandle;
 
     uint seed;
     uint accumulate;
     uint frameCtr;
+
+    uint maxRecursionDepth;
 } pcs;

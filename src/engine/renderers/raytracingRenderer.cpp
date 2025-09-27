@@ -11,6 +11,7 @@ bool RaytracingRenderer::drawGUI() {
         ImGui::Indent();
 
         ImGui::Checkbox("Accumulate",reinterpret_cast<bool*>(&pcs_.accumulate));
+        ImGui::DragInt("Max bounce count",reinterpret_cast<int*>(&pcs_.maxRecursionDepth),0.33,1,16);
 
 
         ImGui::Unindent();
@@ -47,6 +48,8 @@ void RaytracingRenderer::initGraphicsPipelines() {
     pcs_.normalMapHandle = gBuffer_->getNormalMap().getCID();
     pcs_.depthMapHandle = gBuffer_->getDepthMap().getCID();
     pcs_.materialMapHandle = gBuffer_->getMaterialMap().getCID();
+    pcs_.targetHandle = gBuffer_->getTarget().getCID();
+    pcs_.maxRecursionDepth = rtPipeline_.getMaxRecursionDepth();
 
     generator_ = std::mt19937(rngDevice_());
     distr_ = std::uniform_int_distribution(std::numeric_limits<uint32_t>::min(),std::numeric_limits<uint32_t>::max());
@@ -54,14 +57,15 @@ void RaytracingRenderer::initGraphicsPipelines() {
     accumulator_ = TextureManager::getInstance()->registerResource(gBuffer_->getResourceName() + "_accumulator",
                                                                  gBuffer_->getTarget().getWidth(),
                                                                  gBuffer_->getTarget().getHeight(),
-                                                                 GBuffer::getTargetVkFormat(),
+                                                                 vk::Format::eR32G32B32A32Sfloat,
                                                                  accumulatorUsage);
-
-   registerTextureStorage(*accumulator_);
+    registerTextureStorage(*accumulator_);
 }
 
 void RaytracingRenderer::recordCommandBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
     const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) {
+
+    pcs_.skyHandle = scene.getSky()->getCID();
 
     cmdBuf.reset();
     cmdBuf.begin({.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
@@ -137,9 +141,8 @@ void RaytracingRenderer::recordTraceCommands(const Scene& scene, vk::raii::Comma
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, rtPipeline_.getPipelineLayout(), 0, *getDescSetFrame(frameInFlightIndex), nullptr);
 
     pcs_.seed = distr_(generator_);
-    pcs_.skyHandle = gBuffer_->getTarget().getCID();
 
-    cmdBuf.pushConstants(rtPipeline_.getPipelineLayout(), vk::ShaderStageFlagBits::eRaygenKHR ,0, vk::ArrayProxy<const PcsRaygen>{pcs_});
+    cmdBuf.pushConstants(rtPipeline_.getPipelineLayout(), pcsRaygenStageFlags,0, vk::ArrayProxy<const PcsRaygen>{pcs_});
 
     auto renderDims = getRenderDimensions();
 

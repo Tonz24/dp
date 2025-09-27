@@ -214,7 +214,7 @@ void Engine::initVulkanInstance() {
             .applicationVersion = vk::makeVersion(1,0,0),
             .pEngineName = nullptr,
             .engineVersion = vk::makeVersion(1,0,0),
-            .apiVersion = vk::ApiVersion13
+            .apiVersion = vk::ApiVersion14
     };
 
 

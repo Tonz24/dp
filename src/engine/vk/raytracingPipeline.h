@@ -12,7 +12,7 @@
 class RaytracingPipeline : public GraphicsPipeline{
 public:
     RaytracingPipeline(const std::vector<ShaderStageInfo>& shaderInfos, const std::span<const vk::DescriptorSetLayout>& descriptorSetLayouts,
-        const std::span<const vk::PushConstantRange>& pcsRange);
+        const std::span<const vk::PushConstantRange>& pcsRange, uint32_t maxRecursionDepth = 1);
 
     RaytracingPipeline() = default;
 
@@ -20,11 +20,13 @@ public:
     [[nodiscard]] const vk::StridedDeviceAddressRegionKHR& getRaygenRegion() const { return raygenRegion_; }
     [[nodiscard]] const vk::StridedDeviceAddressRegionKHR& getMissRegion() const { return missRegion_; }
     [[nodiscard]] const vk::StridedDeviceAddressRegionKHR& getHitRegion() const { return hitRegion_; }
+    [[nodiscard]] uint32_t getMaxRecursionDepth() const { return maxRecursionDepth_; }
 
 private:
     std::vector<vk::RayTracingShaderGroupCreateInfoKHR> shaderGroups_{};
 
     uint32_t hitCount_{0}, missCount_{0};
+    uint32_t maxRecursionDepth_{16};
 
     VkUtils::BufferAlloc sbtBuffer_{};
 

@@ -1,3 +1,6 @@
+//https://github.com/yknishidate/single-file-vulkan-pathtracing
+//https://nvpro-samples.github.io/vk_raytracing_tutorial_KHR/
+
 #version 460
 #extension GL_GOOGLE_include_directive : require
 #extension GL_EXT_ray_tracing : require
@@ -18,8 +21,8 @@ vec3 getPositionWS(vec3 uv, Vertex v0, Vertex v1, Vertex v2){
 
 vec3 getNormalWS(vec3 uv, Vertex v0, Vertex v1, Vertex v2){
     vec3 normal = uv.x * v0.normal + uv.y * v1.normal + uv.z * v2.normal;
-    vec3 normalWS = normalize(vec3(normal * gl_WorldToObjectEXT));
-    return normalWS;
+    mat3 N = transpose(inverse(mat3(gl_ObjectToWorldEXT)));
+    return (N * normal);
 }
 
 vec3 getTangentWS(vec3 uv, Vertex v0, Vertex v1, Vertex v2){
@@ -70,6 +73,5 @@ void main() {
     payload.hitNormal = params.normal;
     payload.hitEmission = material.emission;
     payload.hitBrdf = params.albedo * INVPI;
-    //payload.hitBrdf = vec3(float(object.materialId));
-    //payload.hitBrdf = params.albedo;
+    payload.hit = true;
 }

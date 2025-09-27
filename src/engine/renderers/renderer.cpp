@@ -58,6 +58,41 @@ void Renderer::updateTLASDescriptor(const vk::raii::AccelerationStructureKHR& tl
     }
 }
 
+void Renderer::updateEmissiveCDF(const VkUtils::BufferAlloc& trianglesBuffer, const VkUtils::BufferAlloc& cdfBuffer) {
+    for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
+        vk::DescriptorBufferInfo triBufferInfo{
+            .buffer = trianglesBuffer.buffer,
+            .offset =  0,
+            .range =  trianglesBuffer.allocationInfo.size
+        };
+
+        vk::DescriptorBufferInfo cdfBufferInfo{
+            .buffer = cdfBuffer.buffer,
+            .offset =  0,
+            .range =  cdfBuffer.allocationInfo.size
+        };
+
+        vk::WriteDescriptorSet triBufferWrite{
+            .dstSet = getDescSetFrame(i),
+            .dstBinding = 7,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = vk::DescriptorType::eStorageBuffer,
+            .pBufferInfo = &triBufferInfo
+        };
+
+        vk::WriteDescriptorSet cdfBufferWrite{
+            .dstSet = getDescSetFrame(i),
+            .dstBinding = 8,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = vk::DescriptorType::eStorageBuffer,
+            .pBufferInfo = &cdfBufferInfo
+        };
+        VkUtils::getDevice().updateDescriptorSets({triBufferWrite,cdfBufferWrite},{});
+    }
+}
+
 void Renderer::initDescSetLayout() {
 
     //  Frame descriptor layout first
@@ -184,9 +219,6 @@ void Renderer::registerTextureBindless(const Texture& texture) {
 
         // TODO: handle other unsigned formats
         uint32_t dstBinding = texture.getVkFormat() == vk::Format::eR32Uint ? 6 : 2;
-
-        if (dstBinding == 6)
-            int h = 10;
 
         vk::DescriptorImageInfo imageInfo{
             .sampler = texture.getVkSampler(),

@@ -63,7 +63,7 @@ bool Material::drawGUI() {
         changed |= ImGui::ColorEdit3("Specular albedo",&uboFormat_.specularAlbedo[0]);
         changed |= ImGui::DragFloat("Shininess",&uboFormat_.shininess,1,1.0f,10000.0f);
         changed |= ImGui::DragFloat("Index of refraction",&uboFormat_.ior,0.01,1.0f,5.0f);
-        changed |= ImGui::ColorEdit3("Emission",&uboFormat_.emission[0]);
+        changed |= ImGui::ColorEdit3("Emission",&uboFormat_.emission[0],ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
         changed |= ImGui::ColorEdit3("Attenuation",&uboFormat_.attenuation[0]);
         ImGui::Unindent();
     }
@@ -72,4 +72,8 @@ bool Material::drawGUI() {
         updateUBO();
 
     return changed;
+}
+
+bool Material::isEmissive() const {
+    return glm::any(glm::notEqual(uboFormat_.emission,glm::vec3{0.0f}));
 }

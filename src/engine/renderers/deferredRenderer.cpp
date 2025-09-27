@@ -53,17 +53,6 @@ void DeferredRenderer::resizeScreen(uint32_t newWidth, uint32_t newHeight) {
 }
 
 void DeferredRenderer::initGraphicsPipelines() {
-
-    std::vector descSetFillLayouts = {*Renderer::getDescSetLayoutFrame()};
-    std::array fillAttachmentFormats{GBuffer::attachmentFormats[0], GBuffer::attachmentFormats[1],GBuffer::attachmentFormats[2], GBuffer::attachmentFormats[3]};
-
-    std::array pcsFillRange{GBuffer::pcsFillRange};
-    std::array pcsShadeRange{GBuffer::pcsShadeRange};
-    std::array pcsSkyRange{Renderer::pcsSkyRange};
-
-    std::array shadeAttachmentFormat{gBuffer_->getTarget().getVkFormat()};
-
-
     auto gBufferFillStages = std::vector<RasterPipeline::ShaderStageInfo>{
         {"shaders/shader_vert.spv",vk::ShaderStageFlagBits::eVertex},
         {"shaders/gbuffer_fill_frag.spv",vk::ShaderStageFlagBits::eFragment}
@@ -80,9 +69,38 @@ void DeferredRenderer::initGraphicsPipelines() {
         {"shaders/gbuffer_shade_frag.spv",vk::ShaderStageFlagBits::eFragment}
     };
 
-    gBufferFillPipeline_ = RasterPipeline{gBufferFillStages,descSetFillLayouts,pcsFillRange,fillAttachmentFormats,true, GBuffer::depthMapVkFormat};
-    skyboxPipeline_ = RasterPipeline{skyboxStages,descSetFillLayouts,pcsSkyRange,{shadeAttachmentFormat.begin(),1}, false};
-    gBufferShadePipeline_ = RasterPipeline{shadeStages,descSetFillLayouts,pcsShadeRange,shadeAttachmentFormat, false};
+    std::vector descSetFillLayouts = {*Renderer::getDescSetLayoutFrame()};
+
+    std::array pcsFillRange{GBuffer::pcsFillRange};
+    std::array pcsShadeRange{GBuffer::pcsShadeRange};
+    std::array pcsSkyRange{Renderer::pcsSkyRange};
+
+    std::array shadeAttachmentFormat{gBuffer_->getTarget().getVkFormat()};
+
+    gBufferFillPipeline_ = RasterPipeline{
+        gBufferFillStages,
+        descSetFillLayouts,
+        pcsFillRange,
+        GBuffer::attachmentFormats,
+        true,
+        GBuffer::depthMapVkFormat
+    };
+
+    skyboxPipeline_ = RasterPipeline{
+        skyboxStages,
+        descSetFillLayouts,
+        pcsSkyRange,
+        std::array{gBuffer_->getTarget().getVkFormat()},
+        false
+    };
+
+    gBufferShadePipeline_ = RasterPipeline{
+        shadeStages,
+        descSetFillLayouts,
+        pcsShadeRange,
+        shadeAttachmentFormat,
+        false
+    };
 
     pcs_.albedoMapHandle = gBuffer_->getAlbedoMap().getCID();
     pcs_.normalMapHandle = gBuffer_->getNormalMap().getCID();

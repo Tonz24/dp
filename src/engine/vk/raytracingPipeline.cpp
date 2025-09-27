@@ -7,8 +7,8 @@
 #include <ranges>
 
 RaytracingPipeline::RaytracingPipeline(const std::vector<ShaderStageInfo>& shaderInfos, const std::span<const vk::DescriptorSetLayout>& descriptorSetLayouts,
-                                       const std::span<const vk::PushConstantRange>& pcsRange)
-: GraphicsPipeline(descriptorSetLayouts, pcsRange)
+                                       const std::span<const vk::PushConstantRange>& pcsRange, uint32_t maxRecursionDepth)
+: GraphicsPipeline(descriptorSetLayouts, pcsRange), maxRecursionDepth_(maxRecursionDepth)
 {
     initShaderStages(shaderInfos);
     initShaderGroups(shaderInfos);
@@ -26,7 +26,7 @@ RaytracingPipeline::RaytracingPipeline(const std::vector<ShaderStageInfo>& shade
         .pStages = shaderStages_.data(),
         .groupCount  = static_cast<uint32_t>(shaderGroups_.size()),
         .pGroups =   shaderGroups_.data(),
-        .maxPipelineRayRecursionDepth = 10,
+        .maxPipelineRayRecursionDepth = maxRecursionDepth_,
         .layout = pipelineLayout_,
         .basePipelineHandle = nullptr,
         .basePipelineIndex = -1,
@@ -95,7 +95,6 @@ void RaytracingPipeline::initSBT() {
     raygenRegion_ = {.deviceAddress = rgenDeviceAddress, .stride = rgenStride, .size = rgenSize};
     missRegion_ = {.deviceAddress = missDeviceAddress, .stride = missStride, .size = missSize};
     hitRegion_ = {.deviceAddress = hitDeviceAddress, .stride = hitStride, .size = hitSize};
-
 
     auto getHandle = [&] (int i) { return handles.data() + i * handleSize; };
 

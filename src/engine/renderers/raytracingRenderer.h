@@ -41,8 +41,9 @@ protected:
 
     std::shared_ptr<Texture> accumulator_{nullptr};
 
+    static constexpr vk::ShaderStageFlags pcsRaygenStageFlags{vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eMissKHR};
     static constexpr vk::PushConstantRange pcsRaygenRange{
-        .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR,
+        .stageFlags = pcsRaygenStageFlags,
         .offset = 0,
         .size = static_cast<uint32_t>(sizeof(PcsRaygen))
     };

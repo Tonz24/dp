@@ -19,9 +19,9 @@ void main() {
     ShadeParams params = unpackMaterial(mat, inNormal, inTBN, inTexCoord);
 
     vec3 camRayDirWS =  normalize(inPosWS - cameraUBO.posWS);
-    //  flip normal on backside hit
-    if (dot(-camRayDirWS,params.normal) < 0.0)
-            params.normal *= -1.0;
+    //  flip normal on backside hit, but allow some wiggle room (to handle cases where interpolation of normals would trigger the flip too)
+    /**if (dot(-camRayDirWS,params.normal) < -0.0)
+            params.normal *= -1.0;*/
     
     outAlbedo = vec4(params.albedo, 1.0);
     outNormal = vec4(params.normal,params.shininess); // smuggle shininess into normal texture

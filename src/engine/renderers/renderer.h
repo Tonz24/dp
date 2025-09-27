@@ -18,7 +18,7 @@ public:
     static void destroy();
 
     virtual void resizeScreen(uint32_t newWidth,uint32_t newHeight) = 0;
-    virtual glm::vec<2,uint32_t> getRenderDimensions() const = 0;
+    [[nodiscard]] virtual glm::vec<2,uint32_t> getRenderDimensions() const = 0;
 
     static const vk::raii::DescriptorSetLayout& getDescSetLayoutFrame() {return descSetLayoutFrame_;}
     static const vk::raii::DescriptorSet& getDescSetFrame(uint32_t frameInFlightIndex);
@@ -29,6 +29,7 @@ public:
     [[nodiscard]] static const std::vector<uint8_t*>& getMatUBOsMapped() {return materialUBOsMapped_;}
 
     static void updateTLASDescriptor(const vk::raii::AccelerationStructureKHR& tlas);
+    static void updateEmissiveCDF(const VkUtils::BufferAlloc& trianglesBuffer, const VkUtils::BufferAlloc& cdfBuffer);
 
     static void registerTextureBindless(const Texture& texture);
     static void registerTextureStorage(const Texture& texture);
@@ -87,7 +88,7 @@ private:
             .binding = 2,
             .descriptorType = vk::DescriptorType::eCombinedImageSampler,
             .descriptorCount = Constants::bindlessTextureLimit,
-            .stageFlags = vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR
+            .stageFlags = vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eMissKHR
         },
         vk::DescriptorSetLayoutBinding { // TLAS
             .binding = 3,
@@ -112,6 +113,18 @@ private:
             .descriptorType = vk::DescriptorType::eCombinedImageSampler,
             .descriptorCount = Constants::bindlessTextureUintLimit,
             .stageFlags = vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR
+        },
+        vk::DescriptorSetLayoutBinding { // emissive triangles buffer
+            .binding = 7,
+            .descriptorType = vk::DescriptorType::eStorageBuffer,
+            .descriptorCount = 1,
+            .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR
+        },
+        vk::DescriptorSetLayoutBinding { // emissive cdf
+            .binding = 8,
+            .descriptorType = vk::DescriptorType::eStorageBuffer,
+            .descriptorCount = 1,
+            .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR
         },
     };
 

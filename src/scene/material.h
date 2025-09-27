@@ -82,6 +82,8 @@ public:
 
     bool drawGUI() override;
 
+    bool isEmissive() const;
+
 
     friend class MaterialManager;
 private:
