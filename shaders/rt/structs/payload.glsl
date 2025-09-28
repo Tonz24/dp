@@ -3,6 +3,7 @@ struct HitPayload{
     vec3 hitNormal;
     vec3 hitEmission;
     vec3 hitBrdf;
+    vec3 albedo;
     bool hit;
 };
 
@@ -13,4 +14,5 @@ void resetPayload(inout HitPayload payload){
     payload.hitEmission = vec3(0.0);
     payload.hitBrdf = vec3(0.0);
     payload.hit = false;
+    payload.albedo = vec3(0.0);
 }

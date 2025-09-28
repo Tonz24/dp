@@ -40,7 +40,14 @@ vec2 getShadowFactor(vec3 posWS, vec3 lightPos){
 
     // tmax is distance to light - if the ray hits anything, the surface is in shadow, otherwise the light is visible
     rayQueryEXT query;
-    rayQueryInitializeEXT(query,topLevelAS,gl_RayFlagsTerminateOnFirstHitEXT,0xFF,posWS,tMin,dirToLight,dstToLight);
+    rayQueryInitializeEXT(query,
+                          topLevelAS,
+                          gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsCullBackFacingTrianglesEXT,
+                          0xFF,
+                          posWS,
+                          tMin,
+                          dirToLight,
+                          dstToLight);
     rayQueryProceedEXT(query);
 
     vec2 inShadow = vec2(0.25f,0.0f);

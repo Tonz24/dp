@@ -44,6 +44,11 @@ TrianglePacked packTriangle(TriangleUnpacked tri){
     return t;
 }
 
+struct TriangleSample{
+    vec3 position;
+    vec3 normal;
+    float pdf;
+};
 
 struct CDFElement {
     uint triIndex;

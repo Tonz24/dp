@@ -1,8 +1,9 @@
 //https://github.com/yknishidate/single-file-vulkan-pathtracing
 //https://nvpro-samples.github.io/vk_raytracing_tutorial_KHR/
 #version 460
-#extension GL_EXT_ray_tracing : enable
-#extension GL_GOOGLE_include_directive : enable
+#extension GL_EXT_ray_tracing : require
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_ray_query : require
 
 #include "../common/common.glsl"
 #include "../common/math_constants.glsl"
@@ -33,7 +34,35 @@ float linearizeDepth(float depth, float zNear, float zFar){
     return zNear * zFar / (zFar + depth * (zNear - zFar));
 }
 
-CDFElement sampleLight(float rnd){
+// tests visibility between points a and b using a ray query
+// avoids touching the SBT at all (should reduce unwanted overhead)
+bool isVisible(vec3 a, vec3 b, vec3 normal){
+
+    float tMin = 0.01;
+
+    vec3 toLightUnnorm = b - a;
+    vec3 dirToLight = normalize(toLightUnnorm);
+    float dstToLight = length(toLightUnnorm) - tMin*1.5;
+
+    // tmax is distance to light - if the ray hits anything, the surface is NOT visible, otherwise it is
+    rayQueryEXT query;
+    rayQueryInitializeEXT(
+        query,
+        topLevelAS,
+        gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsCullBackFacingTrianglesEXT,
+        0xFF,
+        a,
+        tMin,
+        dirToLight,
+        dstToLight
+    );
+    rayQueryProceedEXT(query);
+
+    //return mix(noShadow,inShadow,float((rayQueryGetIntersectionTypeEXT(query, true) != gl_RayQueryCommittedIntersectionNoneEXT)));
+    return rayQueryGetIntersectionTypeEXT(query, true) == gl_RayQueryCommittedIntersectionNoneEXT;
+};
+
+uint sampleCDFIndex(float rnd){
     uint left = 0;
     uint right = emissiveCDF.size - 1;
 
@@ -45,7 +74,63 @@ CDFElement sampleLight(float rnd){
         else
             left = mid + 1;
     }
-    return emissiveCDF.cdf[left];
+    return left;
+}
+
+
+TriangleSample sampleTriangle(TrianglePacked tri, inout uint seed){
+    float r1 = rand(seed);
+    float r2 = rand(seed);
+
+    float x = 1.0f - sqrt(r1);
+    float y = sqrt(r1) * (1.0f - r2);
+    float z = sqrt(r1) * r2;
+
+    TriangleSample s;
+    //  barycentric interpolation of hit position
+    s.position = tri.v0eR.xyz * x + tri.v1eG.xyz * y + tri.v2eB.xyz * z;
+    // calculate normal
+    s.normal = normalize(cross(normalize(tri.v1eG.xyz - tri.v0eR.xyz),normalize(tri.v2eB.xyz - tri.v0eR.xyz)));
+    // pdf of hitting this point on the triangle is always 1.0/area (the probablility of choosing any point is uniform)
+    s.pdf = 1.0f / tri.area;
+    return s;
+}
+
+vec3 evaluateDirectLighting(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
+    // take CDF sample
+    uint cdfSampleIndex = sampleCDFIndex(rand(seed));
+    CDFElement cdfSample = emissiveCDF.cdf[cdfSampleIndex];
+
+    TrianglePacked cdfTriangle = emissiveBuffer.tris[cdfSample.triIndex];
+    vec3 L_i = vec3(cdfTriangle.v0eR.w,cdfTriangle.v1eG.w,cdfTriangle.v2eB.w);
+
+    // sample the triangle identified by CDF sample
+    TriangleSample sampledPoint = sampleTriangle(cdfTriangle,seed);
+    float pdfCDF = cdfSampleIndex == 0 ? cdfSample.cdfVal : cdfSample.cdfVal - emissiveCDF.cdf[cdfSampleIndex-1].cdfVal; 
+    float pdf = sampledPoint.pdf * pdfCDF;
+
+    // early exit if occlusion test fails as there wouldn't be any light contribution anyway
+    if (!isVisible(posWS, sampledPoint.position, normal))
+        return vec3(0.0);
+
+    vec3 omega_i = sampledPoint.position - posWS;
+    float r_sqr = dot(omega_i, omega_i);
+    omega_i = normalize(omega_i);
+
+    if (r_sqr == 0.0 || any(isnan(omega_i)) || any(isinf(omega_i)))
+        return vec3(0.0);
+
+    float cos_theta_i = max(dot(omega_i, normal),0.0);
+    float cos_theta_y = max(dot(-omega_i, sampledPoint.normal),0.0);
+
+    float G = cos_theta_i * cos_theta_y / r_sqr;
+    vec3 brdf = albedo / PI;
+
+    return L_i * brdf * G / pdf;
+}
+
+bool hitLight(HitPayload payload){
+    return any(greaterThan(payload.hitEmission,vec3(0.0)));
 }
 
 void main() { 
@@ -80,9 +165,8 @@ void main() {
     uvec2 s = pcg2d(ivec2(gl_LaunchIDEXT.xy) * (pcs.seed));
     uint seed = s.x + s.y;
 
-    // initialize ray
-    // initial origin is the world space position of first hit (first hit is rasterized by G buffer fill step)
-    // initial direction is sampled according to material at ray origin
+    // initial ray and shading parameters
+    // at first, take them from the G buffer fill step, then reuse them when bouncing rays  
     vec3 posWS = reconstructPositionWS(uv,depth);
     vec4 sampled = sampleHemisphereCosineWeighted(normal,seed);
     vec3 direction = sampled.xyz;
@@ -97,10 +181,18 @@ void main() {
     float tMax = 10000.0f;
 
     vec3 radiance = vec3(0.0);
+    vec3 directContribution = vec3(0.0);
     vec3 weight = vec3(1.0);
     resetPayload(payload);
     for (uint depth = 0; depth < pcs.maxRecursionDepth; depth++){
-        
+
+        // calculate NEE
+        if(pcs.NEE == 1){
+            directContribution = evaluateDirectLighting(albedo,posWS,normal,seed);
+            radiance += weight * directContribution;
+            //break;
+        }
+
         resetPayload(payload);
         traceRayEXT(
             topLevelAS,
@@ -116,21 +208,25 @@ void main() {
             0     // payloadLocation
         );
 
+        // NEE disallows hitting light sources with indirect rays as that would incorrectly double the contribution of lights
+        if(payload.hit && hitLight(payload) && pcs.NEE == 1)
+            break;
        
         weight *= brdf * max(dot(direction,normal),0.0) / pdf;
-        radiance += weight * payload.hitEmission;
+        radiance += weight * payload.hitEmission;  
 
         posWS = payload.hitPosition;
         normal = payload.hitNormal;
         sampled = sampleHemisphereCosineWeighted(normal,seed);
         direction = sampled.xyz;
         pdf = sampled.w;
+        albedo = payload.albedo;
 
         brdf = payload.hitBrdf;
 
         cosThetaI = max(dot(direction,normal),0.0);
 
-        if(!payload.hit || any(greaterThan(payload.hitEmission,vec3(0.0)))) break;
+        if(!payload.hit || hitLight(payload)) break;
     }
 
     if (pcs.accumulate == 1){

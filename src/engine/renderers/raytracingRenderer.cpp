@@ -12,6 +12,8 @@ bool RaytracingRenderer::drawGUI() {
 
         ImGui::Checkbox("Accumulate",reinterpret_cast<bool*>(&pcs_.accumulate));
         ImGui::DragInt("Max bounce count",reinterpret_cast<int*>(&pcs_.maxRecursionDepth),0.33,1,16);
+        ImGui::Checkbox("Next event estimation",reinterpret_cast<bool*>(&pcs_.NEE));
+        ImGui::Checkbox("Sample sky",reinterpret_cast<bool*>(&pcs_.sampleSky));
 
 
         ImGui::Unindent();

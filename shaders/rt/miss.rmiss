@@ -13,7 +13,7 @@ layout(location = 0) rayPayloadInEXT HitPayload payload;
 
 void main() {
     resetPayload(payload);
-    payload.hitEmission = sampleSphericalMap(gl_WorldRayDirectionEXT, pcs.skyHandle);
+    payload.hitEmission = pcs.sampleSky == 1 ? sampleSphericalMap(gl_WorldRayDirectionEXT, pcs.skyHandle) : vec3(0.0);
     payload.hit = false;
     
 }

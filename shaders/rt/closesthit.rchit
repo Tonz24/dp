@@ -74,4 +74,5 @@ void main() {
     payload.hitEmission = material.emission;
     payload.hitBrdf = params.albedo * INVPI;
     payload.hit = true;
+    payload.albedo = params.albedo;
 }

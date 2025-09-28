@@ -87,4 +87,6 @@ struct PcsRaygen {
     uint32_t frameCtr{0};
 
     uint32_t maxRecursionDepth;
+    uint32_t sampleSky{1};
+    uint32_t NEE{1};
 };
