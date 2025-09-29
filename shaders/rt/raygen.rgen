@@ -16,7 +16,6 @@ layout(set = 0, binding = 4, rgba32f) uniform image2D outputImage;
 
 layout(location = 0) rayPayloadEXT HitPayload payload;
 
-
 //  all zero normals are invalid
 bool isGeometryValid(vec3 normal){
     float epsilon = 1e-6;
@@ -49,7 +48,7 @@ bool isVisible(vec3 a, vec3 b, vec3 normal){
     rayQueryInitializeEXT(
         query,
         topLevelAS,
-        gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsCullBackFacingTrianglesEXT,
+        gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT,
         0xFF,
         a,
         tMin,
@@ -58,7 +57,6 @@ bool isVisible(vec3 a, vec3 b, vec3 normal){
     );
     rayQueryProceedEXT(query);
 
-    //return mix(noShadow,inShadow,float((rayQueryGetIntersectionTypeEXT(query, true) != gl_RayQueryCommittedIntersectionNoneEXT)));
     return rayQueryGetIntersectionTypeEXT(query, true) == gl_RayQueryCommittedIntersectionNoneEXT;
 };
 
@@ -185,13 +183,7 @@ void main() {
     vec3 weight = vec3(1.0);
     resetPayload(payload);
     for (uint depth = 0; depth < pcs.maxRecursionDepth; depth++){
-
-        // calculate NEE
-        if(pcs.NEE == 1){
-            directContribution = evaluateDirectLighting(albedo,posWS,normal,seed);
-            radiance += weight * directContribution;
-            //break;
-        }
+        
 
         resetPayload(payload);
         traceRayEXT(
@@ -211,9 +203,23 @@ void main() {
         // NEE disallows hitting light sources with indirect rays as that would incorrectly double the contribution of lights
         if(payload.hit && hitLight(payload) && pcs.NEE == 1)
             break;
-       
+
+        // calculate NEE
+        if(pcs.NEE == 1){
+            directContribution = evaluateDirectLighting(albedo,posWS,normal,seed);
+            radiance += weight * directContribution;
+        }
+
         weight *= brdf * max(dot(direction,normal),0.0) / pdf;
         radiance += weight * payload.hitEmission;  
+
+        float maxWeight = max(weight.x,max(weight.y,weight.z));
+        float rouletteTerminate = rand(seed);
+        if (maxWeight < rouletteTerminate){
+            break;
+        }
+
+        weight /= maxWeight;
 
         posWS = payload.hitPosition;
         normal = payload.hitNormal;
@@ -221,7 +227,6 @@ void main() {
         direction = sampled.xyz;
         pdf = sampled.w;
         albedo = payload.albedo;
-
         brdf = payload.hitBrdf;
 
         cosThetaI = max(dot(direction,normal),0.0);
