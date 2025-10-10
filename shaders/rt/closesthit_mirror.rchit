@@ -66,30 +66,19 @@ void main() {
 
     ShadeParams params = unpackMaterial(material, hitNormal, TBN, texCoord);
 
-
     // flip normal if backside is hit
     if (dot(-gl_WorldRayDirectionEXT,params.normal) < 0.0)
         params.normal *= -1.0;
 
-    // passed from raygen shader, put into a separate variable, otherwise there's VK_DEVICE_LOST if used directly as an inout parameter
-    uint seed = payload.seed;
-
-    vec4 nextSample = sampleHemisphereCosineWeighted(params.normal,seed);
-    vec3 nextDir = nextSample.xyz;
-    float pdf = nextSample.w;
-    payload.seed = seed;
+    vec4 nextSample = sampleMirror(params.normal,gl_WorldRayDirectionEXT);
 
     payload.hitPosition = posWS;
     payload.hitEmission = material.emission;
-    vec3 hitBrdf = params.albedo * INVPI;
+    vec3 hitBrdf = params.albedo;
     payload.hit = true;
     payload.nextSample = nextSample;
 
-    payload.weightFactor = hitBrdf * max(dot(nextDir,params.normal),0.0) / pdf;
-
-    if(hitLight(payload) && pcs.NEE == 1)
-        return;
-    
-    if (pcs.NEE == 1)
-        payload.directContribution = evaluateDirectLighting(params.albedo,posWS,params.normal,seed);
+    payload.weightFactor = hitBrdf;
+    payload.mirror = true;
+    payload.directContribution = vec3(0);
 }

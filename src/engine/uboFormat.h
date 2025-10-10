@@ -41,7 +41,7 @@ struct alignas(16) MaterialUBOFormat {
 
     uint32_t shininessMapHandle{0};
     uint32_t normalMapHandle{0};
-    float padding;
+    uint32_t materialType{0};
     float padding2;
 };
 
@@ -88,5 +88,5 @@ struct PcsRaygen {
 
     uint32_t maxRecursionDepth;
     uint32_t sampleSky{1};
-    uint32_t NEE{1};
+    uint32_t NEE{0};
 };

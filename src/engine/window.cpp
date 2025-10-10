@@ -61,5 +61,3 @@ void Window::init() {
         throw std::runtime_error("ERROR: Failed to create GLFW window!");
 
 }
-
-

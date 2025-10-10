@@ -94,7 +94,7 @@ private:
             .binding = 3,
             .descriptorType = vk::DescriptorType::eAccelerationStructureKHR,
             .descriptorCount = 1,
-            .stageFlags = vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eRaygenKHR
+            .stageFlags = vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eRaygenKHR |  vk::ShaderStageFlagBits::eClosestHitKHR
         },
         vk::DescriptorSetLayoutBinding { // Ray tracing target
             .binding = 4,

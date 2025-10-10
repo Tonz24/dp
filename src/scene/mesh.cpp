@@ -42,6 +42,7 @@ void Mesh::updateBLASInstance() {
         .transform = transformMatrix,
         .instanceCustomIndex = getCID(),
         .mask = 0xFF,
+        .instanceShaderBindingTableRecordOffset = static_cast<uint32_t>(material_->getMaterialType()),
         .flags = static_cast<VkGeometryInstanceFlagsKHR>(vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable),
         .accelerationStructureReference = blas_.getStorageBuffer().deviceAddress,
     };
@@ -51,8 +52,8 @@ bool Mesh::drawGUI() {
     bool changed{false};
     if (ImGui::CollapsingHeader("Mesh",ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Indent();
-        changed = transform_.drawGUI();
-        material_->drawGUI();
+        changed |= transform_.drawGUI();
+        changed |= material_->drawGUI();
         ImGui::Unindent();
     }
 

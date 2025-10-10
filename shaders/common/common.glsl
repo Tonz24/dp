@@ -16,7 +16,7 @@ struct Material{
 
     uint shininessMapHandle;
     uint normalMapHandle;
-    float padding;
+    uint materialType;
     float padding2;
 };
 

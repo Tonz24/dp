@@ -25,6 +25,11 @@ public:
         shininessMapSlot = 3,
     };
 
+    enum class MaterialType : uint32_t {
+        diffuse = 0,
+        mirror = 1,
+    };
+
     Material() : ManagedResource(){}
 
 
@@ -73,7 +78,7 @@ public:
 
     void setAttenuation(const glm::vec3 &attenuation) { uboFormat_.attenuation = attenuation; }
 
-    std::string getResourceType() const override { return "Material"; }
+    [[nodiscard]] std::string getResourceType() const override { return "Material"; }
 
     void recordDescriptorSet() const;
 
@@ -83,6 +88,8 @@ public:
     bool drawGUI() override;
 
     bool isEmissive() const;
+
+    MaterialType getMaterialType() const {return static_cast<MaterialType>(uboFormat_.materialType);}
 
 
     friend class MaterialManager;

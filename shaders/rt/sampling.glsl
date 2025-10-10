@@ -1,36 +1,8 @@
-
-// https://github.com/yknishidate/single-file-vulkan-pathtracing/blob/master/shaders/common.glsl
-uint pcg(inout uint state) {
-
-    uint prev = state * 747796405u + 2891336453u;
-    uint word = ((prev >> ((prev >> 28u) + 4u)) ^ prev) * 277803737u;
-    state = prev;
-    return (word >> 22u) ^ word;
-}
-
-// https://github.com/yknishidate/single-file-vulkan-pathtracing/blob/master/shaders/common.glsl
-uvec2 pcg2d(uvec2 v) {
-
-    v = v * 1664525u + 1013904223u;
-    v.x += v.y * 1664525u;
-    v.y += v.x * 1664525u;
-    v = v ^ (v >> 16u);
-    v.x += v.y * 1664525u;
-    v.y += v.x * 1664525u;
-    v = v ^ (v >> 16u);
-    return v;
-}
-
-float rand(inout uint seed) {
-
-    uint val = pcg(seed);
-    return (float(val) * (1.0 / float(0xffffffffu)));
-}
+#include "../common/rng.glsl"
 
 vec3 orthogonal(vec3 vec) {
 	return abs(vec.x) > abs(vec.z) ? vec3(vec.y, -vec.x, 0.0f ) : vec3(0.0f, vec.z, -vec.y);
 }
-
 
 vec4 sampleHemisphereCosineWeighted(vec3 normal, inout uint seed){
 
@@ -42,7 +14,6 @@ vec4 sampleHemisphereCosineWeighted(vec3 normal, inout uint seed){
 	float z = sqrt(r2);
 
 	// local reference frame
-
 	vec3 sampled = normalize(vec3(x,y,z));
 
 	vec3 o2 = normalize(orthogonal(normal));
@@ -58,3 +29,42 @@ vec4 sampleHemisphereCosineWeighted(vec3 normal, inout uint seed){
 
 	return vec4(sampled, pdf);
 }
+
+vec4 sampleMirror(vec3 normal, vec3 rayDir){
+	vec3 sampled = reflect(rayDir,normal);
+	return vec4(sampled, 1.0);
+}
+
+vec4 sampleMaterial(vec3 normal, vec3 rayDir, uint materialType, inout uint seed){
+	vec4 sampled = vec4(0.0);
+
+	// diffuse
+	if (materialType == 0)
+		return sampleHemisphereCosineWeighted(normal, seed);
+	// mirror
+	if (materialType == 1)
+		return sampleMirror(normal, rayDir);
+
+	return sampled;
+}
+
+vec3 evalBrdfDiffuse(vec3 albedo){
+	return albedo * INVPI;
+}
+
+vec3 evalBrdfMirror(vec3 albedo){
+	return albedo;
+}
+
+/*
+vec4 evalBrdfMaterial(vec3 normal, vec3 rayDir, uint materialType, inout uint seed){
+	vec4 sample = vec4(0.0);
+
+	// diffuse
+	if (materialType == 0)
+		return sampleHemisphereCosineWeighted(normal, seed);
+	if (materialType == 1)
+		return sampleMirror(normal, rayDir);
+
+	return sample;
+}*/

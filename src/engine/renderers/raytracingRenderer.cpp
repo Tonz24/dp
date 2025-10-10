@@ -15,7 +15,6 @@ bool RaytracingRenderer::drawGUI() {
         ImGui::Checkbox("Next event estimation",reinterpret_cast<bool*>(&pcs_.NEE));
         ImGui::Checkbox("Sample sky",reinterpret_cast<bool*>(&pcs_.sampleSky));
 
-
         ImGui::Unindent();
     }
     return false;
@@ -43,7 +42,9 @@ void RaytracingRenderer::initGraphicsPipelines() {
             {"shaders/raygen_rgen.spv",vk::ShaderStageFlagBits::eRaygenKHR},
             {"shaders/miss_rmiss.spv",vk::ShaderStageFlagBits::eMissKHR},
             {"shaders/closesthit_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
+            {"shaders/closesthit_mirror_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
     };
+
     rtPipeline_ = RaytracingPipeline{rtStages,descSetFillLayouts,raygenRange};
 
     pcs_.albedoMapHandle = gBuffer_->getAlbedoMap().getCID();
@@ -138,7 +139,6 @@ void RaytracingRenderer::recordPresentBuffer(const Scene& scene, vk::raii::Comma
 }
 
 void RaytracingRenderer::recordTraceCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex) {
-
     cmdBuf.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR,rtPipeline_.getGraphicsPipeline());
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, rtPipeline_.getPipelineLayout(), 0, *getDescSetFrame(frameInFlightIndex), nullptr);
 
@@ -154,5 +154,4 @@ void RaytracingRenderer::recordTraceCommands(const Scene& scene, vk::raii::Comma
 
     if (!pcs_.accumulate)
         pcs_.frameCtr = 0;
-
 }

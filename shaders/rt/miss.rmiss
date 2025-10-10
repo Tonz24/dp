@@ -15,5 +15,4 @@ void main() {
     resetPayload(payload);
     payload.hitEmission = pcs.sampleSky == 1 ? sampleSphericalMap(gl_WorldRayDirectionEXT, pcs.skyHandle) : vec3(0.0);
     payload.hit = false;
-    
 }

@@ -56,19 +56,26 @@ void Material::updateUBONow() const {
 
 bool Material::drawGUI() {
 
-    bool changed{false};
+    // changed signals that changes to material variables should be propagated outside (to mesh for BLAS instance recreation)
+    // changedUBO tracks whether the material UBO needs to be changed (from this function)
+    bool changed{false}, changedUBO{false};
     if (ImGui::CollapsingHeader("Material")) {
         ImGui::Indent();
-        changed |= ImGui::ColorEdit3("Diffuse albedo",&uboFormat_.diffuseAlbedo[0]);
-        changed |= ImGui::ColorEdit3("Specular albedo",&uboFormat_.specularAlbedo[0]);
-        changed |= ImGui::DragFloat("Shininess",&uboFormat_.shininess,1,1.0f,10000.0f);
-        changed |= ImGui::DragFloat("Index of refraction",&uboFormat_.ior,0.01,1.0f,5.0f);
-        changed |= ImGui::ColorEdit3("Emission",&uboFormat_.emission[0],ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
-        changed |= ImGui::ColorEdit3("Attenuation",&uboFormat_.attenuation[0]);
+
+        static constexpr std::array materialType{"diffuse","mirror"};
+        changed |= ImGui::Combo("Material type", reinterpret_cast<int*>(&uboFormat_.materialType), materialType.data(), materialType.size());
+        changedUBO |= changed;
+
+        changedUBO |= ImGui::ColorEdit3("Diffuse albedo",&uboFormat_.diffuseAlbedo[0]);
+        changedUBO |= ImGui::ColorEdit3("Specular albedo",&uboFormat_.specularAlbedo[0]);
+        changedUBO |= ImGui::DragFloat("Shininess",&uboFormat_.shininess,1,1.0f,10000.0f);
+        changedUBO |= ImGui::DragFloat("Index of refraction",&uboFormat_.ior,0.01,1.0f,5.0f);
+        changedUBO |= ImGui::ColorEdit3("Emission",&uboFormat_.emission[0],ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
+        changedUBO |= ImGui::ColorEdit3("Attenuation",&uboFormat_.attenuation[0]);
         ImGui::Unindent();
     }
 
-    if (changed)
+    if (changedUBO)
         updateUBO();
 
     return changed;
