@@ -119,9 +119,7 @@ void main() {
 
         float maxWeight = max(weight.x,max(weight.y,weight.z));
         float rouletteTerminate = rand(seed);
-        if (maxWeight < rouletteTerminate){
-            break;
-        }
+        if (maxWeight < rouletteTerminate) break;
 
         weight /= maxWeight;
 
@@ -133,7 +131,9 @@ void main() {
         seed = payload.seed;
         lastWasMirror = payload.mirror;
 
-        if(!payload.hit || (hitLight(payload) && !payload.mirror)) break;
+        // on miss, break
+        // upon hitting a light, break
+        if(!payload.hit || hitLight(payload)) break;
     }
 
     if (pcs.accumulate == 1){
