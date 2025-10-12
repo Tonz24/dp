@@ -63,14 +63,19 @@ bool Material::drawGUI() {
         ImGui::Indent();
 
         static constexpr std::array materialType{"diffuse","mirror"};
-        changed |= ImGui::Combo("Material type", reinterpret_cast<int*>(&uboFormat_.materialType), materialType.data(), materialType.size());
-        changedUBO |= changed;
 
+        if (ImGui::Combo("Material type", reinterpret_cast<int*>(&uboFormat_.materialType), materialType.data(), materialType.size())) {
+            changed = true;
+            changedUBO = true;
+        }
         changedUBO |= ImGui::ColorEdit3("Diffuse albedo",&uboFormat_.diffuseAlbedo[0]);
         changedUBO |= ImGui::ColorEdit3("Specular albedo",&uboFormat_.specularAlbedo[0]);
         changedUBO |= ImGui::DragFloat("Shininess",&uboFormat_.shininess,1,1.0f,10000.0f);
         changedUBO |= ImGui::DragFloat("Index of refraction",&uboFormat_.ior,0.01,1.0f,5.0f);
-        changedUBO |= ImGui::ColorEdit3("Emission",&uboFormat_.emission[0],ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
+        if (ImGui::ColorEdit3("Emission",&uboFormat_.emission[0],ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float)) {
+            changedUBO = true;
+            changed = true;
+        }
         changedUBO |= ImGui::ColorEdit3("Attenuation",&uboFormat_.attenuation[0]);
         ImGui::Unindent();
     }

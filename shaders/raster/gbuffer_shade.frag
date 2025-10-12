@@ -60,7 +60,7 @@ vec2 getShadowFactor(vec3 posWS, vec3 lightPos){
 void main() {
 
 /*
-    fragColor = vec4(emissiveBuffer.tris[0].v0eR.xyz + emissiveCDF.cdf[0].cdfVal,1.0);
+    fragColor = vec4(emissiveBuffer.tris[0].v0eR.xyz + emissiveCDF.cdf[0].cdfVal,0.5);
     return;*/
 
     vec2 screenTexCoord = inNDCxy * 0.5 + 0.5;

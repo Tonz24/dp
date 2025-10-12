@@ -13,6 +13,14 @@
 #include "../engine/vk/accelerationStructure.h"
 #include "../engine/vk/vkUtils.h"
 
+struct alignas(16) TrianglePacked {
+    glm::vec4 v0;
+    glm::vec4 v1;
+    glm::vec4 v2;
+    float area{0.0f};
+    float pad[3]{0,0,0};
+};
+
 
 class Mesh : public ManagedResource, public IDrawGui {
 public:
@@ -50,13 +58,17 @@ public:
     };
 
     [[nodiscard]] const ObjDescription& getDescription() const { return description_; }
+    [[nodiscard]] const std::vector<TrianglePacked>& getEmissiveTriangles() const { return emissiveTriangles_; }
+    [[nodiscard]] float getEmissiveSurfaceArea() const { return emissiveSurfaceArea_; }
 
 private:
     void initBuffers();
-
+    void extractEmissiveTriangles();
 
     std::vector<Vertex3D> vertices_{};
     std::vector<uint32_t> indices_{};
+    std::vector<TrianglePacked> emissiveTriangles_{};
+
     std::shared_ptr<Material> material_{nullptr};
 
     VkUtils::BufferAlloc vertexBuffer_{};
@@ -69,4 +81,5 @@ private:
     vk::AccelerationStructureInstanceKHR blasInstance_{};
 
     ObjDescription description_{};
+    float emissiveSurfaceArea_{0};
 };

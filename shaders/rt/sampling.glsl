@@ -30,6 +30,10 @@ vec4 sampleHemisphereCosineWeighted(vec3 normal, inout uint seed){
 	return vec4(sampled, pdf);
 }
 
+float getPdfHemisphereCosineWeighted(vec3 sampled, vec3 normal){
+	return max(dot(normal, sampled), 0.0f) * INVPI;
+}
+
 vec4 sampleMirror(vec3 normal, vec3 rayDir){
 	vec3 sampled = reflect(rayDir,normal);
 	return vec4(sampled, 1.0);

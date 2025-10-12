@@ -11,6 +11,7 @@ Mesh::Mesh(std::vector<Vertex3D>&& vertexList, std::vector<uint32_t>&& indexList
     vertices_(std::move(vertexList)), indices_(std::move(indexList)), material_(std::move(material)) {
 
     initBuffers();
+    extractEmissiveTriangles();
 
     description_ = ObjDescription{
         .vertexBufferAddress = vertexBuffer_.deviceAddress,
@@ -57,8 +58,11 @@ bool Mesh::drawGUI() {
         ImGui::Unindent();
     }
 
-    if (changed) // change BLAS instance transformation matrix
+    // change BLAS instance transformation matrix and SBT offset
+    if (changed){
         updateBLASInstance();
+        extractEmissiveTriangles();
+    }
     return changed;
 }
 
@@ -111,6 +115,48 @@ void Mesh::initBuffers() {
 
     vk::DeviceSize indexBufferSize = sizeof(indices_[0]) * indices_.size();
     indexBuffer_ = VkUtils::createBufferVMA(indexBufferSize,vk::BufferUsageFlagBits::eIndexBuffer | commonFlags);
+}
+
+void Mesh::extractEmissiveTriangles() {
+    emissiveTriangles_.clear();
+    emissiveSurfaceArea_ = 0;
+
+    if (material_->isEmissive()) {
+
+        const auto& modelMat = transform_.getModelMat();
+        glm::vec3 emission = material_->getEmission();
+
+        const int triCount = static_cast<int>(indices_.size() / 3);
+        emissiveTriangles_.resize(triCount);
+
+        float areaSum{0.0f};
+
+        #pragma omp parallel for reduction(+:areaSum)
+        for (int t = 0; t < triCount; t++) {
+            int i = t * 3;
+
+
+            //  world space position is of interest
+            glm::vec3 v0Pos = modelMat * glm::vec4{vertices_[indices_[i]].position,1.0f};
+            glm::vec3 v1Pos = modelMat * glm::vec4{vertices_[indices_[i+1]].position,1.0f};
+            glm::vec3 v2Pos = modelMat * glm::vec4{vertices_[indices_[i+2]].position,1.0f};
+
+            //  pack emission into fourth components of position vectors
+            TrianglePacked tri{
+                .v0 = {v0Pos,emission.x},
+                .v1 = {v1Pos,emission.y},
+                .v2 = {v2Pos,emission.z},
+            };
+
+            glm::vec3 ab = tri.v1 - tri.v0;
+            glm::vec3 ac = tri.v2 - tri.v0;
+            tri.area = 0.5f * glm::length(glm::cross(ab, ac));
+
+            areaSum +=tri.area;
+            emissiveTriangles_[t] = tri;
+        }
+        emissiveSurfaceArea_ = areaSum;
+    }
 }
 
 

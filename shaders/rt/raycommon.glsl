@@ -6,6 +6,7 @@
 layout(buffer_reference, scalar) readonly buffer Vertices {Vertex v[];};
 layout(buffer_reference, scalar) readonly buffer Indices {ivec3 i[];};
 
+
 struct ObjDesc {
     Vertices vertexBufferAddr;
     Indices indexBufferAddr;
@@ -41,12 +42,13 @@ layout(set = 0, binding = 7, std430) readonly buffer EmissiveTriangles {
 
 layout(set = 0, binding = 8, std430) readonly buffer EmissiveCDF {
     uint size;
+    float area;
     CDFElement cdf[];
 } emissiveCDF;
 
 // tests visibility between points a and b using a ray query
 // avoids touching the SBT at all (should reduce unwanted overhead)
-bool isVisible(vec3 a, vec3 b, vec3 normal){
+bool isVisible(vec3 a, vec3 b){
 
     float tMin = 0.01;
 
@@ -121,7 +123,7 @@ vec3 evaluateDirectLighting(vec3 albedo, vec3 posWS, vec3 normal, inout uint see
     float pdf = sampledPoint.pdf * pdfCDF;
 
     // early exit if occlusion test fails as there wouldn't be any light contribution anyway
-    if (!isVisible(posWS, sampledPoint.position, normal))
+    if (!isVisible(posWS, sampledPoint.position))
     return vec3(0.0);
 
     vec3 omega_i = sampledPoint.position - posWS;

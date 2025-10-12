@@ -18,6 +18,7 @@ public:
 
         BufferAlloc() = default;
 
+
         BufferAlloc(const BufferAlloc& other) = delete;
         BufferAlloc& operator=(const BufferAlloc& other) = delete;
 

@@ -32,8 +32,10 @@ bool Scene::drawGUI() {
 
             // rebuild the TLAS
             // TODO: just update the instances, do not rebuild the TLAS vk object itself
-            if (selectedObject_->drawGUI())
+            if (selectedObject_->drawGUI()) {
                 initTLAS();
+                extractEmissiveMeshes();
+            }
         }
 
         if (camera_ != nullptr) {
@@ -93,77 +95,64 @@ void Scene::initTLAS() {
 }
 
 void Scene::extractEmissiveMeshes() {
+    // include size data by default
+    vk::DeviceSize emissiveSize = sizeof(uint32_t) * 4;
+    // accumulate later, serves as the CDF denominator
     float surfaceAreaTotal{0.0f};
+    // accumulate later, serves as the first field in the triangle buffer
+    uint32_t triangleCount{0};
 
-    // accumulate total surface area from every emissive mesh, extract triangles
+    // accumulate total surface area from every emissive mesh, figure out the emissive triangle buffer size
     for (const auto & mesh : meshes_) {
-        if (mesh->getMaterial()->isEmissive()) {
-
-            const auto& indices = mesh->getIndices();
-            const auto& vertices = mesh->getVertices();
-
-            const auto& modelMat = mesh->getTransform().getModelMat();
-
-            for (uint32_t i = 0; i < indices.size(); i+=3) {
-
-                glm::vec3 emission = mesh->getMaterial()->getEmission();
-
-                //  world space position is of interest
-                glm::vec3 v0Pos = modelMat * glm::vec4{vertices[indices[i]].position,1.0f};
-                glm::vec3 v1Pos = modelMat * glm::vec4{vertices[indices[i+1]].position,1.0f};
-                glm::vec3 v2Pos = modelMat * glm::vec4{vertices[indices[i+2]].position,1.0f};
-
-                //  pack emission into fourth components of position vectors
-                TrianglePacked tri{
-                    .v0 = {v0Pos,emission.x},
-                    .v1 = {v1Pos,emission.y},
-                    .v2 = {v2Pos,emission.z},
-                };
-
-                glm::vec3 u = tri.v1 - tri.v0;
-                glm::vec3 v = tri.v2 - tri.v0;
-
-                tri.area = 0.5f * glm::length(glm::cross(u, v));
-                surfaceAreaTotal += tri.area;
-
-                emissiveTriangles_.emplace_back(tri);
-            }
-        }
+        emissiveSize += mesh->getEmissiveTriangles().size() * sizeof(TrianglePacked);
+        triangleCount += mesh->getEmissiveTriangles().size();
+        surfaceAreaTotal += mesh->getEmissiveSurfaceArea();
     }
-    vk::DeviceSize emissiveSize = emissiveTriangles_.size() * sizeof(emissiveTriangles_[0]) + sizeof(uint32_t) * 4;
-
 
     vk::BufferUsageFlags emissiveUsageFlags = vk::BufferUsageFlagBits::eStorageBuffer;
     VmaAllocationCreateFlags createFlags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+
+    VkUtils::destroyBufferVMA(std::move(emissiveBuffer_));
     emissiveBuffer_ = VkUtils::createBufferVMA(emissiveSize,emissiveUsageFlags,createFlags);
 
-    uint32_t triangleBufferCount = emissiveTriangles_.size();
-    memcpy(emissiveBuffer_.allocationInfo.pMappedData,&triangleBufferCount,sizeof(triangleBufferCount));
-    memcpy(static_cast<uint8_t*>(emissiveBuffer_.allocationInfo.pMappedData) + sizeof(uint32_t)*4,emissiveTriangles_.data(),emissiveTriangles_.size() * sizeof(emissiveTriangles_[0]));
+    memcpy(emissiveBuffer_.allocationInfo.pMappedData,&triangleCount,sizeof(triangleCount));
 
+    uint32_t offset{0};
+    for (const auto & mesh : meshes_) {
+        auto emissiveTriangles = mesh->getEmissiveTriangles();
+        auto trianglesSize = emissiveTriangles.size()  * sizeof(TrianglePacked);
+        memcpy(static_cast<uint8_t*>(emissiveBuffer_.allocationInfo.pMappedData) + sizeof(uint32_t)*4 + offset,emissiveTriangles.data(),trianglesSize);
+        offset += trianglesSize;
+    }
 
     //normalize each triangle area, accumulate cdf
-    for (uint32_t i = 0; i < emissiveTriangles_.size(); i++) {
-        const auto& tri = emissiveTriangles_[i];
+    uint32_t cdfIndex{0};
+    cdf_.clear();
+    for (const auto & mesh: meshes_) {
+        const auto& triangles = mesh->getEmissiveTriangles();
 
+        for (const auto & tri: triangles) {
+            float normArea = tri.area / surfaceAreaTotal;
+            float predecessorVal = cdfIndex == 0 ? 0 : cdf_[cdfIndex - 1].pdf;
 
-        float normArea = tri.area / surfaceAreaTotal;
-        float predecessorVal = i == 0 ? 0 : cdf_[i - 1].pdf;
-
-        cdf_.emplace_back(CDFElement{ i , predecessorVal + normArea });
+            cdf_.emplace_back(CDFElement{ cdfIndex , predecessorVal + normArea });
+            cdfIndex++;
+        }
     }
 
     std::ranges::sort(cdf_, [](auto &left, auto& right){
         return left.pdf < right.pdf;
     });
 
-    vk::DeviceSize cdfSize = cdf_.size() * sizeof(cdf_[0]) + sizeof(uint32_t);
-    cdfBuffer_ = VkUtils::createBufferVMA(cdfSize,emissiveUsageFlags,createFlags);
+    vk::DeviceSize cdfSize = cdf_.size() * sizeof(CDFElement) + sizeof(uint32_t) * 2;
 
+    VkUtils::destroyBufferVMA(std::move(cdfBuffer_));
+    cdfBuffer_ = VkUtils::createBufferVMA(cdfSize,emissiveUsageFlags,createFlags);
 
     uint32_t cdfBufferCount = cdf_.size();
     memcpy(cdfBuffer_.allocationInfo.pMappedData,&cdfBufferCount,sizeof(cdfBufferCount));
-    memcpy(static_cast<uint8_t*>(cdfBuffer_.allocationInfo.pMappedData) + sizeof(uint32_t),cdf_.data(),cdf_.size() * sizeof(cdf_[0]));
+    memcpy(static_cast<uint8_t*>(cdfBuffer_.allocationInfo.pMappedData) + sizeof(surfaceAreaTotal),&surfaceAreaTotal,sizeof(surfaceAreaTotal));
+    memcpy(static_cast<uint8_t*>(cdfBuffer_.allocationInfo.pMappedData) + sizeof(uint32_t) * 2,cdf_.data(),cdf_.size() * sizeof(cdf_[0]));
 
     Renderer::updateEmissiveCDF(emissiveBuffer_,cdfBuffer_);
 }

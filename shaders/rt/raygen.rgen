@@ -106,13 +106,14 @@ void main() {
             0     // payloadLocation
         );
 
-        // NEE disallows hitting light sources with indirect rays as that would incorrectly double the contribution of lights
-        if(payload.hit && hitLight(payload) && pcs.NEE == 1 && !lastWasMirror)
-            break;
-
+     
         // calculate NEE
         if(pcs.NEE == 1)
             radiance += weight * directContribution;
+
+        // NEE disallows hitting light sources with indirect rays as that would incorrectly double the contribution of lights
+        if(payload.hit && hitLight(payload) && pcs.NEE == 1 && !lastWasMirror)
+            break;
 
         weight *= weightFactor;
         radiance += weight * payload.hitEmission;  

@@ -34,14 +34,6 @@ public:
 
 private:
 
-    struct alignas(16) TrianglePacked {
-        glm::vec4 v0;
-        glm::vec4 v1;
-        glm::vec4 v2;
-        float area{0.0f};
-        float pad[3]{0,0,0};
-    };
-
     struct alignas(4) CDFElement {
         uint32_t triIndex;
         float pdf;
@@ -50,16 +42,16 @@ private:
     void initDescriptorSet() const;
     void initTLAS();
     void extractEmissiveMeshes();
+    void initCDFBuffers();
+    void recalculateCDF();
 
     std::vector<std::shared_ptr<Mesh>> meshes_{};
     std::shared_ptr<Camera> camera_{};
     std::shared_ptr<Texture> sky_{};
     std::vector<CDFElement> cdf_{};
-    std::vector<TrianglePacked> emissiveTriangles_{};
 
     VkUtils::BufferAlloc emissiveBuffer_{};
     VkUtils::BufferAlloc cdfBuffer_{};
-
 
     std::shared_ptr<Mesh> selectedObject_{};
 
