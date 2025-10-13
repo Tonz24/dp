@@ -175,8 +175,6 @@ void Renderer::initDescSetLayout() {
             .pImageInfo = &dummyInfo,
         };
 
-
-
         vk::DescriptorBufferInfo matBufferInfo{
             .buffer = materialUBOs_[i].buffer,
             .offset = 0,

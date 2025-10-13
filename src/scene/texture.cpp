@@ -4,6 +4,7 @@
 
 #include "texture.h"
 #include <iostream>
+#include <glm/ext/scalar_constants.hpp>
 
 #include "vertex.h"
 #include "../engine/engine.h"
@@ -31,6 +32,22 @@ Texture::Texture(uint32_t width, uint32_t height, vk::Format format, vk::ImageUs
     data_.reserve(width_ * height_ * channelCount_);
     data_.resize(width_ * height_ * channelCount_,0);
     initVkImage();
+
+}
+
+void Texture::buildCDF() {
+    std::unique_ptr<float[]> imgScalar(new float[width_ * height_]);
+
+    for (uint32_t y = 0; y < height_; y++) {
+        float v = (y + 0.5f) / static_cast<float>(height_);
+        float sinTheta = glm::sin(glm::pi<float>() * v);
+
+        for (int x = 0; x < width_; ++x) {
+            glm::vec3 rgb = getTexel<glm::vec3>(x, y);
+            float luminance = glm::length(rgb);
+        }
+    }
+
 
 }
 

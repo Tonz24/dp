@@ -51,6 +51,18 @@ public:
 
     [[nodiscard]] vk::ImageLayout getSamplerLayout() const { return samplerLayout_; }
 
+    void buildCDF();
+
+    template <typename T>
+    T getTexel(const uint32_t x, const uint32_t y) {
+        if (x >= width_ || x < 0 || y >= height_ || y < 0)
+            throw std::runtime_error("ERROR: trying to access texel at invalid coordinates!");
+
+        uint32_t row = y * width_ * sizeof(T);
+        uint32_t col = x * sizeof(T);
+        return static_cast<T>(data_.at(row + col));
+    }
+
 private:
 
     void initVkImage();

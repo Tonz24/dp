@@ -36,7 +36,16 @@ RaytracingRenderer::RaytracingRenderer(const std::string_view& gBufferName): Def
 
 void RaytracingRenderer::resizeScreen(uint32_t newWidth, uint32_t newHeight) {
     DeferredRenderer::resizeScreen(newWidth, newHeight);
-    initAccumulator(newWidth, newHeight);
+
+    if (newWidth != accumulator_->getWidth() || newHeight != accumulator_->getHeight())
+        initAccumulator(newWidth, newHeight);
+
+    pcs_.albedoMapHandle = gBuffer_->getAlbedoMap().getCID();
+    pcs_.normalMapHandle = gBuffer_->getNormalMap().getCID();
+    pcs_.depthMapHandle = gBuffer_->getDepthMap().getCID();
+    pcs_.materialMapHandle = gBuffer_->getMaterialMap().getCID();
+    pcs_.targetHandle = gBuffer_->getTarget().getCID();
+    pcs_.maxRecursionDepth = rtPipeline_.getMaxRecursionDepth();
 }
 
 void RaytracingRenderer::initGraphicsPipelines() {

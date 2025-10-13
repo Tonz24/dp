@@ -202,7 +202,7 @@ void Engine::initVulkan() {
     gBuffer_ = GBufferManager::getInstance()->registerResource("gbuffer_test",1280,720);
     rasterRenderer_ = std::make_shared<DeferredRenderer>(gBuffer_);
     rtRenderer_ = std::make_shared<RaytracingRenderer>(gBuffer_);
-    selectedRenderer_ = rasterRenderer_.get();
+    selectedRenderer_ = rtRenderer_.get();
 }
 
 void Engine::initVulkanInstance() {
@@ -675,9 +675,6 @@ vk::raii::ShaderModule Engine::createShaderModule(const std::vector<char> &code)
 
 
 void Engine::drawFrame() {
-
-
-
     //  reset the current frame's fence
     vk::raii::Fence& frameFence = inFlightFences_[frameInFlightIndex_];
     device_.waitForFences(*frameFence, vk::True, UINT64_MAX );
@@ -800,7 +797,6 @@ void Engine::mainLoop() {
 void Engine::cleanup() {
     scene_.reset();
 
-    dummy_.reset();
     gBuffer_.reset();
 
     VkUtils::destroyBufferVMA(std::move(idMapTransferBuffer_));
@@ -871,7 +867,9 @@ void Engine::recreateSwapchain() {
 
     device_.waitIdle();
 
-    selectedRenderer_->resizeScreen(width,height);
+    rtRenderer_->resizeScreen(width,height);
+    rasterRenderer_->resizeScreen(width,height);
+
     cleanupSwapchain();
     initSwapchain();
     initImageViews();

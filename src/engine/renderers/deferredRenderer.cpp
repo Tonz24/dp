@@ -49,7 +49,13 @@ DeferredRenderer::DeferredRenderer(std::string_view gBufferName) {
 }
 
 void DeferredRenderer::resizeScreen(uint32_t newWidth, uint32_t newHeight) {
-    gBuffer_->resizeContents(newWidth,newHeight);
+    if (newWidth != gBuffer_->getTarget().getWidth() || newHeight != gBuffer_->getTarget().getHeight())
+        gBuffer_->resizeContents(newWidth,newHeight);
+
+    pcs_.albedoMapHandle = gBuffer_->getAlbedoMap().getCID();
+    pcs_.normalMapHandle = gBuffer_->getNormalMap().getCID();
+    pcs_.depthMapHandle = gBuffer_->getDepthMap().getCID();
+    pcs_.materialMapHandle = gBuffer_->getMaterialMap().getCID();
 }
 
 void DeferredRenderer::initGraphicsPipelines() {

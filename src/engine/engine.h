@@ -226,7 +226,7 @@ private:
 
     std::shared_ptr<GBuffer> gBuffer_{nullptr};
 
-    int selectedRendererIndex_{0};
+    int selectedRendererIndex_{1};
     std::shared_ptr<DeferredRenderer> rasterRenderer_{};
     std::shared_ptr<RaytracingRenderer> rtRenderer_{};
     Renderer* selectedRenderer_{nullptr};
