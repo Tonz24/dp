@@ -92,9 +92,9 @@ void RaytracingPipeline::initSBT() {
     vk::DeviceAddress missDeviceAddress = sbtBuffer_.deviceAddress + rgenSize;
     vk::DeviceAddress hitDeviceAddress = sbtBuffer_.deviceAddress + rgenSize + missSize;
 
-    raygenRegion_ = {.deviceAddress = rgenDeviceAddress, .stride = rgenStride, .size = rgenSize};
-    missRegion_ = {.deviceAddress = missDeviceAddress, .stride = missStride, .size = missSize};
-    hitRegion_ = {.deviceAddress = hitDeviceAddress, .stride = hitStride, .size = hitSize};
+    raygenRegion_ = vk::StridedDeviceAddressRegionKHR{.deviceAddress = rgenDeviceAddress, .stride = rgenStride, .size = rgenSize};
+    missRegion_ = vk::StridedDeviceAddressRegionKHR{.deviceAddress = missDeviceAddress, .stride = missStride, .size = missSize};
+    hitRegion_ = vk::StridedDeviceAddressRegionKHR{.deviceAddress = hitDeviceAddress, .stride = hitStride, .size = hitSize};
 
     auto getHandle = [&] (int i) { return handles.data() + i * handleSize; };
 

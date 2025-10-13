@@ -214,9 +214,8 @@ void main() {
         return;
     
     if (pcs.NEE == 1){
-        payload.directContribution = evaluateDirectLighting(params.albedo,posWS,params.normal,seed);
-        //payload.directContribution = calculateDirect(params.albedo,posWS,params.normal,seed);
-        //payload.directContribution = sampleBRDF(posWS,params.normal,seed);
+        //payload.directContribution = evaluateDirectLighting(params.albedo,posWS,params.normal,seed);
+        payload.directContribution = calculateDirect(params.albedo,posWS,params.normal,seed);
     }
 
     payload.seed = seed;
