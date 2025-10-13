@@ -110,60 +110,6 @@ void RaytracingRenderer::recordCommandBuffer(const Scene& scene, vk::raii::Comma
     recordTonemapCommands(scene,cmdBuf,frameInFlightIndex);
 }
 
-/*void RaytracingRenderer::recordPresentBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
-    const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent)
-{
-    //  transition accumulator to blit
-    //accumulator_->transitionLayout(vk::ImageLayout::eTransferSrcOptimal,vk::PipelineStageFlagBits2::eTransfer,vk::AccessFlagBits2::eTransferRead,cmdBuf);
-    gBuffer_->transitionToBlit(cmdBuf);
-
-    VkUtils::transitionImageLayout(swapchainImage,
-                                   vk::ImageLayout::eUndefined,
-                                   vk::ImageLayout::eTransferDstOptimal,
-                                   vk::PipelineStageFlagBits2::eBottomOfPipe,
-                                   vk::AccessFlagBits2::eNone,
-                                   vk::PipelineStageFlagBits2::eTransfer,
-                                   vk::AccessFlagBits2::eTransferWrite,
-                                   vk::ImageAspectFlagBits::eColor,
-                                   cmdBuf);
-
-    VkUtils::blit(cmdBuf,gBuffer_->getTarget().getVkImage().image,
-                    {gBuffer_->getTarget().getWidth(),gBuffer_->getTarget().getHeight()},
-                    vk::ImageAspectFlagBits::eColor,
-                    swapchainImage,
-                    {swapchainExtent.width,swapchainExtent.height},
-                    vk::ImageAspectFlagBits::eColor,
-                    vk::Filter::eNearest);
-
-
-    //  transition swapchain image into color attachment optimal for gui write
-    VkUtils::transitionImageLayout(swapchainImage,
-                                   vk::ImageLayout::eTransferDstOptimal,
-                                   vk::ImageLayout::eColorAttachmentOptimal,
-                                   vk::PipelineStageFlagBits2::eTransfer,
-                                   vk::AccessFlagBits2::eTransferWrite,
-                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                   vk::AccessFlagBits2::eColorAttachmentRead | vk::AccessFlagBits2::eColorAttachmentWrite,
-                                   vk::ImageAspectFlagBits::eColor,
-                                   cmdBuf);
-
-    // render gui last, into the swapchain frame buffer
-    recordGUICommands(scene,cmdBuf,frameInFlightIndex, swapchainImageView, swapchainExtent);
-
-    //  transition swapchain image to present
-    VkUtils::transitionImageLayout(swapchainImage,
-                                   vk::ImageLayout::eColorAttachmentOptimal,
-                                   vk::ImageLayout::ePresentSrcKHR,
-                                   vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                                   vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead,
-                                   vk::PipelineStageFlagBits2::eBottomOfPipe,
-                                   vk::AccessFlagBits2::eNone,
-                                   vk::ImageAspectFlagBits::eColor,
-                                   cmdBuf);
-
-    cmdBuf.end();
-}*/
-
 void RaytracingRenderer::recordTraceCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex) {
     cmdBuf.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR,rtPipeline_.getGraphicsPipeline());
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, rtPipeline_.getPipelineLayout(), 0, *getDescSetFrame(frameInFlightIndex), nullptr);
