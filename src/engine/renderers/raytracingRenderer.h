@@ -20,8 +20,11 @@ public:
 
     explicit RaytracingRenderer(const std::string_view& gBufferName);
 
+    void resizeScreen(uint32_t newWidth, uint32_t newHeight) override;
+
 protected:
     void initGraphicsPipelines();
+    void initAccumulator(uint32_t width, uint32_t height);
 
     void recordCommandBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage,
                              const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) override;

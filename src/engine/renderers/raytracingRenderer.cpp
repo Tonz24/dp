@@ -34,6 +34,11 @@ RaytracingRenderer::RaytracingRenderer(const std::string_view& gBufferName): Def
     initGraphicsPipelines();
 }
 
+void RaytracingRenderer::resizeScreen(uint32_t newWidth, uint32_t newHeight) {
+    DeferredRenderer::resizeScreen(newWidth, newHeight);
+    initAccumulator(newWidth, newHeight);
+}
+
 void RaytracingRenderer::initGraphicsPipelines() {
     std::vector descSetFillLayouts = {*Renderer::getDescSetLayoutFrame()};
 
@@ -59,14 +64,7 @@ void RaytracingRenderer::initGraphicsPipelines() {
     generator_ = std::mt19937(rngDevice_());
     distr_ = std::uniform_int_distribution(std::numeric_limits<uint32_t>::min(),std::numeric_limits<uint32_t>::max());
 
-    accumulator_ = TextureManager::getInstance()->registerResource(gBuffer_->getResourceName() + "_accumulator",
-                                                                 gBuffer_->getTarget().getWidth(),
-                                                                 gBuffer_->getTarget().getHeight(),
-                                                                 vk::Format::eR32G32B32A32Sfloat,
-                                                                 accumulatorUsage);
-    registerTextureStorage(*accumulator_);
-    registerTextureBindless(*accumulator_);
-
+   initAccumulator(gBuffer_->getTarget().getWidth(), gBuffer_->getTarget().getHeight());
 
     auto tonemapStages = std::vector<RasterPipeline::ShaderStageInfo>{
         {"shaders/skypass_vert.spv",vk::ShaderStageFlagBits::eVertex},
@@ -82,8 +80,19 @@ void RaytracingRenderer::initGraphicsPipelines() {
     };
 }
 
+void RaytracingRenderer::initAccumulator(uint32_t width, uint32_t height) {
+    accumulator_.reset();
+    accumulator_ = TextureManager::getInstance()->registerResource(gBuffer_->getResourceName() + "_accumulator",
+                                                                width,
+                                                                height,
+                                                                vk::Format::eR32G32B32A32Sfloat,
+                                                                accumulatorUsage);
+    registerTextureStorage(*accumulator_);
+    registerTextureBindless(*accumulator_);
+}
+
 void RaytracingRenderer::recordCommandBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
-    const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) {
+                                             const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) {
 
     pcs_.skyHandle = scene.getSky()->getCID();
 
