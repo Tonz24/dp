@@ -108,7 +108,7 @@ private:
             .descriptorCount = 1,
             .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR
         },
-        vk::DescriptorSetLayoutBinding { // Bindless textures
+        vk::DescriptorSetLayoutBinding { // Bindless textures UINT
             .binding = 6,
             .descriptorType = vk::DescriptorType::eCombinedImageSampler,
             .descriptorCount = Constants::bindlessTextureUintLimit,

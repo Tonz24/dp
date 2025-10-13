@@ -73,6 +73,12 @@ struct PcsSky {
     uint32_t skyHandle;
 };
 
+struct PcsRtTonemap{
+    uint32_t accumulatorHandle;
+    uint32_t normalTexIndex;
+    uint32_t doTonemap;
+};
+
 struct PcsRaygen {
     uint32_t albedoMapHandle;
     uint32_t normalMapHandle;

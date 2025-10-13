@@ -52,8 +52,7 @@ public:
 
     static constexpr uint32_t targetChannelCount{4};
     static constexpr vk::Format targetVkFormat{vk::Format::eB10G11R11UfloatPack32};
-    // transfer src for blitting into swapchain, sampled for reading skybox in ray gen shader
-    static constexpr vk::ImageUsageFlags targetUsageFlags{defaultAttachmentUsageFlags};
+    static constexpr vk::ImageUsageFlags targetUsageFlags{defaultAttachmentUsageFlags}; // transfer src for blitting into swapchain, sampled for reading skybox in ray gen shader
     static constexpr vk::FormatFeatureFlags targetFormatFlags{vk::FormatFeatureFlagBits::eColorAttachment | vk::FormatFeatureFlagBits::eTransferSrc };
 
 
