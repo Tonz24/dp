@@ -108,7 +108,6 @@ private:
 
     std::vector<std::shared_ptr<Texture>> textures_{};
 
-    void recordDescriptorSet() const;
     void createTextures(const std::string& prefix, uint32_t width,uint32_t height);
 
 };

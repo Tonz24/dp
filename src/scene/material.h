@@ -80,8 +80,6 @@ public:
 
     [[nodiscard]] std::string getResourceType() const override { return "Material"; }
 
-    void recordDescriptorSet() const;
-
     void updateUBO() const;
     void updateUBONow() const;
 

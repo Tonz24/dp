@@ -8,7 +8,7 @@
 #include "mesh.h"
 #include "camera.h"
 #include "../engine/iDrawGui.h"
-#include "../engine/managers/resourceManager.h"
+
 
 class Scene : public IDrawGui {
 public:
@@ -22,7 +22,7 @@ public:
 
     bool drawGUI() override;
 
-    void setSelectedObject(uint32_t objectCId) { selectedObject_ = MeshManager::getInstance()->getResource(objectCId); }
+    void setSelectedObject(uint32_t objectCId);
     void setSelectedObject(std::shared_ptr<Mesh> object) { selectedObject_ = std::move(object);}
 
     void setSky(std::shared_ptr<Texture> newSky) {
@@ -39,7 +39,7 @@ private:
         float pdf;
     };
 
-    void initDescriptorSet() const;
+    void initDescriptorSet() ;
     void initTLAS();
     void extractEmissiveMeshes();
     void initCDFBuffers();
@@ -48,6 +48,7 @@ private:
     std::vector<std::shared_ptr<Mesh>> meshes_{};
     std::shared_ptr<Camera> camera_{};
     std::shared_ptr<Texture> sky_{};
+    std::shared_ptr<Texture> skyCdf_{};
     std::vector<CDFElement> cdf_{};
 
     VkUtils::BufferAlloc emissiveBuffer_{};

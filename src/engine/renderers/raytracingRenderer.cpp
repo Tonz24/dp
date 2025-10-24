@@ -4,6 +4,7 @@
 
 #include "raytracingRenderer.h"
 
+#include "../managers/resourceManager.h"
 #include "imgui/imgui.h"
 
 bool RaytracingRenderer::drawGUI() {
@@ -96,8 +97,6 @@ void RaytracingRenderer::initAccumulator(uint32_t width, uint32_t height) {
                                                                 height,
                                                                 vk::Format::eR32G32B32A32Sfloat,
                                                                 accumulatorUsage);
-    registerTextureStorage(*accumulator_);
-    registerTextureBindless(*accumulator_);
 }
 
 void RaytracingRenderer::recordCommandBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,

@@ -5,6 +5,7 @@
 #include "renderer.h"
 
 #include "../engine.h"
+#include "../managers/resourceManager.h"
 
 void Renderer::initLayouts() {
     if (!isDescSetLayoutInit_)
@@ -141,7 +142,7 @@ void Renderer::initDescSetLayout() {
 
     descSetsFrame_ = VkUtils::getDevice().allocateDescriptorSets(allocInfo);
 
-    auto dummy = TextureManager::getInstance()->getResource("dummy");
+    //auto dummy = TextureManager::getInstance()->getResource("dummy");
 
     for (size_t i = 0; i < Constants::maxFramesInFlight; i++) {
 
@@ -160,20 +161,20 @@ void Renderer::initDescSetLayout() {
             .pBufferInfo = &camBufferInfo,
         };
 
-        vk::DescriptorImageInfo dummyInfo{
-            .sampler =  dummy->getVkSampler(),
-            .imageView = dummy->getVkImageView(),
-            .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-        };
+        // vk::DescriptorImageInfo dummyInfo{
+        //     .sampler =  dummy->getVkSampler(),
+        //     .imageView = dummy->getVkImageView(),
+        //     .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
+        // };
 
-        vk::WriteDescriptorSet writeDescriptorSetDummy{
-            .dstSet = descSetsFrame_[i], //  which descriptor set to update
-            .dstBinding = 2, // which binding to update
-            .dstArrayElement = 0, //  what element the update starts at
-            .descriptorCount = 1, //  how many descriptors are affected
-            .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-            .pImageInfo = &dummyInfo,
-        };
+        // vk::WriteDescriptorSet writeDescriptorSetDummy{
+        //     .dstSet = descSetsFrame_[i], //  which descriptor set to update
+        //     .dstBinding = 2, // which binding to update
+        //     .dstArrayElement = 0, //  what element the update starts at
+        //     .descriptorCount = 1, //  how many descriptors are affected
+        //     .descriptorType = vk::DescriptorType::eCombinedImageSampler,
+        //     .pImageInfo = &dummyInfo,
+        // };
 
         vk::DescriptorBufferInfo matBufferInfo{
             .buffer = materialUBOs_[i].buffer,
@@ -205,7 +206,7 @@ void Renderer::initDescSetLayout() {
             .pBufferInfo = &objDescBufferInfo,
         };
 
-        VkUtils::getDevice().updateDescriptorSets({writeDescriptorSetCam, writeDescriptorSetDummy, writeDescriptorSetMat, writeDescriptorSetObjDesc},{});
+        VkUtils::getDevice().updateDescriptorSets({writeDescriptorSetCam, /*writeDescriptorSetDummy,*/ writeDescriptorSetMat, writeDescriptorSetObjDesc},{});
     }
 
     isDescSetLayoutInit_ = true;

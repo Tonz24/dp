@@ -5,6 +5,10 @@
 #include "deferredRenderer.h"
 
 #include <imgui/imgui_impl_vulkan.h>
+
+#include "../managers/resourceManager.h"
+
+
 bool DeferredRenderer::drawGUI() {
     if (ImGui::CollapsingHeader("Deferred renderer")) {
         ImGui::Indent();

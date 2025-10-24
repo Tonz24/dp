@@ -15,6 +15,7 @@
 #include "../gBuffer.h"
 #include "../../scene/material.h"
 #include "../../scene/mesh.h"
+#include "../renderers/renderer.h"
 
 
 template <ManagedResourceConcept T, typename Derived, uint32_t IdLimit>
@@ -43,7 +44,7 @@ public:
         return nullptr;
     }
 
-    std::shared_ptr<T> registerResource(T* resource, std::string_view resourceName) {
+    virtual std::shared_ptr<T> registerResource(T* resource, std::string_view resourceName) {
 
         if (getResource(resourceName) != nullptr)
             throw std::runtime_error("ERROR: Resource with name " + std::string{resourceName} + " is already registered!");
@@ -150,6 +151,60 @@ class MeshManager : public ResourceManager<Mesh, MeshManager, Constants::default
 class TextureManager : public ResourceManager<Texture, TextureManager, Constants::bindlessTextureLimit> {
     friend class ResourceManager<Texture, TextureManager, Constants::bindlessTextureLimit>;
     TextureManager() = default;
+
+
+public:
+    std::shared_ptr<Texture> registerResource(Texture* resource, std::string_view resourceName) override {
+
+        if (getResource(resourceName) != nullptr)
+            throw std::runtime_error("ERROR: Resource with name " + std::string{resourceName} + " is already registered!");
+
+        auto newResource = std::shared_ptr<Texture>(resource, ResourceDeleter{});
+
+        uint32_t newCID = assignCategoryId();
+        uint32_t newGID = ResourceManagerBase::getInstance()->assignGlobalId();
+        newResource->categoryId_ = newCID;
+        newResource->globalId_ = newGID;
+        newResource->resourceName_ = resourceName;
+        newResource->isRegistered_ = true;
+
+        nameToIdMap_[std::string{resourceName}] = newCID;
+        idToResourceMap_[newCID] = newResource;
+
+        registerTexure(*newResource);
+
+        return newResource;
+    }
+
+    template <typename... Args>
+    std::shared_ptr<Texture> registerResource(std::string_view resourceName, Args&&... args) {
+
+        if (getResource(resourceName) != nullptr)
+            throw std::runtime_error("ERROR: Resource with name " + std::string{resourceName} + " is already registered!");
+
+        auto newResource = std::shared_ptr<Texture>(new Texture(std::forward<Args>(args)...), ResourceDeleter{});
+
+        uint32_t newCId = assignCategoryId();
+        uint32_t newGId = ResourceManagerBase::getInstance()->assignGlobalId();
+        newResource->categoryId_ = newCId;
+        newResource->globalId_ = newGId;
+        newResource->resourceName_ = resourceName;
+        newResource->isRegistered_ = true;
+
+        nameToIdMap_[std::string{resourceName}] = newCId;
+        idToResourceMap_[newCId] = newResource;
+
+        registerTexure(*newResource);
+
+        return newResource;
+    }
+
+private:
+    static void registerTexure(const Texture& texture) {
+        Renderer::registerTextureBindless(texture);
+        if (texture.getImageUsageFlags() & vk::ImageUsageFlagBits::eStorage)
+            Renderer::registerTextureStorage(texture);
+    }
 };
 
 class MaterialManager : public ResourceManager<Material, MaterialManager, Constants::defaultCategoryIdLimit> {

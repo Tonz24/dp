@@ -68,7 +68,6 @@ float powerHeuristic(float pdf, float pdfOther) {
 	return result;
 }
 
-
 // evaluates direct light sample, weighs it by MIS weight
 vec3 evaluateLightSample(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
     // take CDF sample (pick an emissive triangle with probability proportional to the area of all emissive triangles)

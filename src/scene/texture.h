@@ -29,39 +29,35 @@ public:
     ~Texture() override;
 
     [[nodiscard]] std::string getResourceType() const override;
-
     [[nodiscard]] const vk::raii::ImageView & getVkImageView() const { return vkImageView_; }
     [[nodiscard]] const vk::raii::Sampler & getVkSampler() const { return vkSampler_; }
     [[nodiscard]] const VkUtils::ImageAlloc& getVkImage() const { return imageAlloc_; }
     [[nodiscard]] vk::Format getVkFormat() const { return vkFormat_; }
-
     [[nodiscard]] uint32_t getWidth() const { return width_; }
     [[nodiscard]] uint32_t getHeight() const { return height_; }
+    [[nodiscard]] vk::ImageLayout getSamplerLayout() const { return samplerLayout_; }
+    [[nodiscard]] uint32_t getTotalSize() const {return data_.size() * sizeof(data_[0]);}
+    std::shared_ptr<Texture> getCDF();
+
+    [[nodiscard]] vk::ImageUsageFlags getImageUsageFlags() const { return imageUsageFlags_; }
 
     friend class TextureManager;
 
     static std::shared_ptr<Texture> createDummy(std::string_view name,  const glm::vec<4, uint8_t>& color = {255, 0, 255, 255});
 
-    [[nodiscard]] uint32_t getTotalSize() const {return data_.size() * sizeof(data_[0]);}
     void stage(const VkUtils::BufferAlloc& stagingBuffer);
     void generateMipmaps();
 
     void transitionLayout(vk::ImageLayout newLayout, vk::PipelineStageFlags2 stage, vk::AccessFlags2 accessFlags, vk::raii::CommandBuffer& cmdBuf, const VkUtils::TransitionMipInfo&
                           mipInfo = {0,1});
 
-    [[nodiscard]] vk::ImageLayout getSamplerLayout() const { return samplerLayout_; }
 
-    void buildCDF();
+
 
     template <typename T>
-    T getTexel(const uint32_t x, const uint32_t y) {
-        if (x >= width_ || x < 0 || y >= height_ || y < 0)
-            throw std::runtime_error("ERROR: trying to access texel at invalid coordinates!");
+    T getTexel(uint32_t x, uint32_t y);
 
-        uint32_t row = y * width_ * sizeof(T);
-        uint32_t col = x * sizeof(T);
-        return static_cast<T>(data_.at(row + col));
-    }
+    [[nodiscard]] std::string getCdfName() const {return getResourceName() + "_cdf";}
 
 private:
 
@@ -80,6 +76,7 @@ private:
     uint32_t scanWidth_{};
 
     std::vector<uint8_t> data_;
+    std::shared_ptr<Texture> textureCdf_{nullptr};
 
     FREE_IMAGE_FORMAT freeImageFormat_{};
     FREE_IMAGE_TYPE freeImageType_{};
@@ -100,3 +97,17 @@ private:
     std::vector<vk::PipelineStageFlags2> mipStageMasks_{};
     std::vector<vk::AccessFlags2> mipAccessMasks_{};
 };
+
+template<typename T>
+T Texture::getTexel(uint32_t x, uint32_t y) {
+    if (x >= width_ || x < 0 || y >= height_ || y < 0)
+        throw std::runtime_error("ERROR: trying to access texel at invalid coordinates!");
+
+    uint32_t row = y * width_;
+    uint32_t col = x;
+
+    T* data = reinterpret_cast<T*>(data_.data());
+
+    T value = *(data + row + col);
+    return value;
+}

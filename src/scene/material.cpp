@@ -34,15 +34,6 @@ void Material::setTexture(std::shared_ptr<Texture> texture, TextureMapSlot slot)
         uboFormat_.shininessMapHandle = textures_[static_cast<uint8_t>(TextureMapSlot::shininessMapSlot)]->getCID();
 }
 
-void Material::recordDescriptorSet() const {
-    auto dummy = TextureManager::getInstance()->getResource("dummy");
-
-    for (uint32_t i = 0; i < textures_.size(); ++i) {
-        const auto& texture = textures_[i] ? textures_[i] : dummy;
-        Renderer::registerTextureBindless(*texture);
-    }
-}
-
 void Material::updateUBO() const {
     Engine::getInstance().setMaterialUBOStorage(getCID(), uboFormat_);
 }

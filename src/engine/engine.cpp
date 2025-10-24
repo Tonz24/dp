@@ -193,8 +193,8 @@ void Engine::initVulkan() {
 
     initSyncObjects();
 
-    initDummyTexture();
     Renderer::initLayouts();
+    //initDummyTexture();
 
     VmaAllocationCreateFlags allocationCreateFlags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
     idMapTransferBuffer_ = VkUtils::createBufferVMA(sizeof(uint32_t),vk::BufferUsageFlagBits::eTransferDst, allocationCreateFlags);

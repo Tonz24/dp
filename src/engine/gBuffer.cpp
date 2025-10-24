@@ -15,12 +15,6 @@ GBuffer::GBuffer(std::string_view resourceName, uint32_t width, uint32_t height)
     createTextures(textureNamesPrefix,width,height);
 }
 
-void GBuffer::recordDescriptorSet() const {
-    for (const auto & texture : textures_) {
-        Renderer::registerTextureBindless(*texture);
-    }
-}
-
 void GBuffer::createTextures(const std::string& prefix, uint32_t width, uint32_t height) {
 
     albedoMap_.reset();
@@ -69,7 +63,6 @@ void GBuffer::createTextures(const std::string& prefix, uint32_t width, uint32_t
                                                                  idMapUsageFlags);
 
     textures_ = {albedoMap_, normalMap_, depthMap_, materialIdMap_, target_};
-    recordDescriptorSet();
 }
 
 vk::Format GBuffer::getTargetVkFormat() {

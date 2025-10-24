@@ -7,7 +7,7 @@
 #include "../engine/engine.h"
 #include <imgui/imgui.h>
 
-#include "../engine/renderers/renderer.h"
+#include "../engine/managers/resourceManager.h"
 
 
 Scene::Scene(const std::vector<std::shared_ptr<Mesh>>&& meshes, std::shared_ptr<Camera> camera, std::shared_ptr<Texture> sky): meshes_(meshes), camera_(std::move(camera)), sky_(std::move(sky)) {
@@ -48,13 +48,12 @@ bool Scene::drawGUI() {
     return false;
 }
 
-void Scene::initDescriptorSet() const {
+void Scene::initDescriptorSet(){
     if (sky_) {
         VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(sky_->getTotalSize(),vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingAllocFlagsVMA);
         sky_->stage(stagingBuffer);
         VkUtils::destroyBufferVMA(std::move(stagingBuffer));
 
-        Renderer::registerTextureBindless(*sky_);
     }
 
 }
@@ -155,4 +154,8 @@ void Scene::extractEmissiveMeshes() {
     memcpy(static_cast<uint8_t*>(cdfBuffer_.allocationInfo.pMappedData) + sizeof(uint32_t) * 2,cdf_.data(),cdf_.size() * sizeof(cdf_[0]));
 
     Renderer::updateEmissiveCDF(emissiveBuffer_,cdfBuffer_);
+}
+
+void Scene::setSelectedObject(uint32_t objectCId) {
+    selectedObject_ = MeshManager::getInstance()->getResource(objectCId);
 }

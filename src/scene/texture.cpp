@@ -4,6 +4,7 @@
 
 #include "texture.h"
 #include <iostream>
+#include <numeric>
 #include <glm/ext/scalar_constants.hpp>
 
 #include "vertex.h"
@@ -35,20 +36,66 @@ Texture::Texture(uint32_t width, uint32_t height, vk::Format format, vk::ImageUs
 
 }
 
-void Texture::buildCDF() {
-    std::unique_ptr<float[]> imgScalar(new float[width_ * height_]);
+std::shared_ptr<Texture> Texture::getCDF() {
+    std::vector imgScalar(width_ * height_,0.0f);
+    std::vector cdfImg((width_ + 1) * height_,0.0f);
 
+
+
+    TextureManager::getInstance()->registerResource(getCdfName(),width_ + 1, height_,vk::Format::eR32Sfloat,vk::ImageUsageFlagBits::eStorage);
+
+    std::vector marginalSum(height_,0.0f);
+
+    double sumTotal{0.0};
+
+    //  compute luminance values for every pixel
     for (uint32_t y = 0; y < height_; y++) {
-        float v = (y + 0.5f) / static_cast<float>(height_);
+        //  get vertical texture coordinate in [0,1] (offset by 0.5 in pixel coordinates to sample pixel center)
+        //  sinTheta corrects for the fact that sphere poles would otherwise get oversampled
+        float v = (static_cast<float>(y) + 0.5f) / static_cast<float>(height_);
         float sinTheta = glm::sin(glm::pi<float>() * v);
 
-        for (int x = 0; x < width_; ++x) {
-            glm::vec3 rgb = getTexel<glm::vec3>(x, y);
-            float luminance = glm::length(rgb);
+        for (uint32_t x = 0; x < width_; ++x) {
+            auto rgb = getTexel<glm::vec4>(x, y);
+            float luminance = glm::length(glm::vec3(rgb));
+
+            // set a minimum value for black pixels, otherwise they couldn't be sampled at all
+            // that would result in incorrect estimation where bilinear interpolation should return nonzero radiance when sampling such pixels
+            float weightedLuminance = glm::max(luminance * sinTheta, 1e-5f);
+
+            imgScalar[y * width_ + x] = weightedLuminance; // insert weighted luminance into scalar image
+            sumTotal += weightedLuminance; // accumulate total sum of scalar values
+            marginalSum[y] += weightedLuminance; // accumulate sum for every row
         }
     }
 
+    // normalize the marginal sum
+    for (int i = 0; i < height_; ++i) {
+        marginalSum[i] = static_cast<float>(marginalSum[i] / sumTotal);
+    }
+    std::vector marginalCdf(height_,0.0f);
 
+    // build the marginal CDF -- accumulate sums into marginalCdf
+    std::partial_sum(marginalSum.begin(),marginalSum.end(),marginalCdf.begin(),std::plus());
+
+    // build conditional cdfs
+    std::vector conditionalCdf(width_ * height_,0.0f);
+
+    // normalize every pixel by corresponding row sum
+    for (uint32_t y = 0; y < height_; y++) {
+        for (uint32_t x = 0; x < width_; ++x) {
+            conditionalCdf[y * width_ + x] = imgScalar[y * width_ + x] / marginalSum[y];
+        }
+    }
+
+    // build conditional cdf for each row
+    for (uint32_t y = 0; y < height_; y++) {
+        for (uint32_t x = 1; x < width_; ++x) {
+            conditionalCdf[y * width_ + x] += conditionalCdf[y * width_ + (x - 1)];
+        }
+    }
+
+    return {};
 }
 
 void Texture::initVkImage() {

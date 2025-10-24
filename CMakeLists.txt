@@ -108,7 +108,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 # keep this here otherwise MinGW breaks FreeImage on linking as 'ws2_32 gdi32 user32 shell32' will be in the middle of files to link
 if(MINGW)
-        target_link_libraries(freeimage::FreeImage INTERFACE
-                ws2_32 gdi32 user32 shell32
-        )
+        target_link_libraries(freeimage::FreeImage INTERFACE ws2_32 gdi32 user32 shell32)
 endif()

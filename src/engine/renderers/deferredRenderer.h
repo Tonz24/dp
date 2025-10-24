@@ -4,6 +4,7 @@
 
 #pragma once
 #include "renderer.h"
+#include "../gBuffer.h"
 #include "../vk/RasterPipeline.h"
 
 

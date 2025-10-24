@@ -220,7 +220,6 @@ void ModelLoader::loadMaterials(const std::string& directory, const aiScene& sce
         }
 
         // finish material setup
-        mat->recordDescriptorSet();
         mat->updateUBONow();
 
         {
