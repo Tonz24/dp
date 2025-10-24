@@ -54,8 +54,6 @@ void RaytracedRendererNEE::initGraphicsPipelines() {
     generator_ = std::mt19937(rngDevice_());
     distr_ = std::uniform_int_distribution(std::numeric_limits<uint32_t>::min(),std::numeric_limits<uint32_t>::max());
 
-    initAccumulator(gBuffer_->getTarget().getWidth(), gBuffer_->getTarget().getHeight());
-
     auto tonemapStages = std::vector<RasterPipeline::ShaderStageInfo>{
             {"shaders/skypass_vert.spv",vk::ShaderStageFlagBits::eVertex},
             {"shaders/tonemap_frag.spv",vk::ShaderStageFlagBits::eFragment}
