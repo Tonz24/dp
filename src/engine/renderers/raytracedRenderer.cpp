@@ -133,7 +133,7 @@ void RaytracedRenderer::recordTraceCommands(const Scene& scene, vk::raii::Comman
 
     pcs_.seed = distr_(generator_);
 
-    cmdBuf.pushConstants(rtPipeline_.getPipelineLayout(), pcsRaygenStageFlags,0, vk::ArrayProxy<const PcsRaygen>{pcs_});
+    cmdBuf.pushConstants(rtPipeline_.getPipelineLayout(), pcsRaygenStageFlags,0, vk::ArrayProxy<const PcsRaygenNEE>{pcs_});
 
     auto renderDims = getRenderDimensions();
 

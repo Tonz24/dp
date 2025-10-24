@@ -31,26 +31,21 @@ public:
     [[nodiscard]] Texture& getDepthMap() const { return *depthMap_; }
     [[nodiscard]] Texture& getObjectIdMap() const { return *objectIdMap_; }
 
-
     static constexpr vk::ImageUsageFlags defaultAttachmentUsageFlags{
         vk::ImageUsageFlagBits::eSampled | //  will be sampled in a shader later
         vk::ImageUsageFlagBits::eColorAttachment | //  render target output
         vk::ImageUsageFlagBits::eTransferSrc // in case of needing to blit into the swapchain
     };
 
-    static constexpr uint32_t albedoMapChannelCount{4};
     static constexpr vk::Format albedoMapVkFormat{vk::Format::eR8G8B8A8Unorm};
     static constexpr vk::ImageUsageFlags albedoMapUsageFlags{defaultAttachmentUsageFlags}; // transfer src for blitting into swapchain
 
-    static constexpr uint32_t normalMapChannelCount{4};
     static constexpr vk::Format normalMapVkFormat{vk::Format::eR16G16B16A16Sfloat};
     static constexpr vk::ImageUsageFlags normalMapUsageFlags{defaultAttachmentUsageFlags}; // transfer src for blitting into swapchain
 
     static constexpr vk::Format materialMapVkFormat{vk::Format::eR32Uint};
-    static constexpr uint32_t materialMapChannelCount{1};
     static constexpr vk::ImageUsageFlags materialMapUsageFlags{defaultAttachmentUsageFlags};  // transfer src for retrieving id at cursor position
 
-    static constexpr uint32_t targetChannelCount{4};
     static constexpr vk::Format targetVkFormat{vk::Format::eB10G11R11UfloatPack32};
     static constexpr vk::ImageUsageFlags targetUsageFlags{defaultAttachmentUsageFlags}; // transfer src for blitting into swapchain, sampled for reading skybox in ray gen shader
     static constexpr vk::FormatFeatureFlags targetFormatFlags{vk::FormatFeatureFlagBits::eColorAttachment | vk::FormatFeatureFlagBits::eTransferSrc };
@@ -65,13 +60,10 @@ public:
         vk::Format::eR16G16B16A16Sfloat
     };
 
-
-    static constexpr uint32_t depthMapChannelCount{1};
     static constexpr vk::Format depthMapVkFormat{vk::Format::eD32Sfloat};
     static constexpr vk::ImageUsageFlags depthMapUsageFlags{vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eDepthStencilAttachment}; // sampled because of world space position reconstruction from depth
 
     static constexpr vk::Format idMapVkFormat{vk::Format::eR32Uint};
-    static constexpr uint32_t idMapChannelCount{1};
     static constexpr vk::ImageUsageFlags idMapUsageFlags{vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc};  // transfer src for retrieving id at cursor position
 
     static constexpr std::array attachmentFormats{albedoMapVkFormat, normalMapVkFormat, idMapVkFormat, materialMapVkFormat};
@@ -100,6 +92,8 @@ private:
     std::shared_ptr<Texture> normalMap_{nullptr};
     std::shared_ptr<Texture> materialIdMap_{nullptr};
     std::shared_ptr<Texture> target_{nullptr};
+
+    std::shared_ptr<Texture> accumulator{nullptr};
 
 
     std::shared_ptr<Texture> depthMap_{nullptr};

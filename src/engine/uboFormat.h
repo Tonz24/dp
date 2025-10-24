@@ -79,7 +79,7 @@ struct PcsRtTonemap{
     uint32_t doTonemap;
 };
 
-struct PcsRaygen {
+struct PcsRaygenNEE {
     uint32_t albedoMapHandle;
     uint32_t normalMapHandle;
     uint32_t depthMapHandle;
@@ -96,3 +96,4 @@ struct PcsRaygen {
     uint32_t sampleSky{1};
     uint32_t NEE{0};
 };
+

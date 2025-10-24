@@ -38,25 +38,27 @@ protected:
     std::mt19937 generator_;
     std::uniform_int_distribution<uint32_t> distr_;
 
-    PcsRaygen pcs_{};
+    PcsRaygenNEE pcs_{};
 
     std::shared_ptr<Texture> accumulator_{nullptr};
     uint32_t tonemap_{1};
 
     static constexpr vk::ImageUsageFlags accumulatorUsage{vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled};
 
-private:
-    void initGraphicsPipelines();
-
     static constexpr vk::ShaderStageFlags pcsRaygenStageFlags{vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eMissKHR | vk::ShaderStageFlagBits::eClosestHitKHR};
     static constexpr vk::PushConstantRange pcsRaygenRange{
         .stageFlags = pcsRaygenStageFlags,
         .offset = 0,
-        .size = static_cast<uint32_t>(sizeof(PcsRaygen))
+        .size = static_cast<uint32_t>(sizeof(PcsRaygenNEE))
     };
     static constexpr vk::PushConstantRange pcsTonemapRange{
         .stageFlags = vk::ShaderStageFlagBits::eFragment,
         .offset = 0,
         .size = static_cast<uint32_t>(sizeof(PcsRtTonemap))
     };
+
+private:
+    void initGraphicsPipelines();
+
+
 };
