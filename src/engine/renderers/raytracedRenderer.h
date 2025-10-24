@@ -9,21 +9,19 @@
 #include "../vk/raytracingPipeline.h"
 
 
-class RaytracingRenderer : public DeferredRenderer {
+class RaytracedRenderer : public DeferredRenderer {
 public:
     bool drawGUI() override;
 
     void render(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage,
         const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) override;
 
-    explicit RaytracingRenderer(const std::shared_ptr<GBuffer>& gBuffer);
-
-    explicit RaytracingRenderer(const std::string_view& gBufferName);
+    explicit RaytracedRenderer(const std::shared_ptr<GBuffer>& gBuffer);
+    explicit RaytracedRenderer(const std::string_view& gBufferName);
 
     void resizeScreen(uint32_t newWidth, uint32_t newHeight) override;
 
 protected:
-    void initGraphicsPipelines();
     void initAccumulator(uint32_t width, uint32_t height);
 
     void recordCommandBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage,
@@ -45,6 +43,11 @@ protected:
     std::shared_ptr<Texture> accumulator_{nullptr};
     uint32_t tonemap_{1};
 
+    static constexpr vk::ImageUsageFlags accumulatorUsage{vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled};
+
+private:
+    void initGraphicsPipelines();
+
     static constexpr vk::ShaderStageFlags pcsRaygenStageFlags{vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eMissKHR | vk::ShaderStageFlagBits::eClosestHitKHR};
     static constexpr vk::PushConstantRange pcsRaygenRange{
         .stageFlags = pcsRaygenStageFlags,
@@ -56,7 +59,4 @@ protected:
         .offset = 0,
         .size = static_cast<uint32_t>(sizeof(PcsRtTonemap))
     };
-
-
-    static constexpr vk::ImageUsageFlags accumulatorUsage{vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled};
 };
