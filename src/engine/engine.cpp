@@ -64,7 +64,9 @@ bool Engine::drawGUI() {
             if (selectedRendererIndex_ == 0)
                 selectedRenderer_ = rasterRenderer_.get();
             if (selectedRendererIndex_ == 1)
-                selectedRenderer_ = rtRenderer_.get();
+                selectedRenderer_ = ptRendererBasic_.get();
+            if (selectedRendererIndex_ == 1)
+                selectedRenderer_ = ptRendererNEE_.get();
         }
 
         if (selectedRenderer_)  selectedRenderer_->drawGUI();
@@ -196,9 +198,10 @@ void Engine::initVulkan() {
     idMapTransferBuffer_ = VkUtils::createBufferVMA(sizeof(uint32_t),vk::BufferUsageFlagBits::eTransferDst, allocationCreateFlags);
 
     gBuffer_ = GBufferManager::getInstance()->registerResource("gbuffer_test",1280,720);
-    rasterRenderer_ = std::make_shared<DeferredRenderer>(gBuffer_);
-    rtRenderer_ = std::make_shared<RaytracingRenderer>(gBuffer_);
-    selectedRenderer_ = rtRenderer_.get();
+    rasterRenderer_ = std::make_shared<RendererDeffered>(gBuffer_);
+    ptRendererBasic_ = std::make_shared<RendererPathBasic>(gBuffer_);
+    ptRendererNEE_ = std::make_shared<RendererPathNEE>(gBuffer_);
+    selectedRenderer_ = ptRendererBasic_.get();
 }
 
 void Engine::initVulkanInstance() {
@@ -801,7 +804,7 @@ void Engine::cleanup() {
     VkUtils::destroyBufferVMA(std::move(idMapTransferBuffer_));
 
     rasterRenderer_.reset();
-    rtRenderer_.reset();
+    ptRendererBasic_.reset();
     Renderer::destroy();
 
     VkUtils::destroy();
@@ -866,7 +869,7 @@ void Engine::recreateSwapchain() {
 
     device_.waitIdle();
 
-    rtRenderer_->resizeScreen(width,height);
+    ptRendererBasic_->resizeScreen(width,height);
     rasterRenderer_->resizeScreen(width,height);
 
     cleanupSwapchain();

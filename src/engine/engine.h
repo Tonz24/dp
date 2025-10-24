@@ -16,8 +16,9 @@
 #include "../scene/camera.h"
 #include "../scene/mesh.h"
 #include "../scene/scene.h"
-#include "renderers/deferredRenderer.h"
-#include "renderers/raytracingRenderer.h"
+#include "renderers/rendererDeffered.h"
+#include "renderers/rendererPathBasic.h"
+#include "renderers/rendererPathNEE.h"
 #include "vk/rasterPipeline.h"
 
 class Engine : public IDrawGui {
@@ -224,8 +225,9 @@ private:
     std::shared_ptr<GBuffer> gBuffer_{nullptr};
 
     int selectedRendererIndex_{1};
-    std::shared_ptr<DeferredRenderer> rasterRenderer_{};
-    std::shared_ptr<RaytracingRenderer> rtRenderer_{};
+    std::shared_ptr<RendererDeffered> rasterRenderer_{};
+    std::shared_ptr<RendererPathBasic> ptRendererBasic_{};
+    std::shared_ptr<RendererPathNEE> ptRendererNEE_{};
     Renderer* selectedRenderer_{nullptr};
 
     float drawFrametime_{};

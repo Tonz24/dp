@@ -8,7 +8,7 @@
 #include "../vk/RasterPipeline.h"
 
 
-class DeferredRenderer : public Renderer {
+class RendererDeffered : public Renderer {
 public:
     bool drawGUI() override;
 
@@ -16,8 +16,8 @@ public:
                 swapchainImageView, const vk::Extent2D&
                 swapchainExtent) override;
 
-    explicit DeferredRenderer(std::shared_ptr<GBuffer> gBuffer);
-    explicit DeferredRenderer(std::string_view gBufferName);
+    explicit RendererDeffered(std::shared_ptr<GBuffer> gBuffer);
+    explicit RendererDeffered(std::string_view gBufferName);
 
     void resizeScreen(uint32_t newWidth, uint32_t newHeight) override;
     [[nodiscard]] glm::vec<2, uint32_t> getRenderDimensions() const override {return {gBuffer_->getTarget().getWidth(),gBuffer_->getTarget().getHeight()};}

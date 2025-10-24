@@ -2,14 +2,14 @@
 // Created by Tonz on 03.09.2025.
 //
 
-#include "deferredRenderer.h"
+#include "rendererDeffered.h"
 
 #include <imgui/imgui_impl_vulkan.h>
 
 #include "../managers/resourceManager.h"
 
 
-bool DeferredRenderer::drawGUI() {
+bool RendererDeffered::drawGUI() {
     if (ImGui::CollapsingHeader("Deferred renderer")) {
         ImGui::Indent();
 
@@ -33,17 +33,17 @@ bool DeferredRenderer::drawGUI() {
     return false;
 }
 
-void DeferredRenderer::render(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage,
+void RendererDeffered::render(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage,
                               const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) {
     recordCommandBuffer(scene,cmdBuf,frameInFlightIndex,swapchainImage,swapchainImageView,swapchainExtent);
     recordPresentBuffer(scene,cmdBuf,frameInFlightIndex,swapchainImage,swapchainImageView,swapchainExtent);
 }
 
-DeferredRenderer::DeferredRenderer(std::shared_ptr<GBuffer> gBuffer) : gBuffer_(std::move(gBuffer)) {
+RendererDeffered::RendererDeffered(std::shared_ptr<GBuffer> gBuffer) : gBuffer_(std::move(gBuffer)) {
     initGraphicsPipelines();
 }
 
-DeferredRenderer::DeferredRenderer(std::string_view gBufferName) {
+RendererDeffered::RendererDeffered(std::string_view gBufferName) {
     gBuffer_ = GBufferManager::getInstance()->getResource(gBufferName);
 
     if (gBuffer_ == nullptr)
@@ -52,7 +52,7 @@ DeferredRenderer::DeferredRenderer(std::string_view gBufferName) {
     initGraphicsPipelines();
 }
 
-void DeferredRenderer::resizeScreen(uint32_t newWidth, uint32_t newHeight) {
+void RendererDeffered::resizeScreen(uint32_t newWidth, uint32_t newHeight) {
     if (newWidth != gBuffer_->getTarget().getWidth() || newHeight != gBuffer_->getTarget().getHeight())
         gBuffer_->resizeContents(newWidth,newHeight);
 
@@ -62,7 +62,7 @@ void DeferredRenderer::resizeScreen(uint32_t newWidth, uint32_t newHeight) {
     pcs_.materialMapHandle = gBuffer_->getMaterialMap().getCID();
 }
 
-void DeferredRenderer::initGraphicsPipelines() {
+void RendererDeffered::initGraphicsPipelines() {
     auto gBufferFillStages = std::vector<RasterPipeline::ShaderStageInfo>{
         {"shaders/shader_vert.spv",vk::ShaderStageFlagBits::eVertex},
         {"shaders/gbuffer_fill_frag.spv",vk::ShaderStageFlagBits::eFragment}
@@ -118,7 +118,7 @@ void DeferredRenderer::initGraphicsPipelines() {
     pcs_.materialMapHandle = gBuffer_->getMaterialMap().getCID();
 }
 
-void DeferredRenderer::recordPresentBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
+void RendererDeffered::recordPresentBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
                                            const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) {
 
     //  transition g buffer target to blit
@@ -171,7 +171,7 @@ void DeferredRenderer::recordPresentBuffer(const Scene& scene, vk::raii::Command
     cmdBuf.end();
 }
 
-void DeferredRenderer::recordCommandBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
+void RendererDeffered::recordCommandBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
                                            const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent)
 {
     cmdBuf.reset();
@@ -188,7 +188,7 @@ void DeferredRenderer::recordCommandBuffer(const Scene& scene, vk::raii::Command
 
     recordGBufferShadeCommands(scene,cmdBuf,frameInFlightIndex);
 }
-void DeferredRenderer::recordSkyCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex) {
+void RendererDeffered::recordSkyCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex) {
      vk::ClearValue clearColor = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
 
     vk::RenderingAttachmentInfo colorAttachmentInfo = {
@@ -255,7 +255,7 @@ void DeferredRenderer::recordSkyCommands(const Scene& scene, vk::raii::CommandBu
 }
 
 
-void DeferredRenderer::recordSceneCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex) {
+void RendererDeffered::recordSceneCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex) {
      //set up the color attachment
     vk::ClearValue clearColorFloat = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
     vk::ClearValue clearColorUint = vk::ClearColorValue(std::array<uint32_t,4>{0,0,0,0});
@@ -349,7 +349,7 @@ void DeferredRenderer::recordSceneCommands(const Scene& scene, vk::raii::Command
     cmdBuf.endRendering();
 }
 
-void DeferredRenderer::recordGBufferShadeCommands(const Scene& scene, const vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex) {
+void RendererDeffered::recordGBufferShadeCommands(const Scene& scene, const vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex) {
      //set up the color attachment
     vk::ClearValue clearColor = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
 
@@ -409,7 +409,7 @@ void DeferredRenderer::recordGBufferShadeCommands(const Scene& scene, const vk::
     cmdBuf.endRendering();
 }
 
-void DeferredRenderer::recordGUICommands(const Scene& scene, const vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::ImageView& swapchainImageView, const vk::Extent2D&
+void RendererDeffered::recordGUICommands(const Scene& scene, const vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::ImageView& swapchainImageView, const vk::Extent2D&
                                          swapchainExtent) {
     // prepare GUI render pass
     vk::RenderingAttachmentInfo guiAttachmentInfo = {

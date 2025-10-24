@@ -75,6 +75,8 @@ add_executable(dp
         src/engine/vk/graphicsPipeline.cpp
         src/engine/vk/graphicsPipeline.h
         src/engine/vk/RasterPipeline.cpp
+        src/engine/renderers/rendererPathNEE.h
+        src/engine/renderers/rendererPathNEE.cpp
 )
 
 # add shader compilation as a build step
