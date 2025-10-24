@@ -21,6 +21,7 @@ public:
 
     ~GBuffer() override = default;
 
+
     void resizeContents(uint32_t width, uint32_t height);
 
     [[nodiscard]] Texture& getAlbedoMap() const { return *albedoMap_; }
@@ -29,7 +30,6 @@ public:
     [[nodiscard]] Texture& getTarget() const { return *target_; }
     [[nodiscard]] Texture& getDepthMap() const { return *depthMap_; }
     [[nodiscard]] Texture& getObjectIdMap() const { return *objectIdMap_; }
-    [[nodiscard]] Texture& getAccumulator() const { return *accumulator_; }
 
     static constexpr vk::ImageUsageFlags defaultAttachmentUsageFlags{
         vk::ImageUsageFlagBits::eSampled | //  will be sampled in a shader later
@@ -50,8 +50,10 @@ public:
     static constexpr vk::ImageUsageFlags targetUsageFlags{defaultAttachmentUsageFlags}; // transfer src for blitting into swapchain, sampled for reading skybox in ray gen shader
     static constexpr vk::FormatFeatureFlags targetFormatFlags{vk::FormatFeatureFlagBits::eColorAttachment | vk::FormatFeatureFlagBits::eTransferSrc };
 
+
     //  acceptable formats for target G buffer texture
     //  in descending order
+
     static constexpr std::array targetAcceptableFormats{
         vk::Format::eB10G11R11UfloatPack32,
         vk::Format::eR32G32B32A32Sfloat,
@@ -64,10 +66,19 @@ public:
     static constexpr vk::Format idMapVkFormat{vk::Format::eR32Uint};
     static constexpr vk::ImageUsageFlags idMapUsageFlags{vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc};  // transfer src for retrieving id at cursor position
 
-    static constexpr vk::Format accumulatorFormat{vk::Format::eR32G32B32A32Sfloat};
-    static constexpr vk::ImageUsageFlags accumulatorUsageFlags{vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled};
-
     static constexpr std::array attachmentFormats{albedoMapVkFormat, normalMapVkFormat, idMapVkFormat, materialMapVkFormat};
+
+    static constexpr vk::PushConstantRange pcsFillRange{
+        .stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
+        .offset = 0,
+        .size = static_cast<uint32_t>(sizeof(PcsGBufferFill))
+    };
+
+    static constexpr vk::PushConstantRange pcsShadeRange{
+        .stageFlags = vk::ShaderStageFlagBits::eFragment,
+        .offset = 0,
+        .size = static_cast<uint32_t>(sizeof(PcsGBufferShade))
+    };
 
     static vk::Format getTargetVkFormat();
 
@@ -82,11 +93,14 @@ private:
     std::shared_ptr<Texture> materialIdMap_{nullptr};
     std::shared_ptr<Texture> target_{nullptr};
 
-    std::shared_ptr<Texture> accumulator_{nullptr};
+    std::shared_ptr<Texture> accumulator{nullptr};
 
 
     std::shared_ptr<Texture> depthMap_{nullptr};
     std::shared_ptr<Texture> objectIdMap_{nullptr};
+
+
+    std::vector<std::shared_ptr<Texture>> textures_{};
 
     void createTextures(const std::string& prefix, uint32_t width,uint32_t height);
 

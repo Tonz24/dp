@@ -38,6 +38,9 @@ RaytracedRenderer::RaytracedRenderer(const std::string_view& gBufferName): Defer
 void RaytracedRenderer::resizeScreen(uint32_t newWidth, uint32_t newHeight) {
     DeferredRenderer::resizeScreen(newWidth, newHeight);
 
+    if (newWidth != accumulator_->getWidth() || newHeight != accumulator_->getHeight())
+        initAccumulator(newWidth, newHeight);
+
     pcs_.albedoMapHandle = gBuffer_->getAlbedoMap().getCID();
     pcs_.normalMapHandle = gBuffer_->getNormalMap().getCID();
     pcs_.depthMapHandle = gBuffer_->getDepthMap().getCID();
@@ -49,13 +52,14 @@ void RaytracedRenderer::resizeScreen(uint32_t newWidth, uint32_t newHeight) {
 void RaytracedRenderer::initGraphicsPipelines() {
     std::vector descSetFillLayouts = {*Renderer::getDescSetLayoutFrame()};
 
-    std::array raygenRange{PcsRaygen::getRange()};
+    std::array raygenRange{pcsRaygenRange};
 
     auto rtStages = std::vector<RasterPipeline::ShaderStageInfo>{
-            {"shaders/raygen_naive_rgen.spv",vk::ShaderStageFlagBits::eRaygenKHR},
-            {"shaders/miss_naive_rmiss.spv",vk::ShaderStageFlagBits::eMissKHR},
-            {"shaders/closesthit_naive_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
-            {"shaders/closesthit_mirror_naive_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
+            {"shaders/raygen_rgen.spv",vk::ShaderStageFlagBits::eRaygenKHR},
+            {"shaders/miss_rmiss.spv",vk::ShaderStageFlagBits::eMissKHR},
+            {"shaders/closesthit_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
+            {"shaders/closesthit_mirror_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
+            {"shaders/closesthit_brdf_sample_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
     };
 
     rtPipeline_ = RaytracingPipeline{rtStages,descSetFillLayouts,raygenRange};
@@ -70,6 +74,8 @@ void RaytracedRenderer::initGraphicsPipelines() {
     generator_ = std::mt19937(rngDevice_());
     distr_ = std::uniform_int_distribution(std::numeric_limits<uint32_t>::min(),std::numeric_limits<uint32_t>::max());
 
+   initAccumulator(gBuffer_->getTarget().getWidth(), gBuffer_->getTarget().getHeight());
+
     auto tonemapStages = std::vector<RasterPipeline::ShaderStageInfo>{
         {"shaders/skypass_vert.spv",vk::ShaderStageFlagBits::eVertex},
         {"shaders/tonemap_frag.spv",vk::ShaderStageFlagBits::eFragment}
@@ -78,16 +84,25 @@ void RaytracedRenderer::initGraphicsPipelines() {
     tonemapPipeline_ = RasterPipeline{
         tonemapStages,
         descSetFillLayouts,
-        std::array{PcsRtTonemap::getRange()},
+        std::array{pcsTonemapRange},
         std::array{gBuffer_->getTarget().getVkFormat()},
         false
     };
 }
+
+void RaytracedRenderer::initAccumulator(uint32_t width, uint32_t height) {
+    accumulator_.reset();
+    accumulator_ = TextureManager::getInstance()->registerResource(gBuffer_->getResourceName() + "_accumulator",
+                                                                width,
+                                                                height,
+                                                                vk::Format::eR32G32B32A32Sfloat,
+                                                                accumulatorUsage);
+}
+
 void RaytracedRenderer::recordCommandBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
                                              const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) {
 
     pcs_.skyHandle = scene.getSky()->getCID();
-    pcs_.skyCdfHandle = scene.getSkyCdf()->getCID();
 
     cmdBuf.reset();
     cmdBuf.begin({.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
@@ -99,15 +114,13 @@ void RaytracedRenderer::recordCommandBuffer(const Scene& scene, vk::raii::Comman
     recordSceneCommands(scene,cmdBuf,frameInFlightIndex);
 
     gBuffer_->transitionToTrace(cmdBuf);
-    //accumulator_->transitionLayout(vk::ImageLayout::eGeneral,vk::PipelineStageFlagBits2::eRayTracingShaderKHR,vk::AccessFlagBits2::eShaderStorageWrite | vk::AccessFlagBits2::eShaderStorageRead,cmdBuf);
-    gBuffer_->getAccumulator().transitionLayout(vk::ImageLayout::eGeneral,vk::PipelineStageFlagBits2::eRayTracingShaderKHR,vk::AccessFlagBits2::eShaderStorageWrite | vk::AccessFlagBits2::eShaderStorageRead,cmdBuf);
+    accumulator_->transitionLayout(vk::ImageLayout::eGeneral,vk::PipelineStageFlagBits2::eRayTracingShaderKHR,vk::AccessFlagBits2::eShaderStorageWrite | vk::AccessFlagBits2::eShaderStorageRead,cmdBuf);
 
     // trace rays
     recordTraceCommands(scene,cmdBuf,frameInFlightIndex);
 
     //  transition accumulator to readonly optimal for sampling
-    gBuffer_->getAccumulator().transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eFragmentShader,vk::AccessFlagBits2::eShaderSampledRead,cmdBuf);
-
+    accumulator_->transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eFragmentShader,vk::AccessFlagBits2::eShaderSampledRead,cmdBuf);
     // transition target to color attachment optimal (will store the result of tonemapping)
     gBuffer_->getTarget().transitionLayout(vk::ImageLayout::eColorAttachmentOptimal, vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite,cmdBuf);
 
@@ -120,7 +133,7 @@ void RaytracedRenderer::recordTraceCommands(const Scene& scene, vk::raii::Comman
 
     pcs_.seed = distr_(generator_);
 
-    cmdBuf.pushConstants(rtPipeline_.getPipelineLayout(), PcsRaygen::stageFlags,0, vk::ArrayProxy<const PcsRaygen::Data>{pcs_});
+    cmdBuf.pushConstants(rtPipeline_.getPipelineLayout(), pcsRaygenStageFlags,0, vk::ArrayProxy<const PcsRaygenNEE>{pcs_});
 
     auto renderDims = getRenderDimensions();
 
@@ -190,13 +203,14 @@ void RaytracedRenderer::recordTonemapCommands(const Scene& scene, vk::raii::Comm
     //  bind global descriptor set
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, tonemapPipeline_.getPipelineLayout(), 0, *getDescSetFrame(frameInFlightIndex), nullptr);
 
-    PcsRtTonemap::Data tonemapPcs{
-        .accumulatorHandle = gBuffer_->getAccumulator().getCID(),
+
+    PcsRtTonemap tonemapPcs{
+        .accumulatorHandle = accumulator_->getCID(),
         .normalTexIndex = gBuffer_->getNormalMap().getCID(),
         .doTonemap = tonemap_
     };
 
-    cmdBuf.pushConstants(tonemapPipeline_.getPipelineLayout(), PcsRtTonemap::stageFlags,0, vk::ArrayProxy<const PcsRtTonemap::Data>{ tonemapPcs});
+    cmdBuf.pushConstants(tonemapPipeline_.getPipelineLayout(), vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const PcsRtTonemap>{ tonemapPcs});
 
     // draw six vertices making up the screen quad
     cmdBuf.draw(6, 1, 0, 0);
