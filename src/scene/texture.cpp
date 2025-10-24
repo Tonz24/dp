@@ -26,25 +26,33 @@
 //     return dummy;
 // }
 
-Texture::Texture(uint32_t width, uint32_t height, vk::Format format, vk::ImageUsageFlags imageUsage):
-    ManagedResource(), width_(width), height_(height), channelCount_(chooseChannelCount(format)), vkFormat_(format), imageUsageFlags_(imageUsage)
+Texture::Texture(uint32_t width, uint32_t height, vk::Format format, vk::ImageUsageFlags imageUsage, bool populateData):
+    ManagedResource(), width_(width), height_(height), channelCount_(getChannelCount(format)), vkFormat_(format), imageUsageFlags_(imageUsage), pixelSize_(getFormatPixelSize(format))
 {
-    pixelSize_ = channelCount_;
-    data_.reserve(width_ * height_ * channelCount_);
-    data_.resize(width_ * height_ * channelCount_,0);
-    initVkImage();
 
+    if (populateData) {
+        data_.reserve(width_ * height_ * pixelSize_);
+        data_.resize(width_ * height_ * pixelSize_,0);
+    }
+
+    initVkImage();
 }
 
-std::shared_ptr<Texture> Texture::getCDF() {
+std::shared_ptr<Texture> Texture::getCdf() {
     std::vector imgScalar(width_ * height_,0.0f);
-    std::vector cdfImg((width_ + 1) * height_,0.0f);
 
-    TextureManager::getInstance()->registerResource(getCdfName(),width_ + 1, height_,vk::Format::eR32Sfloat,vk::ImageUsageFlagBits::eStorage);
+    // if the CDF already exists, return it
+    auto cdfTexture = TextureManager::getInstance()->getResource(getCdfName());
+    if (cdfTexture != nullptr)
+        return cdfTexture;
+
+    cdfTexture = TextureManager::getInstance()->registerResource(getCdfName(),width_ + 1, height_,vk::Format::eR32Sfloat,vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferDst, true);
 
     std::vector marginalSum(height_,0.0f);
 
     double sumTotal{0.0};
+
+
 
     //  compute luminance values for every pixel
     for (uint32_t y = 0; y < height_; y++) {
@@ -54,8 +62,10 @@ std::shared_ptr<Texture> Texture::getCDF() {
         float sinTheta = glm::sin(glm::pi<float>() * v);
 
         for (uint32_t x = 0; x < width_; ++x) {
-            auto rgb = getTexel<glm::vec4>(x, y);
-            float luminance = glm::length(glm::vec3(rgb));
+
+            auto rgb = static_cast<glm::vec<3,float>>(getTexel<glm::vec<4,uint8_t>>(x, y)) / 255.0f;
+            rgb *= glm::vec3( 0.299,0.587, 0.114);
+            float luminance = rgb.x + rgb.y + rgb.z;
 
             // set a minimum value for black pixels, otherwise they couldn't be sampled at all
             // that would result in incorrect estimation where bilinear interpolation should return nonzero radiance when sampling such pixels
@@ -67,14 +77,15 @@ std::shared_ptr<Texture> Texture::getCDF() {
         }
     }
 
+    auto marginalSumNorm = marginalSum;
     // normalize the marginal sum
     for (int i = 0; i < height_; ++i) {
-        marginalSum[i] = static_cast<float>(marginalSum[i] / sumTotal);
+        marginalSumNorm[i] = static_cast<float>(marginalSum[i] / sumTotal);
     }
     std::vector marginalCdf(height_,0.0f);
 
     // build the marginal CDF -- accumulate sums into marginalCdf
-    std::partial_sum(marginalSum.begin(),marginalSum.end(),marginalCdf.begin(),std::plus());
+    std::partial_sum(marginalSumNorm.begin(),marginalSumNorm.end(),marginalCdf.begin(),std::plus());
 
     // build conditional cdfs
     std::vector conditionalCdf(width_ * height_,0.0f);
@@ -93,7 +104,29 @@ std::shared_ptr<Texture> Texture::getCDF() {
         }
     }
 
-    return {};
+    // for (uint32_t y = 0; y < height_; y++) {
+    //     for (uint32_t x = 0; x < width_ + 1; ++x) {
+    //         // if this is the first column of the texture (x == 0), then put the marginal value into the cdf image, otherwise use the conditional value
+    //         float val = x == 0 ? marginalCdf[y] : conditionalCdf[y * width_ + (x - 1)];
+    //         cdfImg[y * width_ + x] = val;
+    //     }
+    // }
+
+    float* dataFloat = reinterpret_cast<float*>(cdfTexture->data_.data());
+    for (uint32_t y = 0; y < cdfTexture->getHeight(); y++) {
+        for (uint32_t x = 0; x < cdfTexture->getWidth(); ++x) {
+
+            float val = x == 0 ? marginalCdf[y] : conditionalCdf[y * width_ + (x - 1)];
+            dataFloat[y * cdfTexture->getWidth() + x] = val;
+        }
+    }
+
+    // put cdf image data to device local memory
+    VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(cdfTexture->getTotalSize(),vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingAllocFlagsVMA);
+    cdfTexture->stage(stagingBuffer);
+    VkUtils::destroyBufferVMA(std::move(stagingBuffer));
+
+    return cdfTexture;
 }
 
 void Texture::initVkImage() {
@@ -194,7 +227,7 @@ Texture::Texture(std::string_view fileName, bool isSrgb, bool generateMipmaps) :
 
         FIBITMAP* bitmap{nullptr};
 
-        if (fif == FIF_JPEG) {
+        if (fif == FIF_JPEG || fif == FIF_PNG) {
             FIBITMAP* tempBitmap = FreeImage_Load(fif,correctFileName.c_str());
             bitmap = FreeImage_ConvertTo32Bits(tempBitmap);
             FreeImage_Unload(tempBitmap);
@@ -255,6 +288,9 @@ void Texture::stage(const VkUtils::BufferAlloc& stagingBuffer) {
 
     size_t imageSize = width_ * height_ * pixelSize_;
 
+    if (stagingBuffer.allocationInfo.size < imageSize)
+        throw std::runtime_error("ERROR: staging buffer is too small for texture data!");
+
     memcpy(stagingBuffer.allocationInfo.pMappedData,data_.data(),imageSize);
 
     auto cmdBuf = VkUtils::beginSingleTimeCommand();
@@ -263,7 +299,10 @@ void Texture::stage(const VkUtils::BufferAlloc& stagingBuffer) {
 
     VkUtils::copyBufferToImage(stagingBuffer,imageAlloc_,width_,height_, cmdBuf);
 
-    transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eFragmentShader,vk::AccessFlagBits2::eShaderRead,cmdBuf, {0,mipLevelCount_});
+    // storage images should not return to shader read only, but general
+    vk::ImageLayout returnLayout = imageUsageFlags_ & vk::ImageUsageFlagBits::eStorage ? vk::ImageLayout::eGeneral : vk::ImageLayout::eShaderReadOnlyOptimal;
+
+    transitionLayout(returnLayout,vk::PipelineStageFlagBits2::eFragmentShader,vk::AccessFlagBits2::eShaderRead,cmdBuf, {0,mipLevelCount_});
 
     VkUtils::endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
     generateMipmaps();
@@ -404,7 +443,7 @@ int Texture::getChannelCount(FREE_IMAGE_TYPE type, uint32_t bpp) {
     }
 }
 
-int Texture::chooseChannelCount(vk::Format format) {
+int Texture::getChannelCount(vk::Format format) {
     using F = vk::Format;
     switch (format) {
         case F::eR8Unorm:
@@ -514,6 +553,113 @@ int Texture::chooseChannelCount(vk::Format format) {
 
         default:
             throw std::runtime_error("ERROR: Unsupported vk::Format in chooseChannelCount!");
+    }
+}
+
+uint32_t Texture::getFormatPixelSize(vk::Format format) {
+    switch (format) {
+        // 8-bit per channel formats
+        case vk::Format::eR8Unorm:
+        case vk::Format::eR8Snorm:
+        case vk::Format::eR8Uint:
+        case vk::Format::eR8Sint:
+        case vk::Format::eR8Srgb:
+            return 1;
+
+        case vk::Format::eR8G8Unorm:
+        case vk::Format::eR8G8Snorm:
+        case vk::Format::eR8G8Uint:
+        case vk::Format::eR8G8Sint:
+        case vk::Format::eR8G8Srgb:
+            return 2;
+
+        case vk::Format::eR8G8B8Unorm:
+        case vk::Format::eR8G8B8Snorm:
+        case vk::Format::eR8G8B8Uint:
+        case vk::Format::eR8G8B8Sint:
+        case vk::Format::eR8G8B8Srgb:
+        case vk::Format::eB8G8R8Unorm:
+        case vk::Format::eB8G8R8Snorm:
+        case vk::Format::eB8G8R8Uint:
+        case vk::Format::eB8G8R8Sint:
+        case vk::Format::eB8G8R8Srgb:
+            return 3;
+
+        case vk::Format::eR8G8B8A8Unorm:
+        case vk::Format::eR8G8B8A8Snorm:
+        case vk::Format::eR8G8B8A8Uint:
+        case vk::Format::eR8G8B8A8Sint:
+        case vk::Format::eR8G8B8A8Srgb:
+        case vk::Format::eB8G8R8A8Unorm:
+        case vk::Format::eB8G8R8A8Snorm:
+        case vk::Format::eB8G8R8A8Uint:
+        case vk::Format::eB8G8R8A8Sint:
+        case vk::Format::eB8G8R8A8Srgb:
+            return 4;
+
+        // 16-bit per channel formats
+        case vk::Format::eR16Unorm:
+        case vk::Format::eR16Snorm:
+        case vk::Format::eR16Uint:
+        case vk::Format::eR16Sint:
+        case vk::Format::eR16Sfloat:
+            return 2;
+
+        case vk::Format::eR16G16Unorm:
+        case vk::Format::eR16G16Snorm:
+        case vk::Format::eR16G16Uint:
+        case vk::Format::eR16G16Sint:
+        case vk::Format::eR16G16Sfloat:
+        case vk::Format::eB10G11R11UfloatPack32:
+            return 4;
+
+        case vk::Format::eR16G16B16Unorm:
+        case vk::Format::eR16G16B16Snorm:
+        case vk::Format::eR16G16B16Uint:
+        case vk::Format::eR16G16B16Sint:
+        case vk::Format::eR16G16B16Sfloat:
+            return 6;
+
+        case vk::Format::eR16G16B16A16Unorm:
+        case vk::Format::eR16G16B16A16Snorm:
+        case vk::Format::eR16G16B16A16Uint:
+        case vk::Format::eR16G16B16A16Sint:
+        case vk::Format::eR16G16B16A16Sfloat:
+            return 8;
+
+        // 32-bit per channel formats
+        case vk::Format::eR32Uint:
+        case vk::Format::eR32Sint:
+        case vk::Format::eR32Sfloat:
+            return 4;
+
+        case vk::Format::eR32G32Uint:
+        case vk::Format::eR32G32Sint:
+        case vk::Format::eR32G32Sfloat:
+            return 8;
+
+        case vk::Format::eR32G32B32Uint:
+        case vk::Format::eR32G32B32Sint:
+        case vk::Format::eR32G32B32Sfloat:
+            return 12;
+
+        case vk::Format::eR32G32B32A32Uint:
+        case vk::Format::eR32G32B32A32Sint:
+        case vk::Format::eR32G32B32A32Sfloat:
+            return 16;
+
+        // Depth / stencil formats
+        case vk::Format::eD16Unorm:
+            return 2;
+        case vk::Format::eX8D24UnormPack32:
+        case vk::Format::eD32Sfloat:
+            return 4;
+        case vk::Format::eD24UnormS8Uint:
+        case vk::Format::eD32SfloatS8Uint:
+            return 5;
+
+        default:
+            throw std::runtime_error("Unsupported or compressed vk::Format in GetFormatPixelSize");
     }
 }
 

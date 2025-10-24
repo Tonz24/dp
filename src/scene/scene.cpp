@@ -54,8 +54,8 @@ void Scene::initDescriptorSet(){
         sky_->stage(stagingBuffer);
         VkUtils::destroyBufferVMA(std::move(stagingBuffer));
 
+        skyCdf_ = sky_->getCdf();
     }
-
 }
 
 void Scene::initTLAS() {

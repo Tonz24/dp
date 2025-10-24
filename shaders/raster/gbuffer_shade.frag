@@ -63,6 +63,11 @@ void main() {
     fragColor = vec4(emissiveBuffer.tris[0].v0eR.xyz + emissiveCDF.cdf[0].cdfVal,0.5);
     return;*/
 
+    /**float cdf = imageLoad(skyCdf, ivec2(0,499)).r;
+    fragColor = vec4(cdf);
+    return;*/
+
+
     vec2 screenTexCoord = inNDCxy * 0.5 + 0.5;
     screenTexCoord.y = 1.0 - screenTexCoord.y;
 

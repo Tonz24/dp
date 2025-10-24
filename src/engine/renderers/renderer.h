@@ -126,6 +126,12 @@ private:
             .descriptorCount = 1,
             .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eFragment
         },
+        vk::DescriptorSetLayoutBinding { // sky cdf
+            .binding = 9,
+            .descriptorType = vk::DescriptorType::eStorageImage,
+            .descriptorCount = 1,
+            .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eFragment
+        },
     };
 
     static constexpr vk::DescriptorSetLayoutCreateInfo frameLayoutInfo{

@@ -836,7 +836,7 @@ void Engine::initDescriptorPool() {
         },
         vk::DescriptorPoolSize {
             .type = vk::DescriptorType::eStorageImage,
-            .descriptorCount = 1
+            .descriptorCount = 10
         },
         vk::DescriptorPoolSize {
             .type = vk::DescriptorType::eStorageBuffer,

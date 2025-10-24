@@ -49,6 +49,7 @@ layout(set = 0, binding = 6) uniform usampler2D utextures[1024];
 
 #extension GL_EXT_ray_query : require
 layout(set = 0, binding = 3) uniform accelerationStructureEXT topLevelAS;
+layout(set = 0, binding = 9, r32f) uniform readonly image2D skyCdf;
 //================================================
 
 //====================MATERIAL====================

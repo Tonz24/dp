@@ -23,7 +23,7 @@ public:
     Texture& operator=(Texture&&) = delete;
 
     explicit Texture(std::string_view fileName, bool isSrgb, bool generateMipmaps);
-    Texture(uint32_t width, uint32_t height, vk::Format format, vk::ImageUsageFlags imageUsage);
+    Texture(uint32_t width, uint32_t height, vk::Format format, vk::ImageUsageFlags imageUsage, bool populateData = false);
 
 
     ~Texture() override;
@@ -37,12 +37,17 @@ public:
     [[nodiscard]] uint32_t getHeight() const { return height_; }
     [[nodiscard]] vk::ImageLayout getSamplerLayout() const { return samplerLayout_; }
     [[nodiscard]] uint32_t getTotalSize() const {return data_.size() * sizeof(data_[0]);}
-    std::shared_ptr<Texture> getCDF();
+    std::shared_ptr<Texture> getCdf();
 
     [[nodiscard]] vk::ImageUsageFlags getImageUsageFlags() const { return imageUsageFlags_; }
 
     friend class TextureManager;
 
+
+    /**
+     * @brief copies texture data from RAM to VRAM using the provided staging buffer. (data flow is host memory -> staging buffer -> device local memory)
+     * @param stagingBuffer buffer that facilitates transfer from host to device local memory. Must be large enough to hold all texture data at once
+     */
     void stage(const VkUtils::BufferAlloc& stagingBuffer);
     void generateMipmaps();
 
@@ -64,8 +69,9 @@ private:
     vk::Format chooseVkFormat(bool isSrgb) const;
 
     static int getChannelCount(FREE_IMAGE_TYPE type, uint32_t bpp);
+    int getChannelCount(vk::Format format);
 
-    int chooseChannelCount(vk::Format format);
+    static uint32_t getFormatPixelSize(vk::Format format);
 
     uint32_t width_{};
     uint32_t height_{};

@@ -107,7 +107,6 @@ void Renderer::initDescSetLayout() {
 
         cameraUBOsMapped_.emplace_back(static_cast<unsigned char*>(buffer.allocationInfo.pMappedData));
         cameraUBOs_.emplace_back(std::move(buffer));
-
     }
 
     // material UBO
@@ -132,7 +131,6 @@ void Renderer::initDescSetLayout() {
         objDescSSBOs_.emplace_back(std::move(buffer));
     }
 
-
     std::vector<vk::DescriptorSetLayout> layouts(Constants::maxFramesInFlight,*descSetLayoutFrame_);
     vk::DescriptorSetAllocateInfo allocInfo{
         .descriptorPool = Engine::getInstance().getDescriptorPool(),
@@ -141,8 +139,6 @@ void Renderer::initDescSetLayout() {
     };
 
     descSetsFrame_ = VkUtils::getDevice().allocateDescriptorSets(allocInfo);
-
-    //auto dummy = TextureManager::getInstance()->getResource("dummy");
 
     for (size_t i = 0; i < Constants::maxFramesInFlight; i++) {
 
@@ -160,21 +156,6 @@ void Renderer::initDescSetLayout() {
             .descriptorType = vk::DescriptorType::eUniformBuffer,
             .pBufferInfo = &camBufferInfo,
         };
-
-        // vk::DescriptorImageInfo dummyInfo{
-        //     .sampler =  dummy->getVkSampler(),
-        //     .imageView = dummy->getVkImageView(),
-        //     .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-        // };
-
-        // vk::WriteDescriptorSet writeDescriptorSetDummy{
-        //     .dstSet = descSetsFrame_[i], //  which descriptor set to update
-        //     .dstBinding = 2, // which binding to update
-        //     .dstArrayElement = 0, //  what element the update starts at
-        //     .descriptorCount = 1, //  how many descriptors are affected
-        //     .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-        //     .pImageInfo = &dummyInfo,
-        // };
 
         vk::DescriptorBufferInfo matBufferInfo{
             .buffer = materialUBOs_[i].buffer,
@@ -212,7 +193,6 @@ void Renderer::initDescSetLayout() {
     isDescSetLayoutInit_ = true;
 }
 
-
 void Renderer::registerTextureBindless(const Texture& texture) {
     for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
 
@@ -238,6 +218,10 @@ void Renderer::registerTextureBindless(const Texture& texture) {
 }
 
 void Renderer::registerTextureStorage(const Texture& texture) {
+    // TODO: move to non-uniform indexing
+    auto vkFormat = texture.getVkFormat();
+    uint32_t dstBinding = vkFormat == vk::Format::eR32Sfloat ? 9 : 4;
+
     for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
         vk::DescriptorImageInfo imageInfo{
             .sampler = texture.getVkSampler(),
@@ -247,7 +231,7 @@ void Renderer::registerTextureStorage(const Texture& texture) {
 
         vk::WriteDescriptorSet writeDescriptorSetBindless{
             .dstSet = getDescSetFrame(i),
-            .dstBinding = 4,
+            .dstBinding = dstBinding,
             .dstArrayElement = 0,
             .descriptorCount = 1,
             .descriptorType = vk::DescriptorType::eStorageImage,
