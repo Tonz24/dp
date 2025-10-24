@@ -171,7 +171,7 @@ public:
         nameToIdMap_[std::string{resourceName}] = newCID;
         idToResourceMap_[newCID] = newResource;
 
-        registerTexure(*newResource);
+        registerTexture(*newResource);
 
         return newResource;
     }
@@ -194,14 +194,18 @@ public:
         nameToIdMap_[std::string{resourceName}] = newCId;
         idToResourceMap_[newCId] = newResource;
 
-        registerTexure(*newResource);
+        registerTexture(*newResource);
 
         return newResource;
     }
 
 private:
-    static void registerTexure(const Texture& texture) {
-        Renderer::registerTextureBindless(texture);
+    static void registerTexture(const Texture& texture) {
+        // put texture into the bindless descriptor array if it is to be sampled in shader (use sampler and sampler layout from texture object)
+        if (texture.getImageUsageFlags() & vk::ImageUsageFlagBits::eSampled)
+            Renderer::registerTextureBindless(texture);
+
+        // put texture into the bindless descriptor array if it is to be used as a storage image (directly set sampler layout to eGeneral, descriptor type to eStorageImage)
         if (texture.getImageUsageFlags() & vk::ImageUsageFlagBits::eStorage)
             Renderer::registerTextureStorage(texture);
     }

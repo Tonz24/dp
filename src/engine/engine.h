@@ -54,8 +54,6 @@ private:
     void initGLFW();
     void initImGui();
 
-    void initDummyTexture();
-
     void initVulkan();
     void initVulkanInstance();
     std::vector<const char*> initRequiredInstanceExtensions();
@@ -209,7 +207,6 @@ private:
 
     vk::raii::DescriptorPool uiPool_{nullptr};
 
-    std::shared_ptr<Texture> dummy_{nullptr};
 
     void configureVkUtils() const;
     void updateUBOs();

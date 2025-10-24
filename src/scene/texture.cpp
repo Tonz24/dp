@@ -11,20 +11,20 @@
 #include "../engine/engine.h"
 #include "../engine/managers/resourceManager.h"
 
-std::shared_ptr<Texture> Texture::createDummy(std::string_view name,  const glm::vec<4, uint8_t>& color) {
 
-    vk::ImageUsageFlags usageFlags = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
-    auto dummy = TextureManager::getInstance()->registerResource(name,1,1,vk::Format::eB8G8R8A8Unorm, usageFlags);
-
-    memcpy(dummy->data_.data(),&color[0],sizeof(color));
-
-    VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(dummy->getTotalSize(),vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingAllocFlagsVMA);
-    dummy->stage(stagingBuffer);
-    VkUtils::destroyBufferVMA(std::move(stagingBuffer));
-
-    return dummy;
-}
-
+// std::shared_ptr<Texture> Texture::createDummy(std::string_view name,  const glm::vec<4, uint8_t>& color) {
+//
+//     vk::ImageUsageFlags usageFlags = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
+//     auto dummy = TextureManager::getInstance()->registerResource(name,1,1,vk::Format::eB8G8R8A8Unorm, usageFlags);
+//
+//     memcpy(dummy->data_.data(),&color[0],sizeof(color));
+//
+//     VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(dummy->getTotalSize(),vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingAllocFlagsVMA);
+//     dummy->stage(stagingBuffer);
+//     VkUtils::destroyBufferVMA(std::move(stagingBuffer));
+//
+//     return dummy;
+// }
 
 Texture::Texture(uint32_t width, uint32_t height, vk::Format format, vk::ImageUsageFlags imageUsage):
     ManagedResource(), width_(width), height_(height), channelCount_(chooseChannelCount(format)), vkFormat_(format), imageUsageFlags_(imageUsage)
@@ -39,8 +39,6 @@ Texture::Texture(uint32_t width, uint32_t height, vk::Format format, vk::ImageUs
 std::shared_ptr<Texture> Texture::getCDF() {
     std::vector imgScalar(width_ * height_,0.0f);
     std::vector cdfImg((width_ + 1) * height_,0.0f);
-
-
 
     TextureManager::getInstance()->registerResource(getCdfName(),width_ + 1, height_,vk::Format::eR32Sfloat,vk::ImageUsageFlagBits::eStorage);
 

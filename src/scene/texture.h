@@ -43,8 +43,6 @@ public:
 
     friend class TextureManager;
 
-    static std::shared_ptr<Texture> createDummy(std::string_view name,  const glm::vec<4, uint8_t>& color = {255, 0, 255, 255});
-
     void stage(const VkUtils::BufferAlloc& stagingBuffer);
     void generateMipmaps();
 

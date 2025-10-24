@@ -52,17 +52,35 @@ layout(set = 0, binding = 3) uniform accelerationStructureEXT topLevelAS;
 //================================================
 
 //====================MATERIAL====================
+//ShadeParams unpackMaterial(Material mat,vec3 normal, mat3 tbn, vec2 texCoord){
+//    ShadeParams params;
+//
+//    float hasAlbedoMap = clamp(float(mat.diffuseAlbedoMapHandle),0.0f,1.0f);
+//    params.albedo = mix(mat.diffuseAlbedo, texture(textures[mat.diffuseAlbedoMapHandle], texCoord).rgb, hasAlbedoMap);
+//
+//    float hasNormalMap = clamp(float(mat.normalMapHandle),0.0f,1.0f);
+//    params.normal = mix(normalize(normal),normalize(tbn * (texture(textures[mat.normalMapHandle],texCoord).xyz * 2.0 - 1.0)),hasNormalMap);
+//
+//    float hasShininessMap = clamp(float(mat.shininessMapHandle),0.0f,1.0f);
+//    params.shininess = mix(mat.shininess, texture(textures[mat.shininessMapHandle], texCoord).r, hasShininessMap);
+//    // roughness to shininess remapping https://simonstechblog.blogspot.com/2011/12/microfacet-brdf.html
+//    params.shininess = mix(params.shininess,2.0f / (params.shininess * params.shininess) - 2.0f,hasShininessMap);
+//
+//    return params;
+//}
+
 ShadeParams unpackMaterial(Material mat,vec3 normal, mat3 tbn, vec2 texCoord){
     ShadeParams params;
 
-    float hasAlbedoMap = clamp(float(mat.diffuseAlbedoMapHandle),0.0f,1.0f);
-    params.albedo = mix(mat.diffuseAlbedo, texture(textures[mat.diffuseAlbedoMapHandle], texCoord).rgb, hasAlbedoMap);
+    bool hasAlbedoMap = mat.diffuseAlbedoMapHandle > 0;
+    params.albedo = hasAlbedoMap ? texture(textures[mat.diffuseAlbedoMapHandle], texCoord).rgb :  mat.diffuseAlbedo;
 
-    float hasNormalMap = clamp(float(mat.normalMapHandle),0.0f,1.0f);
-    params.normal = mix(normalize(normal),normalize(tbn * (texture(textures[mat.normalMapHandle],texCoord).xyz * 2.0 - 1.0)),hasNormalMap);
+    bool hasNormalMap = mat.normalMapHandle > 0;
+    params.normal = hasNormalMap ? normalize(tbn * (texture(textures[mat.normalMapHandle],texCoord).xyz * 2.0 - 1.0)) : normalize(normal);
 
-    float hasShininessMap = clamp(float(mat.shininessMapHandle),0.0f,1.0f);
-    params.shininess = mix(mat.shininess, texture(textures[mat.shininessMapHandle], texCoord).r, hasShininessMap);
+    bool hasShininessMap = mat.shininessMapHandle > 0;
+    params.shininess = hasShininessMap ? texture(textures[mat.shininessMapHandle], texCoord).r : mat.shininess;
+
     // roughness to shininess remapping https://simonstechblog.blogspot.com/2011/12/microfacet-brdf.html
     params.shininess = mix(params.shininess,2.0f / (params.shininess * params.shininess) - 2.0f,hasShininessMap);
 

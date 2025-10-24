@@ -165,10 +165,6 @@ void Engine::initImGui() {
     ImGui_ImplVulkan_Init(&initInfo);
 }
 
-void Engine::initDummyTexture() {
-    dummy_ = Texture::createDummy("dummy");
-}
-
 void Engine::initVulkan() {
 
     initVulkanInstance();
@@ -642,6 +638,9 @@ Engine::debugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::Deb
     msg.append( "\tSeverity: " +  to_string(severity) + "\n");
     msg.append( "\tType: " + to_string(type) + "\n");
     msg.append( "\tObjects:\n");
+
+    if (severity == vk::DebugUtilsMessageSeverityFlagBitsEXT::eError)
+        int breakpoint = 0;
 
     for (uint32_t i = 0; i < pCallbackData->objectCount; ++i){
 
