@@ -49,7 +49,7 @@ void RaytracedRenderer::resizeScreen(uint32_t newWidth, uint32_t newHeight) {
 void RaytracedRenderer::initGraphicsPipelines() {
     std::vector descSetFillLayouts = {*Renderer::getDescSetLayoutFrame()};
 
-    std::array raygenRange{pcsRaygenRange};
+    std::array raygenRange{PcsRaygenNEE::getRange()};
 
     auto rtStages = std::vector<RasterPipeline::ShaderStageInfo>{
             {"shaders/raygen_rgen.spv",vk::ShaderStageFlagBits::eRaygenKHR},
@@ -79,7 +79,7 @@ void RaytracedRenderer::initGraphicsPipelines() {
     tonemapPipeline_ = RasterPipeline{
         tonemapStages,
         descSetFillLayouts,
-        std::array{pcsTonemapRange},
+        std::array{PcsRtTonemap::getRange()},
         std::array{gBuffer_->getTarget().getVkFormat()},
         false
     };
@@ -121,7 +121,7 @@ void RaytracedRenderer::recordTraceCommands(const Scene& scene, vk::raii::Comman
 
     pcs_.seed = distr_(generator_);
 
-    cmdBuf.pushConstants(rtPipeline_.getPipelineLayout(), pcsRaygenStageFlags,0, vk::ArrayProxy<const PcsRaygenNEE>{pcs_});
+    cmdBuf.pushConstants(rtPipeline_.getPipelineLayout(), PcsRaygenNEE::stageFlags,0, vk::ArrayProxy<const PcsRaygenNEE::Data>{pcs_});
 
     auto renderDims = getRenderDimensions();
 
@@ -191,14 +191,13 @@ void RaytracedRenderer::recordTonemapCommands(const Scene& scene, vk::raii::Comm
     //  bind global descriptor set
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, tonemapPipeline_.getPipelineLayout(), 0, *getDescSetFrame(frameInFlightIndex), nullptr);
 
-
-    PcsRtTonemap tonemapPcs{
+    PcsRtTonemap::Data tonemapPcs{
         .accumulatorHandle = gBuffer_->getAccumulator().getCID(),
         .normalTexIndex = gBuffer_->getNormalMap().getCID(),
         .doTonemap = tonemap_
     };
 
-    cmdBuf.pushConstants(tonemapPipeline_.getPipelineLayout(), vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const PcsRtTonemap>{ tonemapPcs});
+    cmdBuf.pushConstants(tonemapPipeline_.getPipelineLayout(), PcsRtTonemap::stageFlags,0, vk::ArrayProxy<const PcsRtTonemap::Data>{ tonemapPcs});
 
     // draw six vertices making up the screen quad
     cmdBuf.draw(6, 1, 0, 0);

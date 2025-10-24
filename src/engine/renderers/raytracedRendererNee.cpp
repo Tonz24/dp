@@ -32,7 +32,7 @@ RaytracedRendererNEE::RaytracedRendererNEE(const std::string_view& gBufferName):
 void RaytracedRendererNEE::initGraphicsPipelines() {
     std::vector descSetFillLayouts = {*Renderer::getDescSetLayoutFrame()};
 
-    std::array raygenRange{pcsRaygenRange};
+    std::array raygenRange{PcsRaygenNEE::getRange()};
 
     auto rtStages = std::vector<RasterPipeline::ShaderStageInfo>{
                 {"shaders/raygen_rgen.spv",vk::ShaderStageFlagBits::eRaygenKHR},
@@ -62,7 +62,7 @@ void RaytracedRendererNEE::initGraphicsPipelines() {
     tonemapPipeline_ = RasterPipeline{
         tonemapStages,
         descSetFillLayouts,
-        std::array{pcsTonemapRange},
+        std::array{PcsRtTonemap::getRange()},
         std::array{gBuffer_->getTarget().getVkFormat()},
         false
     };

@@ -6,7 +6,7 @@
 #include "renderer.h"
 #include "../gBuffer.h"
 #include "../vk/RasterPipeline.h"
-
+#include "../pushConstants.h"
 
 class DeferredRenderer : public Renderer {
 public:
@@ -49,6 +49,6 @@ protected:
 
 private:
     void initGraphicsPipelines();
-    PcsGBufferShade pcs_{};
+    PcsGBufferShade::Data pcs_{};
 };
 

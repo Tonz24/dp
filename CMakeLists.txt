@@ -77,6 +77,8 @@ add_executable(dp
         src/engine/vk/RasterPipeline.cpp
         src/engine/renderers/raytracedRendererNee.cpp
         src/engine/renderers/raytracedRendererNee.h
+        src/engine/pushConstants.h
+        src/engine/pushConstants.h
 )
 
 # add shader compilation as a build step

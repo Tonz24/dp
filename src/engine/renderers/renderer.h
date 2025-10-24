@@ -48,11 +48,11 @@ protected:
     virtual void recordPresentBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
                                            const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) = 0;
 
-    static constexpr vk::PushConstantRange pcsSkyRange{
+    /*static constexpr vk::PushConstantRange pcsSkyRange{
         .stageFlags = vk::ShaderStageFlagBits::eFragment,
         .offset = 0,
         .size = static_cast<uint32_t>(sizeof(PcsSky))
-    };
+    };*/
 
 private:
 

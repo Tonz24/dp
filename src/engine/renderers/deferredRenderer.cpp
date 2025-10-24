@@ -6,6 +6,7 @@
 
 #include <imgui/imgui_impl_vulkan.h>
 
+
 #include "../managers/resourceManager.h"
 
 
@@ -81,9 +82,9 @@ void DeferredRenderer::initGraphicsPipelines() {
 
     std::vector descSetFillLayouts = {*Renderer::getDescSetLayoutFrame()};
 
-    std::array pcsFillRange{GBuffer::pcsFillRange};
-    std::array pcsShadeRange{GBuffer::pcsShadeRange};
-    std::array pcsSkyRange{Renderer::pcsSkyRange};
+    std::array pcsFillRange{PcsGBufferFill::getRange()};
+    std::array pcsShadeRange{PcsGBufferShade::getRange()};
+    std::array pcsSkyRange{PcsSky::getRange()};
 
     std::array shadeAttachmentFormat{gBuffer_->getTarget().getVkFormat()};
 
@@ -247,7 +248,7 @@ void DeferredRenderer::recordSkyCommands(const Scene& scene, vk::raii::CommandBu
     //  bind global descriptor set
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, skyboxPipeline_.getPipelineLayout(), 0, *getDescSetFrame(frameInFlightIndex), nullptr);
 
-    cmdBuf.pushConstants(skyboxPipeline_.getPipelineLayout(), vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const uint32_t>{scene.getSky()->getCID()});
+    cmdBuf.pushConstants(skyboxPipeline_.getPipelineLayout(), PcsSky::stageFlags,0, vk::ArrayProxy<const uint32_t>{scene.getSky()->getCID()});
 
     // draw six vertices making up the screen quad
     cmdBuf.draw(6, 1, 0, 0);
@@ -404,7 +405,7 @@ void DeferredRenderer::recordGBufferShadeCommands(const Scene& scene, const vk::
     cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, gBufferShadePipeline_.getGraphicsPipeline());
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, gBufferShadePipeline_.getPipelineLayout(), 0, *getDescSetFrame(frameInFlightIndex), nullptr);
 
-    cmdBuf.pushConstants(gBufferShadePipeline_.getPipelineLayout(), vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const PcsGBufferShade>{pcs_});
+    cmdBuf.pushConstants(gBufferShadePipeline_.getPipelineLayout(), PcsGBufferShade::stageFlags,0, vk::ArrayProxy<const PcsGBufferShade::Data>{pcs_});
     cmdBuf.draw(6, 1, 0, 0);
     cmdBuf.endRendering();
 }
