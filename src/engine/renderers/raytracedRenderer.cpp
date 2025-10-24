@@ -38,9 +38,6 @@ RaytracedRenderer::RaytracedRenderer(const std::string_view& gBufferName): Defer
 void RaytracedRenderer::resizeScreen(uint32_t newWidth, uint32_t newHeight) {
     DeferredRenderer::resizeScreen(newWidth, newHeight);
 
-    if (newWidth != accumulator_->getWidth() || newHeight != accumulator_->getHeight())
-        initAccumulator(newWidth, newHeight);
-
     pcs_.albedoMapHandle = gBuffer_->getAlbedoMap().getCID();
     pcs_.normalMapHandle = gBuffer_->getNormalMap().getCID();
     pcs_.depthMapHandle = gBuffer_->getDepthMap().getCID();
@@ -74,8 +71,6 @@ void RaytracedRenderer::initGraphicsPipelines() {
     generator_ = std::mt19937(rngDevice_());
     distr_ = std::uniform_int_distribution(std::numeric_limits<uint32_t>::min(),std::numeric_limits<uint32_t>::max());
 
-   initAccumulator(gBuffer_->getTarget().getWidth(), gBuffer_->getTarget().getHeight());
-
     auto tonemapStages = std::vector<RasterPipeline::ShaderStageInfo>{
         {"shaders/skypass_vert.spv",vk::ShaderStageFlagBits::eVertex},
         {"shaders/tonemap_frag.spv",vk::ShaderStageFlagBits::eFragment}
@@ -89,16 +84,6 @@ void RaytracedRenderer::initGraphicsPipelines() {
         false
     };
 }
-
-void RaytracedRenderer::initAccumulator(uint32_t width, uint32_t height) {
-    accumulator_.reset();
-    accumulator_ = TextureManager::getInstance()->registerResource(gBuffer_->getResourceName() + "_accumulator",
-                                                                width,
-                                                                height,
-                                                                vk::Format::eR32G32B32A32Sfloat,
-                                                                accumulatorUsage);
-}
-
 void RaytracedRenderer::recordCommandBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
                                              const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) {
 
@@ -114,13 +99,16 @@ void RaytracedRenderer::recordCommandBuffer(const Scene& scene, vk::raii::Comman
     recordSceneCommands(scene,cmdBuf,frameInFlightIndex);
 
     gBuffer_->transitionToTrace(cmdBuf);
-    accumulator_->transitionLayout(vk::ImageLayout::eGeneral,vk::PipelineStageFlagBits2::eRayTracingShaderKHR,vk::AccessFlagBits2::eShaderStorageWrite | vk::AccessFlagBits2::eShaderStorageRead,cmdBuf);
+    //accumulator_->transitionLayout(vk::ImageLayout::eGeneral,vk::PipelineStageFlagBits2::eRayTracingShaderKHR,vk::AccessFlagBits2::eShaderStorageWrite | vk::AccessFlagBits2::eShaderStorageRead,cmdBuf);
+    gBuffer_->getAccumulator().transitionLayout(vk::ImageLayout::eGeneral,vk::PipelineStageFlagBits2::eRayTracingShaderKHR,vk::AccessFlagBits2::eShaderStorageWrite | vk::AccessFlagBits2::eShaderStorageRead,cmdBuf);
 
     // trace rays
     recordTraceCommands(scene,cmdBuf,frameInFlightIndex);
 
     //  transition accumulator to readonly optimal for sampling
-    accumulator_->transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eFragmentShader,vk::AccessFlagBits2::eShaderSampledRead,cmdBuf);
+    //accumulator_->transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eFragmentShader,vk::AccessFlagBits2::eShaderSampledRead,cmdBuf);
+    gBuffer_->getAccumulator().transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eFragmentShader,vk::AccessFlagBits2::eShaderSampledRead,cmdBuf);
+
     // transition target to color attachment optimal (will store the result of tonemapping)
     gBuffer_->getTarget().transitionLayout(vk::ImageLayout::eColorAttachmentOptimal, vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite,cmdBuf);
 
@@ -205,7 +193,7 @@ void RaytracedRenderer::recordTonemapCommands(const Scene& scene, vk::raii::Comm
 
 
     PcsRtTonemap tonemapPcs{
-        .accumulatorHandle = accumulator_->getCID(),
+        .accumulatorHandle = gBuffer_->getAccumulator().getCID(),
         .normalTexIndex = gBuffer_->getNormalMap().getCID(),
         .doTonemap = tonemap_
     };
