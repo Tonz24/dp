@@ -2,22 +2,13 @@
 // Created by Tonz on 19.09.2025.
 //
 
-<<<<<<<< HEAD:src/engine/renderers/raytracedRenderer.cpp
 #include "raytracedRenderer.h"
-========
-#include "rendererPathBasic.h"
->>>>>>>> master/master:src/engine/renderers/rendererPathBasic.cpp
 
 #include "../managers/resourceManager.h"
 #include "imgui/imgui.h"
 
-<<<<<<<< HEAD:src/engine/renderers/raytracedRenderer.cpp
 bool RaytracedRenderer::drawGUI() {
     if (ImGui::CollapsingHeader("Basic path tracer")) {
-========
-bool RendererPathBasic::drawGUI() {
-    if (ImGui::CollapsingHeader("Path tracer")) {
->>>>>>>> master/master:src/engine/renderers/rendererPathBasic.cpp
         ImGui::Indent();
 
         ImGui::Checkbox("Tonemap",reinterpret_cast<bool*>(&tonemap_));
@@ -31,16 +22,11 @@ bool RendererPathBasic::drawGUI() {
     return false;
 }
 
-<<<<<<<< HEAD:src/engine/renderers/raytracedRenderer.cpp
 void RaytracedRenderer::render(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage,
-========
-void RendererPathBasic::render(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage,
->>>>>>>> master/master:src/engine/renderers/rendererPathBasic.cpp
                                 const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) {
-    RendererDeffered::render(scene, cmdBuf, frameInFlightIndex, swapchainImage, swapchainImageView, swapchainExtent);
+    DeferredRenderer::render(scene, cmdBuf, frameInFlightIndex, swapchainImage, swapchainImageView, swapchainExtent);
 }
 
-<<<<<<<< HEAD:src/engine/renderers/raytracedRenderer.cpp
 RaytracedRenderer::RaytracedRenderer(const std::shared_ptr<GBuffer>& gBuffer): DeferredRenderer(gBuffer) {
     initGraphicsPipelines();
 }
@@ -51,18 +37,6 @@ RaytracedRenderer::RaytracedRenderer(const std::string_view& gBufferName): Defer
 
 void RaytracedRenderer::resizeScreen(uint32_t newWidth, uint32_t newHeight) {
     DeferredRenderer::resizeScreen(newWidth, newHeight);
-========
-RendererPathBasic::RendererPathBasic(const std::shared_ptr<GBuffer>& gBuffer): RendererDeffered(gBuffer) {
-    initGraphicsPipelines();
-}
-
-RendererPathBasic::RendererPathBasic(const std::string_view& gBufferName): RendererDeffered(gBufferName) {
-    initGraphicsPipelines();
-}
-
-void RendererPathBasic::resizeScreen(uint32_t newWidth, uint32_t newHeight) {
-    RendererDeffered::resizeScreen(newWidth, newHeight);
->>>>>>>> master/master:src/engine/renderers/rendererPathBasic.cpp
 
     pcs_.albedoMapHandle = gBuffer_->getAlbedoMap().getCID();
     pcs_.normalMapHandle = gBuffer_->getNormalMap().getCID();
@@ -72,11 +46,7 @@ void RendererPathBasic::resizeScreen(uint32_t newWidth, uint32_t newHeight) {
     pcs_.maxRecursionDepth = rtPipeline_.getMaxRecursionDepth();
 }
 
-<<<<<<<< HEAD:src/engine/renderers/raytracedRenderer.cpp
 void RaytracedRenderer::initGraphicsPipelines() {
-========
-void RendererPathBasic::initGraphicsPipelines() {
->>>>>>>> master/master:src/engine/renderers/rendererPathBasic.cpp
     std::vector descSetFillLayouts = {*Renderer::getDescSetLayoutFrame()};
 
     std::array raygenRange{PcsRaygen::getRange()};
@@ -113,21 +83,7 @@ void RendererPathBasic::initGraphicsPipelines() {
         false
     };
 }
-<<<<<<<< HEAD:src/engine/renderers/raytracedRenderer.cpp
 void RaytracedRenderer::recordCommandBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
-========
-
-void RendererPathBasic::initAccumulator(uint32_t width, uint32_t height) {
-    accumulator_.reset();
-    accumulator_ = TextureManager::getInstance()->registerResource(gBuffer_->getResourceName() + "_accumulator",
-                                                                width,
-                                                                height,
-                                                                vk::Format::eR32G32B32A32Sfloat,
-                                                                accumulatorUsage);
-}
-
-void RendererPathBasic::recordCommandBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
->>>>>>>> master/master:src/engine/renderers/rendererPathBasic.cpp
                                              const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) {
 
     pcs_.skyHandle = scene.getSky()->getCID();
@@ -158,11 +114,7 @@ void RendererPathBasic::recordCommandBuffer(const Scene& scene, vk::raii::Comman
     recordTonemapCommands(scene,cmdBuf,frameInFlightIndex);
 }
 
-<<<<<<<< HEAD:src/engine/renderers/raytracedRenderer.cpp
 void RaytracedRenderer::recordTraceCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex) {
-========
-void RendererPathBasic::recordTraceCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex) {
->>>>>>>> master/master:src/engine/renderers/rendererPathBasic.cpp
     cmdBuf.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR,rtPipeline_.getGraphicsPipeline());
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, rtPipeline_.getPipelineLayout(), 0, *getDescSetFrame(frameInFlightIndex), nullptr);
 
@@ -179,11 +131,7 @@ void RendererPathBasic::recordTraceCommands(const Scene& scene, vk::raii::Comman
     if (!pcs_.accumulate) pcs_.frameCtr = 0;
 }
 
-<<<<<<<< HEAD:src/engine/renderers/raytracedRenderer.cpp
 void RaytracedRenderer::recordTonemapCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex) {
-========
-void RendererPathBasic::recordTonemapCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex) {
->>>>>>>> master/master:src/engine/renderers/rendererPathBasic.cpp
 
     vk::ClearValue clearColor = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
     vk::RenderingAttachmentInfo colorAttachmentInfo = {

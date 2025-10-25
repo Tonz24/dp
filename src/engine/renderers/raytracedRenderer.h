@@ -5,28 +5,21 @@
 #pragma once
 #include <random>
 
-#include "rendererDeffered.h"
+#include "deferredRenderer.h"
 #include "../vk/raytracingPipeline.h"
 
 
-<<<<<<<< HEAD:src/engine/renderers/raytracedRenderer.h
 class RaytracedRenderer : public DeferredRenderer {
-========
-class RendererPathBasic : public RendererDeffered {
->>>>>>>> master/master:src/engine/renderers/rendererPathBasic.h
+
 public:
     bool drawGUI() override;
 
     void render(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage,
         const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) override;
 
-<<<<<<<< HEAD:src/engine/renderers/raytracedRenderer.h
+
     explicit RaytracedRenderer(const std::shared_ptr<GBuffer>& gBuffer);
     explicit RaytracedRenderer(const std::string_view& gBufferName);
-========
-    explicit RendererPathBasic(const std::shared_ptr<GBuffer>& gBuffer);
-    explicit RendererPathBasic(const std::string_view& gBufferName);
->>>>>>>> master/master:src/engine/renderers/rendererPathBasic.h
 
     void resizeScreen(uint32_t newWidth, uint32_t newHeight) override;
 
