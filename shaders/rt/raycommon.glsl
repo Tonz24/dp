@@ -54,7 +54,7 @@ bool isVisible(vec3 a, vec3 b){
 
     vec3 toLightUnnorm = b - a;
     vec3 dirToLight = normalize(toLightUnnorm);
-    float dstToLight = max(length(toLightUnnorm) - tMin*1.5,tMin);
+    float dstToLight = max(length(toLightUnnorm) - tMin* 1.5, tMin);
 
     // tmax is distance to light - if the ray hits anything, the surface is NOT visible, otherwise it is
     rayQueryEXT query;

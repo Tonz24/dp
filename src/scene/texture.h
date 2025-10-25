@@ -104,7 +104,7 @@ private:
 
 template<typename T>
 T Texture::getTexel(uint32_t x, uint32_t y) {
-    if (x >= width_ || x < 0 || y >= height_ || y < 0)
+    if (x >= width_ || y >= height_)
         throw std::runtime_error("ERROR: trying to access texel at invalid coordinates!");
 
     uint32_t row = y * width_;

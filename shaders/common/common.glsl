@@ -89,13 +89,14 @@ ShadeParams unpackMaterial(Material mat,vec3 normal, mat3 tbn, vec2 texCoord){
 //================================================
 
 
-vec2 dirToUv(vec3 dir){
-    const float u = 0.5f + 0.5f * atan(dir.z, dir.x) * INVPI;
+// calibrated so that test image (https://naver.github.io/egjs-view360/docs/projections/equirect) faces the camera when its view vector looks down (0, 0, -1) in world space
+vec2 dirToEquirect(vec3 dir){
+    const float u = 0.5f * atan(dir.z, dir.x) * INVPI - 0.25f;
     const float v = 1.0f - acos(dir.y) * INVPI;
     return vec2(u,v);
 }
 
 vec3 sampleSphericalMap(vec3 dir, uint skyTextureIndex){
-    vec2 uv = dirToUv(dir);
+    vec2 uv = dirToEquirect(dir);
     return texture(textures[skyTextureIndex],uv).xyz;
 }

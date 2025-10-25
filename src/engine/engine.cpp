@@ -201,7 +201,7 @@ void Engine::initVulkan() {
     rasterRenderer_ = std::make_shared<DeferredRenderer>(gBuffer_);
     rtRendererNaive_ = std::make_shared<RaytracedRenderer>(gBuffer_);
     rtRendererNEE_ = std::make_shared<RaytracedRendererNEE>(gBuffer_);
-    selectedRenderer_ = rtRendererNaive_.get();
+    selectedRenderer_ = rtRendererNEE_.get();
 }
 
 void Engine::initVulkanInstance() {

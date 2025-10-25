@@ -52,7 +52,6 @@ std::shared_ptr<Texture> Texture::getCdf() {
 
     double sumTotal{0.0};
 
-
     //  compute luminance values for every pixel
     for (uint32_t y = 0; y < height_; y++) {
         //  get vertical texture coordinate in [0,1] (offset by 0.5 in pixel coordinates to sample pixel center)
@@ -73,7 +72,7 @@ std::shared_ptr<Texture> Texture::getCdf() {
 
             // set a minimum value for black pixels, otherwise they couldn't be sampled at all
             // that would result in incorrect estimation where bilinear interpolation should return nonzero radiance when sampling such pixels
-            float weightedLuminance = glm::max(luminance * sinTheta, 1e-5f);
+            float weightedLuminance = glm::max(luminance * sinTheta, 1e-5f * sinTheta);
 
             imgScalar[y * width_ + x] = weightedLuminance; // insert weighted luminance into scalar image
             sumTotal += weightedLuminance; // accumulate total sum of scalar values
