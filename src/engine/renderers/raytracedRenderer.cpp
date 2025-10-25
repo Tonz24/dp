@@ -106,7 +106,6 @@ void RaytracedRenderer::recordCommandBuffer(const Scene& scene, vk::raii::Comman
     recordTraceCommands(scene,cmdBuf,frameInFlightIndex);
 
     //  transition accumulator to readonly optimal for sampling
-    //accumulator_->transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eFragmentShader,vk::AccessFlagBits2::eShaderSampledRead,cmdBuf);
     gBuffer_->getAccumulator().transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eFragmentShader,vk::AccessFlagBits2::eShaderSampledRead,cmdBuf);
 
     // transition target to color attachment optimal (will store the result of tonemapping)
