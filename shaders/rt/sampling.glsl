@@ -153,7 +153,7 @@ vec4 sampleEnvironment(sampler2D skyCdf, inout uint seed){
 	float cosPhi = cos(phi);
 
 	// reconstruct XYZ direction from spherical coordinates
-	vec3 direction = vec3(sinTheta * cosPhi, cosTheta , -sinTheta * sinPhi);
+	vec3 direction = vec3(sinTheta * cosPhi, cosTheta , sinTheta * sinPhi);
 
 	// convert pdf to solid angle measure
 	pdf = pdf / ((TWOPI / width) * (PI / height) * sinTheta);
@@ -170,7 +170,7 @@ float getPdfEnvironment(sampler2D skyCdf, vec3 dir){
 	// convert direction to UV in environment map
 	vec2 uv = dirToEquirect(dir);
 	float u = fract(uv.x);
-    float v = 1.0 - uv.y;
+    float v = uv.y;
 
 	// calculate unnormalized pixel coordinates
 	int x = int(u * float(width)) + 1; // start at index 1 since index 0 is reserved for the marginal map
@@ -183,7 +183,7 @@ float getPdfEnvironment(sampler2D skyCdf, vec3 dir){
 	float pdf = pdfX * pdfY;
 
 	// convert uv to spherical coordinates
-	float theta = (v) * PI;
+	float theta = (1.0 - v) * PI;
 	float sinTheta = max(sin(theta), 1e-6);
 	
 	// convert pdf to solid angle measure
