@@ -63,7 +63,8 @@ std::shared_ptr<Texture> Texture::getCdf() {
 
         for (uint32_t x = 0; x < width_; ++x) {
 
-            auto rgb = static_cast<glm::vec<3,float>>(getTexel<glm::vec<4,uint8_t>>(x, y)) / 255.0f;
+            //auto rgb = static_cast<glm::vec<3,float>>(getTexel<glm::vec<4,uint8_t>>(x, y)) / 255.0f;
+            auto rgb = static_cast<glm::vec<3,float>>(getTexel<glm::vec4>(x, y));
             rgb *= glm::vec3( 0.299,0.587, 0.114);
             float luminance = rgb.x + rgb.y + rgb.z;
 
@@ -104,13 +105,6 @@ std::shared_ptr<Texture> Texture::getCdf() {
         }
     }
 
-    // for (uint32_t y = 0; y < height_; y++) {
-    //     for (uint32_t x = 0; x < width_ + 1; ++x) {
-    //         // if this is the first column of the texture (x == 0), then put the marginal value into the cdf image, otherwise use the conditional value
-    //         float val = x == 0 ? marginalCdf[y] : conditionalCdf[y * width_ + (x - 1)];
-    //         cdfImg[y * width_ + x] = val;
-    //     }
-    // }
 
     float* dataFloat = reinterpret_cast<float*>(cdfTexture->data_.data());
     for (uint32_t y = 0; y < cdfTexture->getHeight(); y++) {
