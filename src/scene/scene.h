@@ -31,6 +31,7 @@ public:
     }
 
     [[nodiscard]] const std::shared_ptr<Texture>& getSky() const { return sky_; }
+    [[nodiscard]] const std::shared_ptr<Texture>& getSkyCdf() const { return skyCdf_; }
 
 private:
 

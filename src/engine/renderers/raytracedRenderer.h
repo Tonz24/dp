@@ -5,25 +5,25 @@
 #pragma once
 #include <random>
 
-#include "rendererDeffered.h"
+#include "deferredRenderer.h"
 #include "../vk/raytracingPipeline.h"
 
 
-class RendererPathBasic : public RendererDeffered {
+class RaytracedRenderer : public DeferredRenderer {
+
 public:
     bool drawGUI() override;
 
     void render(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage,
         const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) override;
 
-    explicit RendererPathBasic(const std::shared_ptr<GBuffer>& gBuffer);
-    explicit RendererPathBasic(const std::string_view& gBufferName);
+
+    explicit RaytracedRenderer(const std::shared_ptr<GBuffer>& gBuffer);
+    explicit RaytracedRenderer(const std::string_view& gBufferName);
 
     void resizeScreen(uint32_t newWidth, uint32_t newHeight) override;
 
 protected:
-    void initGraphicsPipelines();
-    void initAccumulator(uint32_t width, uint32_t height);
 
     void recordCommandBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage,
                              const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) override;
@@ -39,23 +39,13 @@ protected:
     std::mt19937 generator_;
     std::uniform_int_distribution<uint32_t> distr_;
 
-    PcsRaygen pcs_{};
+    PcsRaygen::Data pcs_{};
 
-    std::shared_ptr<Texture> accumulator_{nullptr};
+
     uint32_t tonemap_{1};
 
-    static constexpr vk::ShaderStageFlags pcsRaygenStageFlags{vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eMissKHR | vk::ShaderStageFlagBits::eClosestHitKHR};
-    static constexpr vk::PushConstantRange pcsRaygenRange{
-        .stageFlags = pcsRaygenStageFlags,
-        .offset = 0,
-        .size = static_cast<uint32_t>(sizeof(PcsRaygen))
-    };
-    static constexpr vk::PushConstantRange pcsTonemapRange{
-        .stageFlags = vk::ShaderStageFlagBits::eFragment,
-        .offset = 0,
-        .size = static_cast<uint32_t>(sizeof(PcsRtTonemap))
-    };
+private:
+    void initGraphicsPipelines();
 
 
-    static constexpr vk::ImageUsageFlags accumulatorUsage{vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled};
 };

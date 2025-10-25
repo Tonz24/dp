@@ -1,3 +1,5 @@
+/*
+
 //https://github.com/yknishidate/single-file-vulkan-pathtracing
 //https://nvpro-samples.github.io/vk_raytracing_tutorial_KHR/
 #version 460
@@ -154,15 +156,15 @@ vec3 calculateDirect(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
     return directContribution;
 }
 
-uint sampleEnvCdfMarginalIndex(sampler2D skyCdf, float rnd){
+uint sampleEnvCdfMarginalIndex(float rnd){
     uint left = 0;
-    uint right = uint(textureSize(skyCdf,0).y);
 
+    uint right = uint(imageSize(skyCdf).y);
 
     while (left < right){
         uint mid = left + (right - left) / 2;
 
-		float val = texelFetch(skyCdf, ivec2(0,mid), 0).r;
+		float val = imageLoad(skyCdf, ivec2(0,mid)).r;
 
         if (rnd < val)
             right = mid;
@@ -172,14 +174,14 @@ uint sampleEnvCdfMarginalIndex(sampler2D skyCdf, float rnd){
     return left;
 }
 
-uint sampleEnvCdfConditionalIndex(sampler2D skyCdf, uint y, float rnd){
-    uint left = 1;
-    uint right = uint(textureSize(skyCdf,0).x);
+uint sampleEnvCdfConditionalIndex(uint y, float rnd){
+    uint left = 0;
+    uint right = uint(imageSize(skyCdf).x);
 
     while (left < right){
         uint mid = left + (right - left) / 2;
 
-		float val = texelFetch(skyCdf, ivec2(mid,y), 0).r;
+		float val = imageLoad(skyCdf, ivec2(mid,y)).r;
 
         if (rnd < val)
             right = mid;
@@ -189,38 +191,35 @@ uint sampleEnvCdfConditionalIndex(sampler2D skyCdf, uint y, float rnd){
     return left;
 }
 
-vec4 sampleEnvironment(sampler2D skyCdf, inout uint seed){
+vec4 sampleEnvironment(inout uint seed){
 
-	ivec2 envSize = textureSize(skyCdf,0);
-    float width = float(envSize.x - 1); // subtract 1 from height (ignore the marginal index)
-    float height = float(envSize.y);
-
+	vec2 envSize = vec2(imageSize(skyCdf));
 	float r1 = rand(seed);
 	float r2 = rand(seed);
 
-
 	// sample pixel
-	uint y = sampleEnvCdfMarginalIndex(skyCdf,r1);
-	uint x = sampleEnvCdfConditionalIndex(skyCdf,y, r2);
-    
+	uint y = sampleEnvCdfMarginalIndex(r1);
+	uint x = sampleEnvCdfConditionalIndex(y, r2);
+
 	// calculate texel pdf using the cdf
-	float pdfY = y == 0 ? texelFetch(skyCdf, ivec2(0, 0), 0).r : texelFetch(skyCdf, ivec2(0, y), 0).r - texelFetch(skyCdf, ivec2(0, y - 1), 0).r;
-	float pdfX = x == 1 ? texelFetch(skyCdf, ivec2(1, y), 0).r : texelFetch(skyCdf, ivec2(x, y), 0).r - texelFetch(skyCdf, ivec2(x - 1, y), 0).r;
+	float pdfY = y > 0 ? imageLoad(skyCdf, ivec2(0, y)).r - imageLoad(skyCdf, ivec2(0, y - 1)).r : imageLoad(skyCdf, ivec2(0,y)).r;
+	float pdfX = x > 0 ? imageLoad(skyCdf, ivec2(x, y)).r - imageLoad(skyCdf, ivec2(x - 1, y)).r : imageLoad(skyCdf, ivec2(x, y)).r;
 
 	float pdf = pdfX * pdfY;
+    return vec4(pdf);
 
 	// sample within the pixel using r1 and r2 as interpolants
-	float vInterpA = y > 0 ? texelFetch(skyCdf, ivec2(0, y - 1), 0).r : 0.0f;
-	float vInterpB = texelFetch(skyCdf, ivec2(0, y), 0).r;
+	float vInterpA = y > 0 ? imageLoad(skyCdf, ivec2(0, y - 1)).r : 0.0f;
+	float vInterpB = imageLoad(skyCdf, ivec2(0, y)).r;
 	float vInterp = (r1 - vInterpA) / (vInterpB - vInterpA);
 
-	float uInterpA = x > 1 ? texelFetch(skyCdf, ivec2(x - 1, y), 0).r : 0.0f;
-	float uInterpB = texelFetch(skyCdf, ivec2(x, y), 0).r;
+	float uInterpA = x > 0.0f ? imageLoad(skyCdf, ivec2(x - 1, y)).r : 0.0f;
+	float uInterpB = imageLoad(skyCdf, ivec2(x, y)).r;
 	float uInterp = (r2 - uInterpA) / (uInterpB - uInterpA);
 
 	// add the interpolated offset to sampled pixel coordinates, convert to [0, 1] range
-	float u = (float(x - 1) + uInterp) / width;
-	float v = (float(y) + vInterp) / height;
+	float u = (float(x) + uInterp) / envSize.x;
+	float v = (float(y) + vInterp) / envSize.y;
 
 	// convert uv to spherical coordinates
 	float theta = v * PI;
@@ -231,8 +230,8 @@ vec4 sampleEnvironment(sampler2D skyCdf, inout uint seed){
 	float sinPhi = sin(phi);
 	float cosPhi = cos(phi);
 
-	vec3 direction = vec3(sinTheta * cosPhi, cosTheta , -sinTheta * sinPhi);
-	pdf = pdf / ((2.0 * PI / width) * (PI / height) * sinTheta);
+	vec3 direction = vec3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
+	pdf = pdf / ((2.0 * PI / envSize.x) * (PI / envSize.y) * sinTheta);
 
 	return vec4(direction, pdf);
 }
@@ -293,33 +292,6 @@ void main() {
     //vec3 directContribution = mat.materialType == 1 ? vec3(0.0) : evaluateDirectLighting(albedo,posWS,normal,seed);
     vec3 directContribution = mat.materialType == 1 ? vec3(0.0) : calculateDirect(albedo,posWS,normal,seed);
     vec3 weight = vec3(1.0);
-
-
-    if (pcs.NEE == 1){
-        vec4 envSample = sampleEnvironment(textures[pcs.skyCdfHandle], seed);
-        direction = normalize(envSample.xyz);
-        pdf = envSample.w;
-    }
-
-    
-    vec3 envLi = sampleSphericalMap(direction, pcs.skyHandle);
-
-    float V = float(isVisible(posWS, direction * 1000.0f));
-
-    cosThetaI = max(dot(normal,direction),0.0);
-    radiance = envLi * brdf * V * cosThetaI / pdf;
-
-
-    if (any(isnan(radiance)) || any(isinf(radiance)) || any(lessThan(radiance, vec3(0.0))))
-        radiance = vec3(0,1,1);
-
-    if (pcs.accumulate == 1){
-        vec3 oldRadiance = imageLoad(outputImage, ivec2(gl_LaunchIDEXT.xy)).xyz;
-        radiance = mix(oldRadiance,radiance, 1.0f / float(pcs.frameCtr + 1));
-    }
-
-    imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(radiance, 1.0));
-    return;
     
     resetPayload(payload);
     bool lastWasMirror = mat.materialType == 1;
@@ -371,4 +343,13 @@ void main() {
         // upon hitting a light, break
         if(!payload.hit || hitLight(payload)) break;
     }
-}
+
+
+    radiance = sampleEnvironment(seed).www;
+    if (pcs.accumulate == 1){
+        vec3 oldRadiance = imageLoad(outputImage, ivec2(gl_LaunchIDEXT.xy)).xyz;
+        radiance = mix(oldRadiance,radiance, 1.0f / float(pcs.frameCtr + 1));
+    }
+
+    imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(radiance, 1.0));
+}*/

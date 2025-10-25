@@ -65,3 +65,21 @@ void resetBRDFSamplePayload(inout BRDFSamplePayload payload){
 bool hitLight(TracedSample payload){
     return any(greaterThan(payload.hitEmission,vec3(0.0)));
 }
+
+
+struct HitPayloadNaive{
+    vec3 hitPosition;
+    vec3 hitEmission;
+    vec3 weightFactor;
+    vec4 nextSample;
+    uint seed;
+    bool hit;
+};
+
+void resetPayload(inout HitPayloadNaive payload){
+    payload.hitPosition = vec3(0.0);
+    payload.hitEmission = vec3(0.0);
+    payload.weightFactor = vec3(0.0);
+    payload.nextSample = vec4(0.0);
+    payload.seed = 0;
+}

@@ -6,6 +6,7 @@ layout(push_constant, std140) uniform PushConstants {
 
     uint targetHandle;
     uint skyHandle;
+    uint skyCdfHandle;
 
     uint seed;
     uint accumulate;

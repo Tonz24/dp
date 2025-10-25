@@ -23,8 +23,7 @@ void GBuffer::createTextures(const std::string& prefix, uint32_t width, uint32_t
     target_.reset();
     depthMap_.reset();
     objectIdMap_.reset();
-
-    textures_.clear();
+    accumulator_.reset();
 
     albedoMap_ = TextureManager::getInstance()->registerResource(prefix + "_albedo",
                                                                  width,
@@ -62,7 +61,11 @@ void GBuffer::createTextures(const std::string& prefix, uint32_t width, uint32_t
                                                                  idMapVkFormat,
                                                                  idMapUsageFlags);
 
-    textures_ = {albedoMap_, normalMap_, depthMap_, materialIdMap_, target_};
+    accumulator_ = TextureManager::getInstance()->registerResource(prefix + "accumulator",
+                                                                 width,
+                                                                 height,
+                                                                 accumulatorFormat,
+                                                                 accumulatorUsageFlags);
 }
 
 vk::Format GBuffer::getTargetVkFormat() {
@@ -70,7 +73,7 @@ vk::Format GBuffer::getTargetVkFormat() {
     for (const auto & format : targetAcceptableFormats) {
         vk::FormatProperties props = device.getFormatProperties(format);
 
-        //  all images are hardcoded to be tiled so use tiled features
+        //  all images are hardcoded to be tiled, so use tiled features
         auto features = props.optimalTilingFeatures;
 
         //  return first found suitable format

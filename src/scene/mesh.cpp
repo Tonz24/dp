@@ -6,6 +6,7 @@
 
 #include <imgui/imgui.h>
 #include "../engine/engine.h"
+#include "../engine/pushConstants.h"
 
 Mesh::Mesh(std::vector<Vertex3D>&& vertexList, std::vector<uint32_t>&& indexList, std::shared_ptr<Material> material):
     vertices_(std::move(vertexList)), indices_(std::move(indexList)), material_(std::move(material)) {
@@ -91,14 +92,14 @@ void Mesh::recordDrawCommands(vk::raii::CommandBuffer& cmdBuf, const vk::raii::P
     cmdBuf.bindVertexBuffers(0,vertexBuffer_.buffer,{0});
     cmdBuf.bindIndexBuffer(indexBuffer_.buffer,0,vk::IndexType::eUint32);
 
-    const PcsGBufferFill pcs = {
+    const PcsGBufferFill::Data pcs = {
         .modelMat = transform_.getModelMat(),
         .normalMat = transform_.getNormalMat(),
         .materialId = material_->getCID(),
         .meshId = getCID()
     };
 
-    cmdBuf.pushConstants(pipelineLayout,vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,0, vk::ArrayProxy<const PcsGBufferFill>{pcs});
+    cmdBuf.pushConstants(pipelineLayout,PcsGBufferFill::stageFlags,0, vk::ArrayProxy<const PcsGBufferFill::Data>{pcs});
 
     cmdBuf.drawIndexed(indices_.size(), 1, 0, 0, 0);
 }

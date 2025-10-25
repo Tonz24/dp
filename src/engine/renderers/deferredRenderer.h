@@ -6,9 +6,9 @@
 #include "renderer.h"
 #include "../gBuffer.h"
 #include "../vk/RasterPipeline.h"
+#include "../pushConstants.h"
 
-
-class RendererDeffered : public Renderer {
+class DeferredRenderer : public Renderer {
 public:
     bool drawGUI() override;
 
@@ -16,8 +16,8 @@ public:
                 swapchainImageView, const vk::Extent2D&
                 swapchainExtent) override;
 
-    explicit RendererDeffered(std::shared_ptr<GBuffer> gBuffer);
-    explicit RendererDeffered(std::string_view gBufferName);
+    explicit DeferredRenderer(std::shared_ptr<GBuffer> gBuffer);
+    explicit DeferredRenderer(std::string_view gBufferName);
 
     void resizeScreen(uint32_t newWidth, uint32_t newHeight) override;
     [[nodiscard]] glm::vec<2, uint32_t> getRenderDimensions() const override {return {gBuffer_->getTarget().getWidth(),gBuffer_->getTarget().getHeight()};}
@@ -49,6 +49,6 @@ protected:
 
 private:
     void initGraphicsPipelines();
-    PcsGBufferShade pcs_{};
+    PcsGBufferShade::Data pcs_{};
 };
 
