@@ -219,8 +219,6 @@ void Renderer::registerTextureBindless(const Texture& texture) {
 
 void Renderer::registerTextureStorage(const Texture& texture) {
     // TODO: move to non-uniform indexing
-    auto vkFormat = texture.getVkFormat();
-    uint32_t dstBinding = vkFormat == vk::Format::eR32Sfloat ? 9 : 4;
 
     for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
         vk::DescriptorImageInfo imageInfo{
@@ -231,7 +229,7 @@ void Renderer::registerTextureStorage(const Texture& texture) {
 
         vk::WriteDescriptorSet writeDescriptorSetBindless{
             .dstSet = getDescSetFrame(i),
-            .dstBinding = dstBinding,
+            .dstBinding = 4,
             .dstArrayElement = 0,
             .descriptorCount = 1,
             .descriptorType = vk::DescriptorType::eStorageImage,

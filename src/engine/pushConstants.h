@@ -100,6 +100,7 @@ struct PcsRaygenNEE{
 
         uint32_t targetHandle;
         uint32_t skyHandle;
+        uint32_t skyCdfHandle;
 
         uint32_t seed;
         uint32_t accumulate{0};

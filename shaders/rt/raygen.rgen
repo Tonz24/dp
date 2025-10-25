@@ -154,15 +154,15 @@ vec3 calculateDirect(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
     return directContribution;
 }
 
-uint sampleEnvCdfMarginalIndex(float rnd){
+uint sampleEnvCdfMarginalIndex(sampler2D skyCdf, float rnd){
     uint left = 0;
+    uint right = uint(textureSize(skyCdf,0).y);
 
-    uint right = uint(imageSize(skyCdf).y);
 
     while (left < right){
         uint mid = left + (right - left) / 2;
 
-		float val = imageLoad(skyCdf, ivec2(0,mid)).r;
+		float val = texelFetch(skyCdf, ivec2(0,mid), 0).r;
 
         if (rnd < val)
             right = mid;
@@ -172,14 +172,14 @@ uint sampleEnvCdfMarginalIndex(float rnd){
     return left;
 }
 
-uint sampleEnvCdfConditionalIndex(uint y, float rnd){
+uint sampleEnvCdfConditionalIndex(sampler2D skyCdf, uint y, float rnd){
     uint left = 1;
-    uint right = uint(imageSize(skyCdf).x);
+    uint right = uint(textureSize(skyCdf,0).x);
 
     while (left < right){
         uint mid = left + (right - left) / 2;
 
-		float val = imageLoad(skyCdf, ivec2(mid,y)).r;
+		float val = texelFetch(skyCdf, ivec2(mid,y), 0).r;
 
         if (rnd < val)
             right = mid;
@@ -191,30 +191,31 @@ uint sampleEnvCdfConditionalIndex(uint y, float rnd){
 
 vec4 sampleEnvironment(inout uint seed){
 
-	ivec2 envSize = imageSize(skyCdf);
+	ivec2 envSize = textureSize(textures[pcs.skyCdfHandle],0);
     float width = float(envSize.x - 1); // subtract 1 from height (ignore the marginal index)
     float height = float(envSize.y);
 
 	float r1 = rand(seed);
 	float r2 = rand(seed);
 
-	// sample pixel
-	uint y = sampleEnvCdfMarginalIndex(r1);
-	uint x = sampleEnvCdfConditionalIndex(y, r2);
 
+	// sample pixel
+	uint y = sampleEnvCdfMarginalIndex(textures[pcs.skyCdfHandle],r1);
+	uint x = sampleEnvCdfConditionalIndex(textures[pcs.skyCdfHandle],y, r2);
+    
 	// calculate texel pdf using the cdf
-	float pdfY = y == 0 ? imageLoad(skyCdf, ivec2(0, 0)).r : imageLoad(skyCdf, ivec2(0, y)).r - imageLoad(skyCdf, ivec2(0, y - 1)).r;
-	float pdfX = x == 1 ? imageLoad(skyCdf, ivec2(1, y)).r : imageLoad(skyCdf, ivec2(x, y)).r - imageLoad(skyCdf, ivec2(x - 1, y)).r;
+	float pdfY = y == 0 ? texelFetch(textures[pcs.skyCdfHandle], ivec2(0, 0), 0).r : texelFetch(textures[pcs.skyCdfHandle], ivec2(0, y), 0).r - texelFetch(textures[pcs.skyCdfHandle], ivec2(0, y - 1), 0).r;
+	float pdfX = x == 1 ? texelFetch(textures[pcs.skyCdfHandle], ivec2(1, y), 0).r : texelFetch(textures[pcs.skyCdfHandle], ivec2(x, y), 0).r - texelFetch(textures[pcs.skyCdfHandle], ivec2(x - 1, y), 0).r;
 
 	float pdf = pdfX * pdfY;
 
 	// sample within the pixel using r1 and r2 as interpolants
-	float vInterpA = y > 0 ? imageLoad(skyCdf, ivec2(0, y - 1)).r : 0.0f;
-	float vInterpB = imageLoad(skyCdf, ivec2(0, y)).r;
+	float vInterpA = y > 0 ? texelFetch(textures[pcs.skyCdfHandle], ivec2(0, y - 1), 0).r : 0.0f;
+	float vInterpB = texelFetch(textures[pcs.skyCdfHandle], ivec2(0, y), 0).r;
 	float vInterp = (r1 - vInterpA) / (vInterpB - vInterpA);
 
-	float uInterpA = x > 1 ? imageLoad(skyCdf, ivec2(x - 1, y)).r : 0.0f;
-	float uInterpB = imageLoad(skyCdf, ivec2(x, y)).r;
+	float uInterpA = x > 1 ? texelFetch(textures[pcs.skyCdfHandle], ivec2(x - 1, y), 0).r : 0.0f;
+	float uInterpB = texelFetch(textures[pcs.skyCdfHandle], ivec2(x, y), 0).r;
 	float uInterp = (r2 - uInterpA) / (uInterpB - uInterpA);
 
 	// add the interpolated offset to sampled pixel coordinates, convert to [0, 1] range
@@ -293,16 +294,20 @@ void main() {
     vec3 directContribution = mat.materialType == 1 ? vec3(0.0) : calculateDirect(albedo,posWS,normal,seed);
     vec3 weight = vec3(1.0);
 
-    vec4 envSample = sampleEnvironment(seed);
-    vec3 sampleDir = normalize(envSample.xyz);
-    vec3 envLi = sampleSphericalMap(sampleDir, pcs.skyHandle);
 
+    if (pcs.NEE == 1){
+        vec4 envSample = sampleEnvironment(seed);
+        direction = normalize(envSample.xyz);
+        pdf = envSample.w;
+    }
 
-    float V = float(isVisible(posWS, sampleDir * 1000.0f));
+    
+    vec3 envLi = sampleSphericalMap(direction, pcs.skyHandle);
 
-    cosThetaI = max(dot(normal,sampleDir),0.0);
-    radiance = envLi * brdf * V * cosThetaI / envSample.w;
+    float V = float(isVisible(posWS, direction * 1000.0f));
 
+    cosThetaI = max(dot(normal,direction),0.0);
+    radiance = envLi * brdf * V * cosThetaI / pdf;
 
 
     if (any(isnan(radiance)) || any(isinf(radiance)) || any(lessThan(radiance, vec3(0.0))))

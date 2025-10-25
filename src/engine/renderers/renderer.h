@@ -48,12 +48,6 @@ protected:
     virtual void recordPresentBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
                                            const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) = 0;
 
-    /*static constexpr vk::PushConstantRange pcsSkyRange{
-        .stageFlags = vk::ShaderStageFlagBits::eFragment,
-        .offset = 0,
-        .size = static_cast<uint32_t>(sizeof(PcsSky))
-    };*/
-
 private:
 
     inline static std::vector<VkUtils::BufferAlloc> cameraUBOs_{};
@@ -125,13 +119,7 @@ private:
             .descriptorType = vk::DescriptorType::eStorageBuffer,
             .descriptorCount = 1,
             .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eFragment
-        },
-        vk::DescriptorSetLayoutBinding { // sky cdf
-            .binding = 9,
-            .descriptorType = vk::DescriptorType::eStorageImage,
-            .descriptorCount = 1,
-            .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eFragment
-        },
+        }
     };
 
     static constexpr vk::DescriptorSetLayoutCreateInfo frameLayoutInfo{
