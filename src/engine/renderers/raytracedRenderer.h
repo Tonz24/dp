@@ -37,10 +37,13 @@ protected:
     std::mt19937 generator_;
     std::uniform_int_distribution<uint32_t> distr_;
 
-    PcsRaygenNEE::Data pcs_{};
+    PcsRaygen::Data pcs_{};
+
 
     uint32_t tonemap_{1};
 
 private:
     void initGraphicsPipelines();
+
+
 };
