@@ -91,7 +91,8 @@ struct PcsRtTonemap{
     }
 };
 
-struct PcsRaygenNEE{
+
+struct PcsRaygen{
     struct Data{
         uint32_t albedoMapHandle;
         uint32_t normalMapHandle;

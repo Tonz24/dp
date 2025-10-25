@@ -49,14 +49,13 @@ void RaytracedRenderer::resizeScreen(uint32_t newWidth, uint32_t newHeight) {
 void RaytracedRenderer::initGraphicsPipelines() {
     std::vector descSetFillLayouts = {*Renderer::getDescSetLayoutFrame()};
 
-    std::array raygenRange{PcsRaygenNEE::getRange()};
+    std::array raygenRange{PcsRaygen::getRange()};
 
     auto rtStages = std::vector<RasterPipeline::ShaderStageInfo>{
-            {"shaders/raygen_rgen.spv",vk::ShaderStageFlagBits::eRaygenKHR},
-            {"shaders/miss_rmiss.spv",vk::ShaderStageFlagBits::eMissKHR},
-            {"shaders/closesthit_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
-            {"shaders/closesthit_mirror_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
-            {"shaders/closesthit_brdf_sample_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
+            {"shaders/raygen_naive_rgen.spv",vk::ShaderStageFlagBits::eRaygenKHR},
+            {"shaders/miss_naive_rmiss.spv",vk::ShaderStageFlagBits::eMissKHR},
+            {"shaders/closesthit_naive_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
+            {"shaders/closesthit_mirror_naive_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
     };
 
     rtPipeline_ = RaytracingPipeline{rtStages,descSetFillLayouts,raygenRange};
@@ -121,7 +120,7 @@ void RaytracedRenderer::recordTraceCommands(const Scene& scene, vk::raii::Comman
 
     pcs_.seed = distr_(generator_);
 
-    cmdBuf.pushConstants(rtPipeline_.getPipelineLayout(), PcsRaygenNEE::stageFlags,0, vk::ArrayProxy<const PcsRaygenNEE::Data>{pcs_});
+    cmdBuf.pushConstants(rtPipeline_.getPipelineLayout(), PcsRaygen::stageFlags,0, vk::ArrayProxy<const PcsRaygen::Data>{pcs_});
 
     auto renderDims = getRenderDimensions();
 
