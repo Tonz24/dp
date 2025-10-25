@@ -10,11 +10,13 @@
 
 
 class RaytracedRenderer : public DeferredRenderer {
+
 public:
     bool drawGUI() override;
 
     void render(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage,
         const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) override;
+
 
     explicit RaytracedRenderer(const std::shared_ptr<GBuffer>& gBuffer);
     explicit RaytracedRenderer(const std::string_view& gBufferName);
