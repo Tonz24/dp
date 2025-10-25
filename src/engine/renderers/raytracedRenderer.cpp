@@ -88,6 +88,7 @@ void RaytracedRenderer::recordCommandBuffer(const Scene& scene, vk::raii::Comman
                                              const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) {
 
     pcs_.skyHandle = scene.getSky()->getCID();
+    pcs_.skyCdfHandle = scene.getSkyCdf()->getCID();
 
     cmdBuf.reset();
     cmdBuf.begin({.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
