@@ -189,9 +189,9 @@ uint sampleEnvCdfConditionalIndex(sampler2D skyCdf, uint y, float rnd){
     return left;
 }
 
-vec4 sampleEnvironment(inout uint seed){
+vec4 sampleEnvironment(sampler2D skyCdf, inout uint seed){
 
-	ivec2 envSize = textureSize(textures[pcs.skyCdfHandle],0);
+	ivec2 envSize = textureSize(skyCdf,0);
     float width = float(envSize.x - 1); // subtract 1 from height (ignore the marginal index)
     float height = float(envSize.y);
 
@@ -200,22 +200,22 @@ vec4 sampleEnvironment(inout uint seed){
 
 
 	// sample pixel
-	uint y = sampleEnvCdfMarginalIndex(textures[pcs.skyCdfHandle],r1);
-	uint x = sampleEnvCdfConditionalIndex(textures[pcs.skyCdfHandle],y, r2);
+	uint y = sampleEnvCdfMarginalIndex(skyCdf,r1);
+	uint x = sampleEnvCdfConditionalIndex(skyCdf,y, r2);
     
 	// calculate texel pdf using the cdf
-	float pdfY = y == 0 ? texelFetch(textures[pcs.skyCdfHandle], ivec2(0, 0), 0).r : texelFetch(textures[pcs.skyCdfHandle], ivec2(0, y), 0).r - texelFetch(textures[pcs.skyCdfHandle], ivec2(0, y - 1), 0).r;
-	float pdfX = x == 1 ? texelFetch(textures[pcs.skyCdfHandle], ivec2(1, y), 0).r : texelFetch(textures[pcs.skyCdfHandle], ivec2(x, y), 0).r - texelFetch(textures[pcs.skyCdfHandle], ivec2(x - 1, y), 0).r;
+	float pdfY = y == 0 ? texelFetch(skyCdf, ivec2(0, 0), 0).r : texelFetch(skyCdf, ivec2(0, y), 0).r - texelFetch(skyCdf, ivec2(0, y - 1), 0).r;
+	float pdfX = x == 1 ? texelFetch(skyCdf, ivec2(1, y), 0).r : texelFetch(skyCdf, ivec2(x, y), 0).r - texelFetch(skyCdf, ivec2(x - 1, y), 0).r;
 
 	float pdf = pdfX * pdfY;
 
 	// sample within the pixel using r1 and r2 as interpolants
-	float vInterpA = y > 0 ? texelFetch(textures[pcs.skyCdfHandle], ivec2(0, y - 1), 0).r : 0.0f;
-	float vInterpB = texelFetch(textures[pcs.skyCdfHandle], ivec2(0, y), 0).r;
+	float vInterpA = y > 0 ? texelFetch(skyCdf, ivec2(0, y - 1), 0).r : 0.0f;
+	float vInterpB = texelFetch(skyCdf, ivec2(0, y), 0).r;
 	float vInterp = (r1 - vInterpA) / (vInterpB - vInterpA);
 
-	float uInterpA = x > 1 ? texelFetch(textures[pcs.skyCdfHandle], ivec2(x - 1, y), 0).r : 0.0f;
-	float uInterpB = texelFetch(textures[pcs.skyCdfHandle], ivec2(x, y), 0).r;
+	float uInterpA = x > 1 ? texelFetch(skyCdf, ivec2(x - 1, y), 0).r : 0.0f;
+	float uInterpB = texelFetch(skyCdf, ivec2(x, y), 0).r;
 	float uInterp = (r2 - uInterpA) / (uInterpB - uInterpA);
 
 	// add the interpolated offset to sampled pixel coordinates, convert to [0, 1] range
@@ -296,7 +296,7 @@ void main() {
 
 
     if (pcs.NEE == 1){
-        vec4 envSample = sampleEnvironment(seed);
+        vec4 envSample = sampleEnvironment(textures[pcs.skyCdfHandle], seed);
         direction = normalize(envSample.xyz);
         pdf = envSample.w;
     }
