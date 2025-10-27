@@ -25,7 +25,6 @@ bool hitLight(HitPayload payload){
     return any(greaterThan(payload.hitEmission,vec3(0.0)));
 }
 
-
 struct BRDFSamplePayload{
     vec3 hitPosition;
     vec3 hitEmission;

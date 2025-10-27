@@ -36,6 +36,14 @@ float powerHeuristic(float pdf, float pdfOther) {
 	return result;
 }
 
+float powerHeuristic(float pdf1, float pdf2, float pdf3) {
+	const float pdf1_sqr = pdf1 * pdf1;
+	const float pdf2_sqr = pdf2 * pdf2;
+	const float pdf3_sqr = pdf3 * pdf3;
+	const float result = pdf1_sqr / (pdf1_sqr + pdf2_sqr + pdf3_sqr);
+	return result;
+}
+
 // evaluates direct light sample, weighs it by MIS weight
 vec3 evaluateLightSample(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
     // take CDF sample (pick an emissive triangle with probability proportional to the area of all emissive triangles)
@@ -102,6 +110,10 @@ TracedSample traceBRDFLighting(vec3 posWS, vec3 direction){
             1     // brdf sample always has payload location 1
     );
 
+    // automatically sample the environment if it happens that the ray misses all geometry
+    if (!payloadBRDF.didHit)
+        payloadBRDF.hitEmission = sampleSphericalMap(direction, pcs.skyHandle);
+
     return makeTraced(payloadBRDF);
 }
 
@@ -141,9 +153,63 @@ vec3 evaluateBRDFSample(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
     return L_direct;
 }
 
+// TODO: retrieve the texure value immediately after sampling to get rid of double cartesian -> polar -> uv transformation
 vec3 evaluateEnvironmentSample(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
-    return vec3(0);
+    vec4 envSample = sampleEnvironment(textures[pcs.skyCdfHandle], seed);
+    vec3 omega_i = envSample.xyz;
+    float envPdf = envSample.w;
+
+    //  send a ray in the env map sample direction
+    TracedSample brdfHit = traceBRDFLighting(posWS, omega_i);
+
+    //  if the ray hits anything (env map is occluded), early exit
+    //  occlusion of the env map means that zero radiance would come from this direction anyway
+    if (brdfHit.didHit) return vec3(0.0);
+
+    // retrieve radiance coming from the env map
+    vec3 L_i = sampleSphericalMap(omega_i, pcs.skyHandle);
+
+    // get the pdf of the env map sample as if it came from sampling the BRDF
+    float brdfPdf = getPdfHemisphereCosineWeighted(omega_i, normal);
+
+    float misWeight = powerHeuristic(envPdf, brdfPdf);
+
+    if (misWeight <= 0.0) return vec3(0.0);
+
+    float cos_theta_i = max(dot(omega_i, normal), 0.0f);
+
+    vec3 brdf = albedo * INVPI;
+    vec3 L_direct = misWeight * L_i * brdf * cos_theta_i / envPdf; 
+    return L_direct;
+
 }
+
+vec3 evaluateBRDFSampleEnv(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
+
+    // sample the BRDF
+    vec4 brdfSample = sampleHemisphereCosineWeighted(normal, seed);
+    vec3 omega_i = brdfSample.xyz;
+    float brdfPdf = brdfSample.w;
+
+    // check what the BRDF sample hits 
+    TracedSample brdfHit = traceBRDFLighting(posWS, omega_i);
+    vec3 L_i = brdfHit.hitEmission;
+
+    // if the sample can't contribute any radiance (it hit a non-emissive scene surface) do an early exit
+    if (brdfHit.didHit && all( lessThanEqual(brdfHit.hitEmission,vec3(0.0))))
+        return vec3(0.0);
+
+    float envPdf = getPdfEnvironment(textures[pcs.skyCdfHandle],omega_i);
+    
+    float misWeight = powerHeuristic(brdfPdf, envPdf);
+
+    float cos_theta_i = max(dot(omega_i, normal), 0.0f);
+    vec3 brdf = albedo * INVPI;
+    vec3 L_direct = misWeight * L_i * brdf * cos_theta_i / brdfPdf; 
+    return L_direct;
+}
+
+
 
 vec3 calculateDirect(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
     vec3 directContribution = vec3(0.0);
@@ -153,6 +219,16 @@ vec3 calculateDirect(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
 
     return directContribution;
 }
+
+vec3 calculateDirectEnv(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
+    vec3 directContribution = vec3(0.0);
+
+    directContribution += evaluateEnvironmentSample(albedo, posWS, normal, seed);
+    directContribution += evaluateBRDFSampleEnv(albedo, posWS, normal, seed);
+
+    return directContribution;
+}
+
 
 
 void main() { 
@@ -207,8 +283,8 @@ void main() {
     float tMax = 10000.0f;
 
     vec3 radiance = vec3(0.0);
-    //vec3 directContribution = mat.materialType == 1 ? vec3(0.0) : evaluateDirectLighting(albedo,posWS,normal,seed);
-    vec3 directContribution = mat.materialType == 1 ? vec3(0.0) : calculateDirect(albedo,posWS,normal,seed);
+    //vec3 directContribution = mat.materialType == 1 ? vec3(0.0) : calculateDirect(albedo,posWS,normal,seed);
+    vec3 directContribution = mat.materialType == 1 ? vec3(0.0) : calculateDirectEnv(albedo,posWS,normal,seed);
     vec3 weight = vec3(1.0);
 
     float h;
@@ -219,28 +295,18 @@ void main() {
     if (pcs.NEE == 1){
         vec4 envSample = sampleEnvironment(textures[pcs.skyCdfHandle], seed);
         direction = normalize(envSample.xyz);
-
-        //if (any(isnan(direction)) || any(isinf(direction)) || any(lessThan(direction, vec3(0.0))))
-        //    nan = true;
-
         pdfFromDir = getPdfEnvironment(textures[pcs.skyCdfHandle],direction);
         pdf = envSample.w;
-        if (pcs.sampleSky == 1)
-            pdf = pdfFromDir;
-    }
 
+    }
     
     vec3 envLi = sampleSphericalMap(direction, pcs.skyHandle);
 
     float V = float(isVisible(posWS,posWS + direction * 1000.0f));
 
     cosThetaI = max(dot(normal,direction),0.0);
-    radiance = envLi * brdf * V * cosThetaI / pdf;
+    radiance = pcs.sampleSky == 1 ? directContribution : (envLi * brdf * V * cosThetaI / pdf);
 
-    float ratio = pdfFromDir / pdf;
-    if (isnan(ratio) || isinf(ratio))
-        ratio = 100.0f;
-    //radiance = vec3(ratio);
 
     if (pcs.accumulate == 1){
         vec3 oldRadiance = imageLoad(outputImage, ivec2(gl_LaunchIDEXT.xy)).xyz;
