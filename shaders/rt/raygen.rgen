@@ -196,10 +196,12 @@ vec3 evaluateBRDFSampleEnv(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed
     vec3 L_i = brdfHit.hitEmission;
 
     // if the sample can't contribute any radiance (it hit a non-emissive scene surface) do an early exit
-    if (brdfHit.didHit && all( lessThanEqual(brdfHit.hitEmission,vec3(0.0))))
+    if (brdfHit.didHit && all(lessThanEqual(brdfHit.hitEmission,vec3(0.0))))
         return vec3(0.0);
 
-    float envPdf = getPdfEnvironment(textures[pcs.skyCdfHandle],omega_i);
+    // it only makes sense to evaluate the env pdf when the sample is unoccluded by scene geometry
+    // otherwise it would be possible to mistakenly calculate the env map pdf when hitting an emissive scene object (the pdf must be zero)
+    float envPdf = brdfHit.didHit ? 0.0 : getPdfEnvironment(textures[pcs.skyCdfHandle],omega_i);
     
     float misWeight = powerHeuristic(brdfPdf, envPdf);
 

@@ -77,13 +77,13 @@ bool Engine::drawGUI() {
     if (ImGui::CollapsingHeader("Export",ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Indent();
 
-        char buf[256] = {};
+        ImGui::DragInt("Auto export frame count",reinterpret_cast<int*>(&autoExportFrameCount_),1.0f,0,1000000);
+
+        char* buf = const_cast<char*>(exportFileName_.c_str());
         if (ImGui::InputText("file name",buf,256))
             exportFileName_ = buf;
 
-        ImGui::DragInt("Auto export frame count",reinterpret_cast<int*>(&autoExportFrameCount_),1.0f,0,1000000);
-
-        if (ImGui::Button("Export accumulator") || selectedRenderer_->getAccumulatedFrameCount() == autoExportFrameCount_) {
+        if (ImGui::Button("Export accumulator") || (selectedRenderer_->getAccumulatedFrameCount() == autoExportFrameCount_ && autoExportFrameCount_ != 0)) {
             selectedRenderer_->setExportSignal(exportFileName_);
         }
 
