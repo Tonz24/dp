@@ -110,7 +110,7 @@ private:
 
     static inline Engine* engineInstance{nullptr};
     std::unique_ptr<Window> window{nullptr};
-
+    uint32_t autoExportFrameCount_;
 
 
     static inline const std::vector<const char*> requiredValidationLayers = {

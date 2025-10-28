@@ -81,7 +81,9 @@ bool Engine::drawGUI() {
         if (ImGui::InputText("file name",buf,256))
             exportFileName_ = buf;
 
-        if (ImGui::Button("Export accumulator")) {
+        ImGui::DragInt("Auto export frame count",reinterpret_cast<int*>(&autoExportFrameCount_),1.0f,0,1000000);
+
+        if (ImGui::Button("Export accumulator") || selectedRenderer_->getAccumulatedFrameCount() == autoExportFrameCount_) {
             selectedRenderer_->setExportSignal(exportFileName_);
         }
 
@@ -98,6 +100,9 @@ bool Engine::drawGUI() {
         ImGui::Text(("Swapchain dimensions: " + std::to_string(swapChainExtent.width) + "x" + std::to_string(swapChainExtent.height)).c_str());
         auto renderDims = selectedRenderer_->getRenderDimensions();
         ImGui::Text(("Render dimensions: " + std::to_string(renderDims.x) + "x" + std::to_string(renderDims.y)).c_str());
+
+        ImGui::Separator();
+        ImGui::Text(("Accumulated frames: " + std::to_string(selectedRenderer_->getAccumulatedFrameCount())).c_str());
 
         ImGui::Unindent();
     }

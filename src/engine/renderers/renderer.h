@@ -16,6 +16,7 @@ public:
 
     void setExportSignal(std::string_view fileName);
 
+    virtual uint32_t getAccumulatedFrameCount() {return 0;}
     static void initLayouts();
     static void destroy();
 

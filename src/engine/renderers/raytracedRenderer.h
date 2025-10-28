@@ -17,11 +17,12 @@ public:
     void render(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage,
         const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) override;
 
-
     explicit RaytracedRenderer(const std::shared_ptr<GBuffer>& gBuffer);
     explicit RaytracedRenderer(const std::string_view& gBufferName);
 
     void resizeScreen(uint32_t newWidth, uint32_t newHeight) override;
+
+    uint32_t getAccumulatedFrameCount() override {return pcs_.frameCtr;}
 
 protected:
 

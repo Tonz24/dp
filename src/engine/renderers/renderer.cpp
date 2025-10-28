@@ -278,7 +278,7 @@ void Renderer::flushExportBuffer() {
                                                 true);
 
     std::string fullPath {Paths::exportPathPrefix};
-    fullPath.append(exportFileName_);
+    fullPath.append(exportFileName_.size() > 0 ? exportFileName_ : "untitled.png");
 
     FreeImage_Save(FIF_PNG, image, fullPath.data(), PNG_DEFAULT);
     FreeImage_Unload(image);
