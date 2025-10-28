@@ -37,9 +37,11 @@ public:
     [[nodiscard]] uint32_t getHeight() const { return height_; }
     [[nodiscard]] vk::ImageLayout getSamplerLayout() const { return samplerLayout_; }
     [[nodiscard]] uint32_t getTotalSize() const {return data_.size() * sizeof(data_[0]);}
-    std::shared_ptr<Texture> getCdf();
-
+    [[nodiscard]] std::shared_ptr<Texture> getCdf();
+    [[nodiscard]] const std::vector<uint8_t>& getData() const { return data_; }
     [[nodiscard]] vk::ImageUsageFlags getImageUsageFlags() const { return imageUsageFlags_; }
+    [[nodiscard]] uint32_t getScanWidth() const { return scanWidth_; }
+    [[nodiscard]] uint32_t getPixelSize() const { return pixelSize_; }
 
     friend class TextureManager;
 
@@ -54,11 +56,13 @@ public:
     void transitionLayout(vk::ImageLayout newLayout, vk::PipelineStageFlags2 stage, vk::AccessFlags2 accessFlags, vk::raii::CommandBuffer& cmdBuf, const VkUtils::TransitionMipInfo&
                           mipInfo = {0,1});
 
-
-
+    /**
+     * @brief fetches texture data from device memory into the data_ member on host
+     */
+    void copyToHost();
 
     template <typename T>
-    T getTexel(uint32_t x, uint32_t y);
+    T getTexel(uint32_t x, uint32_t y);;
 
     [[nodiscard]] std::string getCdfName() const {return getResourceName() + "_cdf";}
 

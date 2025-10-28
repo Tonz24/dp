@@ -7,6 +7,11 @@
 #include "../engine.h"
 #include "../managers/resourceManager.h"
 
+void Renderer::setExportSignal(std::string_view fileName) {
+    exportSignal_ = true;
+    exportFileName_ = fileName;
+}
+
 void Renderer::initLayouts() {
     if (!isDescSetLayoutInit_)
         initDescSetLayout();
@@ -193,6 +198,7 @@ void Renderer::initDescSetLayout() {
     isDescSetLayoutInit_ = true;
 }
 
+
 void Renderer::registerTextureBindless(const Texture& texture) {
     for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
 
@@ -244,4 +250,69 @@ void Renderer::uploadObjDescription(const Mesh& mesh) {
         uint8_t* dst = objDescSSBOsMapped_[i] + mesh.getCID() * sizeof(Mesh::ObjDescription);
         memcpy(dst,&mesh.getDescription(), sizeof(Mesh::ObjDescription));
     }
+}
+
+void Renderer::flushExportBuffer() {
+
+    if (!pendingExport_)
+        return;
+
+    pendingExport_ = false;
+    uint32_t bufferSize = exportExtent_.width * exportExtent_.height * 4;
+
+    std::vector<uint8_t> imageData(bufferSize);
+    imageData.resize(bufferSize);
+
+    memcpy(imageData.data(),exportBuffer_.allocationInfo.pMappedData,bufferSize);
+
+    uint32_t exportScanWidth = exportExtent_.width * 4;
+
+    FIBITMAP *image = FreeImage_ConvertFromRawBits(imageData.data(),
+                                                exportExtent_.width,
+                                                exportExtent_.height,
+                                                exportScanWidth,
+                                                4 * 8,
+                                                FI_RGBA_RED_MASK,
+                                                FI_RGBA_GREEN_MASK,
+                                                FI_RGBA_BLUE_MASK,
+                                                true);
+
+    std::string fullPath {Paths::exportPathPrefix};
+    fullPath.append(exportFileName_);
+
+    FreeImage_Save(FIF_PNG, image, fullPath.data(), PNG_DEFAULT);
+    FreeImage_Unload(image);
+
+    VkUtils::destroyBufferVMA(std::move(exportBuffer_));
+}
+
+void Renderer::recordSwapchainImageExport(const vk::Image& swapchainImage, vk::Extent2D extent, std::string_view fileName,
+                                          const vk::raii::CommandBuffer& cmdBuf) {
+    exportExtent_ = extent;
+    vk::DeviceSize bufferSize = extent.width * extent.height * 4;
+    exportBuffer_ = VkUtils::createBufferVMA(bufferSize,vk::BufferUsageFlagBits::eTransferDst,VkUtils::stagingAllocFlagsVMA);
+
+    VkUtils::transitionImageLayout(swapchainImage,
+                                  vk::ImageLayout::eTransferDstOptimal,
+                                  vk::ImageLayout::eTransferSrcOptimal,
+                                  vk::PipelineStageFlagBits2::eTransfer,
+                                   vk::AccessFlagBits2::eTransferWrite,
+                                   vk::PipelineStageFlagBits2::eTransfer,
+                                   vk::AccessFlagBits2::eTransferRead,
+                                  vk::ImageAspectFlagBits::eColor,
+                                  cmdBuf);
+
+    VkUtils::copyImageToBuffer(swapchainImage, exportBuffer_,0,extent.width,0,extent.height,cmdBuf);
+
+    VkUtils::transitionImageLayout(swapchainImage,
+                        vk::ImageLayout::eTransferSrcOptimal,
+                                 vk::ImageLayout::eTransferDstOptimal,
+                                 vk::PipelineStageFlagBits2::eTransfer,
+                                  vk::AccessFlagBits2::eTransferRead,
+                                  vk::PipelineStageFlagBits2::eTransfer,
+                                  vk::AccessFlagBits2::eTransferWrite,
+                                 vk::ImageAspectFlagBits::eColor,
+                                 cmdBuf);
+
+    pendingExport_ = true;
 }

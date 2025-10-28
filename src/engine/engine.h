@@ -19,7 +19,6 @@
 #include "renderers/deferredRenderer.h"
 #include "renderers/raytracedRenderer.h"
 #include "renderers/raytracedRendererNee.h"
-#include "vk/rasterPipeline.h"
 
 class Engine : public IDrawGui {
 public:
@@ -235,4 +234,6 @@ private:
     float deltaTime_{};
     float oldTime_{};
     uint64_t frameCtr_{0};
+
+    std::string exportFileName_{};
 };

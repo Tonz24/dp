@@ -16,7 +16,7 @@
 #include "managers/resourceManager.h"
 
 std::vector<std::shared_ptr<Mesh>> ModelLoader::loadModel(std::string_view path, bool multithread) {
-    std::string fullPath{ModelLoader::modelPathPrefix + std::string{path}};
+    std::string fullPath{Paths::modelPathPrefix + std::string{path}};
 
     Assimp::Importer importer;
 

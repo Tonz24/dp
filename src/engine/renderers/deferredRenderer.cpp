@@ -57,10 +57,7 @@ void DeferredRenderer::resizeScreen(uint32_t newWidth, uint32_t newHeight) {
     if (newWidth != gBuffer_->getTarget().getWidth() || newHeight != gBuffer_->getTarget().getHeight())
         gBuffer_->resizeContents(newWidth,newHeight);
 
-    pcs_.albedoMapHandle = gBuffer_->getAlbedoMap().getCID();
-    pcs_.normalMapHandle = gBuffer_->getNormalMap().getCID();
-    pcs_.depthMapHandle = gBuffer_->getDepthMap().getCID();
-    pcs_.materialMapHandle = gBuffer_->getMaterialMap().getCID();
+    setPcsData();
 }
 
 void DeferredRenderer::initGraphicsPipelines() {
@@ -113,6 +110,10 @@ void DeferredRenderer::initGraphicsPipelines() {
         false
     };
 
+    setPcsData();
+}
+
+void DeferredRenderer::setPcsData() {
     pcs_.albedoMapHandle = gBuffer_->getAlbedoMap().getCID();
     pcs_.normalMapHandle = gBuffer_->getNormalMap().getCID();
     pcs_.depthMapHandle = gBuffer_->getDepthMap().getCID();
@@ -143,6 +144,10 @@ void DeferredRenderer::recordPresentBuffer(const Scene& scene, vk::raii::Command
                     vk::ImageAspectFlagBits::eColor,
                     vk::Filter::eNearest);
 
+    if (exportSignal_) {
+        recordSwapchainImageExport(swapchainImage,swapchainExtent,exportFileName_,cmdBuf);
+        exportSignal_ = false;
+    }
 
     //  transition swapchain image into color attachment optimal for gui write
     VkUtils::transitionImageLayout(swapchainImage,
@@ -154,6 +159,9 @@ void DeferredRenderer::recordPresentBuffer(const Scene& scene, vk::raii::Command
                                    vk::AccessFlagBits2::eColorAttachmentRead | vk::AccessFlagBits2::eColorAttachmentWrite,
                                    vk::ImageAspectFlagBits::eColor,
                                    cmdBuf);
+
+
+
 
     // render gui last, into the swapchain frame buffer
     recordGUICommands(scene,cmdBuf,frameInFlightIndex, swapchainImageView, swapchainExtent);

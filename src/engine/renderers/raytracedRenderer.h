@@ -32,6 +32,8 @@ protected:
     void recordTraceCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex);
     void recordTonemapCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex);
 
+    void setPcsData() override;
+
     RaytracingPipeline rtPipeline_;
     RasterPipeline tonemapPipeline_;
 

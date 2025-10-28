@@ -36,13 +36,7 @@ RaytracedRenderer::RaytracedRenderer(const std::string_view& gBufferName): Defer
 
 void RaytracedRenderer::resizeScreen(uint32_t newWidth, uint32_t newHeight) {
     DeferredRenderer::resizeScreen(newWidth, newHeight);
-
-    pcs_.albedoMapHandle = gBuffer_->getAlbedoMap().getCID();
-    pcs_.normalMapHandle = gBuffer_->getNormalMap().getCID();
-    pcs_.depthMapHandle = gBuffer_->getDepthMap().getCID();
-    pcs_.materialMapHandle = gBuffer_->getMaterialMap().getCID();
-    pcs_.targetHandle = gBuffer_->getTarget().getCID();
-    pcs_.maxRecursionDepth = rtPipeline_.getMaxRecursionDepth();
+    setPcsData();
 }
 
 void RaytracedRenderer::initGraphicsPipelines() {
@@ -59,12 +53,7 @@ void RaytracedRenderer::initGraphicsPipelines() {
 
     rtPipeline_ = RaytracingPipeline{rtStages,descSetFillLayouts,raygenRange};
 
-    pcs_.albedoMapHandle = gBuffer_->getAlbedoMap().getCID();
-    pcs_.normalMapHandle = gBuffer_->getNormalMap().getCID();
-    pcs_.depthMapHandle = gBuffer_->getDepthMap().getCID();
-    pcs_.materialMapHandle = gBuffer_->getMaterialMap().getCID();
-    pcs_.targetHandle = gBuffer_->getTarget().getCID();
-    pcs_.maxRecursionDepth = rtPipeline_.getMaxRecursionDepth();
+   setPcsData();
 
     generator_ = std::mt19937(rngDevice_());
     distr_ = std::uniform_int_distribution(std::numeric_limits<uint32_t>::min(),std::numeric_limits<uint32_t>::max());
@@ -81,6 +70,7 @@ void RaytracedRenderer::initGraphicsPipelines() {
         std::array{gBuffer_->getTarget().getVkFormat()},
         false
     };
+
 }
 void RaytracedRenderer::recordCommandBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
                                              const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) {
@@ -200,4 +190,13 @@ void RaytracedRenderer::recordTonemapCommands(const Scene& scene, vk::raii::Comm
     // draw six vertices making up the screen quad
     cmdBuf.draw(6, 1, 0, 0);
     cmdBuf.endRendering();
+}
+
+void RaytracedRenderer::setPcsData() {
+    pcs_.albedoMapHandle = gBuffer_->getAlbedoMap().getCID();
+    pcs_.normalMapHandle = gBuffer_->getNormalMap().getCID();
+    pcs_.depthMapHandle = gBuffer_->getDepthMap().getCID();
+    pcs_.materialMapHandle = gBuffer_->getMaterialMap().getCID();
+    pcs_.targetHandle = gBuffer_->getTarget().getCID();
+    pcs_.maxRecursionDepth = rtPipeline_.getMaxRecursionDepth();
 }

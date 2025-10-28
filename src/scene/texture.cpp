@@ -27,7 +27,7 @@
 // }
 
 Texture::Texture(uint32_t width, uint32_t height, vk::Format format, vk::ImageUsageFlags imageUsage, bool populateData):
-    ManagedResource(), width_(width), height_(height), channelCount_(getChannelCount(format)), vkFormat_(format), imageUsageFlags_(imageUsage), pixelSize_(getFormatPixelSize(format))
+    ManagedResource(), width_(width), height_(height), channelCount_(getChannelCount(format)), vkFormat_(format), imageUsageFlags_(imageUsage), pixelSize_(getFormatPixelSize(format)), scanWidth_(width_ * pixelSize_)
 {
 
     if (populateData) {
@@ -67,6 +67,7 @@ std::shared_ptr<Texture> Texture::getCdf() {
             if (freeImageFormat_ == FIF_HDR || freeImageFormat_ == FIF_EXR )
                 rgb = static_cast<glm::vec<3,float>>(getTexel<glm::vec4>(x, y));
 
+            // opencv formula
             rgb *= glm::vec3( 0.299,0.587, 0.114);
             float luminance = rgb.x + rgb.y + rgb.z;
 
@@ -107,11 +108,9 @@ std::shared_ptr<Texture> Texture::getCdf() {
         }
     }
 
-
     float* dataFloat = reinterpret_cast<float*>(cdfTexture->data_.data());
     for (uint32_t y = 0; y < cdfTexture->getHeight(); y++) {
         for (uint32_t x = 0; x < cdfTexture->getWidth(); ++x) {
-
             float val = x == 0 ? marginalCdf[y] : conditionalCdf[y * width_ + (x - 1)];
             dataFloat[y * cdfTexture->getWidth() + x] = val;
         }
@@ -391,6 +390,22 @@ void Texture::transitionLayout(vk::ImageLayout newLayout, vk::PipelineStageFlags
     }
 }
 
+void Texture::copyToHost() {
+    vk::DeviceSize bufferSize = width_ * height_ * pixelSize_;
+    auto stagingBuffer = VkUtils::createBufferVMA(bufferSize,vk::BufferUsageFlagBits::eTransferDst,VkUtils::stagingAllocFlagsVMA);
+
+
+    auto cmdBuf =  VkUtils::beginSingleTimeCommand();
+    transitionLayout(vk::ImageLayout::eTransferSrcOptimal,vk::PipelineStageFlagBits2::eTransfer,vk::AccessFlagBits2::eTransferRead,cmdBuf,{0,mipLevelCount_});
+    VkUtils::copyImageToBuffer(imageAlloc_, stagingBuffer,0,width_,0,height_,cmdBuf);
+    VkUtils::endSingleTimeCommand(cmdBuf,VkUtils::QueueType::graphics);
+
+    data_.clear();
+    data_.resize(bufferSize);
+
+    memcpy(data_.data(),stagingBuffer.allocationInfo.pMappedData,bufferSize);
+    VkUtils::destroyBufferVMA(std::move(stagingBuffer));
+}
 
 
 vk::Format Texture::chooseVkFormat(bool isSrgb) const {

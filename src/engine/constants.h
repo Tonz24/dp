@@ -4,6 +4,7 @@
 
 #pragma once
 #include <cstdint>
+#include <string>
 
 class Constants{
 public:
@@ -24,4 +25,14 @@ public:
   #else
   static constexpr bool enableValidationLayers{true};
   #endif
+};
+
+
+class Paths{
+public:
+  Paths() = delete;
+
+  static inline const std::string exportPathPrefix{"../exports/"};
+  static inline const std::string modelPathPrefix{"../assets/models/"};
+
 };

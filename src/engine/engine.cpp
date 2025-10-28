@@ -73,6 +73,21 @@ bool Engine::drawGUI() {
         if (scene_)     scene_->drawGUI();
         ImGui::Unindent();
     }
+
+    if (ImGui::CollapsingHeader("Export",ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Indent();
+
+        char buf[256] = {};
+        if (ImGui::InputText("file name",buf,256))
+            exportFileName_ = buf;
+
+        if (ImGui::Button("Export accumulator")) {
+            selectedRenderer_->setExportSignal(exportFileName_);
+        }
+
+        ImGui::Unindent();
+    }
+
     if (ImGui::CollapsingHeader("Stats",ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Indent();
 
@@ -380,15 +395,15 @@ void Engine::initLogicalDevice() {
         vk::PhysicalDeviceRayQueryFeaturesKHR
         >
             featureChain {
-                {.features = {.samplerAnisotropy = vk::True,}}, // vk::PhysicalDeviceFeatures2 (empty for now)
-                {.storageBuffer8BitAccess = vk::True, .scalarBlockLayout = true, .timelineSemaphore = vk::True,  .bufferDeviceAddress = vk::True,  .vulkanMemoryModel = vk::True,  .vulkanMemoryModelDeviceScope = vk::True,},
+                {.features = {.samplerAnisotropy = vk::True}},
+                {.storageBuffer8BitAccess = vk::True, .scalarBlockLayout = true, .timelineSemaphore = vk::True,  .bufferDeviceAddress = vk::True,  .vulkanMemoryModel = vk::True,  .vulkanMemoryModelDeviceScope = vk::True},
                 {.shaderDemoteToHelperInvocation =  vk::True, .synchronization2 = vk::True, .dynamicRendering = vk::True,},      // Enable dynamic rendering from Vulkan 1.3
-                {.extendedDynamicState = vk::True }, // Enable extended dynamic state from the extension_
+                {.extendedDynamicState = vk::True },
                 {.rayTracingPipeline = vk::True},
                 {.accelerationStructure = vk::True},
                 {},
                 {},
-                {.rayQuery = vk::True}
+                {.rayQuery = vk::True},
     };
 
     vk::DeviceCreateInfo deviceCreateInfo{
@@ -422,7 +437,7 @@ void Engine::initSwapchain() {
        .imageColorSpace = surfaceFormat.colorSpace,
        .imageExtent = swapExtent,
        .imageArrayLayers = 1,
-       .imageUsage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst,
+       .imageUsage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc,
        .imageSharingMode = vk::SharingMode::eExclusive,
        .preTransform = surfaceCapabilities.currentTransform,
        .compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
@@ -680,6 +695,8 @@ void Engine::drawFrame() {
     //  reset the current frame's fence
     vk::raii::Fence& frameFence = inFlightFences_[frameInFlightIndex_];
     device_.waitForFences(*frameFence, vk::True, UINT64_MAX );
+
+    selectedRenderer_->flushExportBuffer();
 
     updateUBOs();
 

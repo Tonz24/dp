@@ -28,6 +28,9 @@ public:
 
     [[nodiscard]] virtual std::string getResourceType() const = 0;
 
+    [[nodiscard]] bool isFromDisk() const { return isFromDisk_; }
+    [[nodiscard]] bool isRegistered() const { return isRegistered_; }
+
 
     template <ManagedResourceConcept T, typename Derived, uint32_t IdLimit>
     friend class ResourceManager;

@@ -105,7 +105,8 @@ public:
 
 
     static void copyBufferToImage(const BufferAlloc& buffer, const ImageAlloc& image, uint32_t width, uint32_t height, vk::raii::CommandBuffer& cmdBuf);
-    static void copyImageToBuffer(const ImageAlloc& image, const BufferAlloc& buffer, int32_t offsetX, uint32_t width, int32_t offsetY, uint32_t height, vk::raii::CommandBuffer& cmdBuf);
+    static void copyImageToBuffer(const ImageAlloc& image, const BufferAlloc& buffer, int32_t offsetX, uint32_t width, int32_t offsetY, uint32_t height, const vk::raii::CommandBuffer& cmdBuf);
+    static void copyImageToBuffer(const vk::Image& image, const BufferAlloc& buffer, int32_t offsetX, uint32_t width, int32_t offsetY, uint32_t height, const vk::raii::CommandBuffer& cmdBuf);
 
     /**
      * @brief allocates and returns a new command buffer
@@ -142,7 +143,7 @@ public:
     static void transitionImageLayout(const vk::Image &image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
                                       vk::PipelineStageFlags2 srcStageMask, vk::AccessFlags2 srcAccessMask,
                                       vk::PipelineStageFlags2 dstStageMask, vk::AccessFlags2 dstAccessMask,
-                                      vk::ImageAspectFlags imageAspectFlags, vk::raii::CommandBuffer &cmdBuf, TransitionMipInfo mipInfo = {0,1});
+                                      vk::ImageAspectFlags imageAspectFlags, const vk::raii::CommandBuffer &cmdBuf, TransitionMipInfo mipInfo = {0,1});
 
 
 

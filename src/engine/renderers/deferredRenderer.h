@@ -46,9 +46,12 @@ protected:
 
     std::shared_ptr<GBuffer> gBuffer_{nullptr};
 
+     void setPcsData() override;
+
 
 private:
     void initGraphicsPipelines();
     PcsGBufferShade::Data pcs_{};
+
 };
 

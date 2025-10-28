@@ -14,6 +14,8 @@ public:
 
     ~Renderer() override = default;
 
+    void setExportSignal(std::string_view fileName);
+
     static void initLayouts();
     static void destroy();
 
@@ -35,6 +37,8 @@ public:
     static void registerTextureStorage(const Texture& texture);
     static void uploadObjDescription(const Mesh& mesh);
 
+    void flushExportBuffer();
+
 protected:
     Renderer() {
         if (!isDescSetLayoutInit_)
@@ -47,6 +51,17 @@ protected:
 
     virtual void recordPresentBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex,
                                            const vk::Image& swapchainImage, const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) = 0;
+
+    virtual void setPcsData() = 0;
+
+    bool exportSignal_{false};
+    std::string_view exportFileName_{};
+    VkUtils::BufferAlloc exportBuffer_{};
+    vk::Extent2D exportExtent_;
+    bool pendingExport_{false};
+
+    void recordSwapchainImageExport(const vk::Image& swapchainImage, vk::Extent2D extent, std::string_view fileName,
+                                    const vk::raii::CommandBuffer& cmdBuf);
 
 private:
 
