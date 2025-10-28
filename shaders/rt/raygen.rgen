@@ -36,6 +36,28 @@ float powerHeuristic(float pdf, float pdfOther) {
 	return result;
 }
 
+TracedSample traceBRDFLighting(vec3 posWS, vec3 direction){
+    float tMin = 0.001f;
+    float tMax = 10000.0f;
+
+    resetBRDFSamplePayload(payloadBRDF);
+    traceRayEXT(
+            topLevelAS,
+            gl_RayFlagsOpaqueEXT,
+            0xff, // cullMask
+            2,    // sbtRecordOffset
+            0,    // sbtRecordStride
+            1,    // missIndex
+            posWS,
+            tMin,
+            direction,
+            tMax,
+            1     // brdf sample always has payload location 1
+    );
+
+    return makeTraced(payloadBRDF);
+}
+
 // samples an area light (emissive triangle) and returns incoming radiance
 // area-brdf MIS weighing. environmental map is not taken into consideration, since its the sampling domain is mutually exclusive with the area light domain: 
 //      if an environment sample has non-zero incoming radiance at an shading point, it must not be occluded by any scene geometry, which includes emissive surfaces
@@ -89,28 +111,6 @@ vec3 evaluateSampleAreaMisBrdf(vec3 albedo, vec3 posWS, vec3 normal, inout uint 
     vec3 L_direct = misWeight * L_i * brdf * G * cos_theta_i / lightPdf;
 
     return L_direct;
-}
-
-TracedSample traceBRDFLighting(vec3 posWS, vec3 direction){
-    float tMin = 0.001f;
-    float tMax = 10000.0f;
-
-    resetBRDFSamplePayload(payloadBRDF);
-    traceRayEXT(
-            topLevelAS,
-            gl_RayFlagsOpaqueEXT,
-            0xff, // cullMask
-            2,    // sbtRecordOffset
-            0,    // sbtRecordStride
-            1,    // missIndex
-            posWS,
-            tMin,
-            direction,
-            tMax,
-            1     // brdf sample always has payload location 1
-    );
-
-    return makeTraced(payloadBRDF);
 }
 
 // TODO: retrieve the texure value immediately after sampling to get rid of double cartesian -> polar -> uv transformation
@@ -194,9 +194,22 @@ vec3 evaluateSampleBrdfMisEnvArea(vec3 albedo, vec3 posWS, vec3 normal, inout ui
 vec3 calculateDirect(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
     vec3 directContribution = vec3(0.0);
 
-    directContribution += evaluateSampleAreaMisBrdf(albedo, posWS, normal, seed);
-    directContribution += evaluateSampleEnvMisBrdf(albedo, posWS, normal, seed);
-    directContribution += evaluateSampleBrdfMisEnvArea(albedo, posWS, normal, seed);
+    vec3 contribArea = evaluateSampleAreaMisBrdf(albedo, posWS, normal, seed);
+
+    if (any(isinf(contribArea)) || any(isnan(contribArea)) || any(lessThan(contribArea,vec3(0.0))))
+        return vec3(10,0,0);
+
+    vec3 contribEnv = evaluateSampleEnvMisBrdf(albedo, posWS, normal, seed);
+
+    if (any(isinf(contribEnv)) || any(isnan(contribEnv)) || any(lessThan(contribEnv,vec3(0.0))))
+        return vec3(0,10,0);
+
+    vec3 contribBrdf = evaluateSampleBrdfMisEnvArea(albedo, posWS, normal, seed);
+
+    if (any(isinf(contribBrdf)) || any(isnan(contribBrdf)) || any(lessThan(contribBrdf,vec3(0.0))))
+       return vec3(0,0,10);
+
+    directContribution = contribArea + contribEnv + contribBrdf;
 
     return directContribution;
 }
@@ -259,7 +272,7 @@ void main() {
 
     radiance = directContribution;
 
-     if (pcs.accumulate == 1) {
+    if (pcs.accumulate == 1) {
         vec3 oldRadiance = imageLoad(outputImage, ivec2(gl_LaunchIDEXT.xy)).xyz;
         radiance = mix(oldRadiance,radiance, 1.0f / float(pcs.frameCtr + 1));
     }

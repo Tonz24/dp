@@ -182,12 +182,15 @@ vec3 evaluateSampleBrdfMisEnvArea(vec3 albedo, vec3 posWS, vec3 normal, inout ui
         float r_sqr = dot(toHit, toHit);
         float cos_theta_y = max(dot(-omega_i, brdfHit.hitNormal), 0.0f);
 
+        if (r_sqr <= 0.0 || cos_theta_y <= 0.0) return vec3(0.0);
+
         float areaToSolidMeasureFactor =  r_sqr / cos_theta_y;
-        pdfOther = (brdfHit.hitArea / emissiveCDF.area) * areaToSolidMeasureFactor;
+        pdfOther = (1/ emissiveCDF.area) * areaToSolidMeasureFactor;
     }
     // evaluating the env pdf only makes sense when the sample is unoccluded by scene geometry
     else {
         pdfOther = getPdfEnvironment(textures[pcs.skyCdfHandle],omega_i);
+        if (pdfOther <= 0.0) return vec3(0.0);
     }
     
     float misWeight = powerHeuristic(brdfPdf, pdfOther);

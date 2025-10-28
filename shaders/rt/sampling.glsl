@@ -169,7 +169,7 @@ float getPdfEnvironment(sampler2D skyCdf, vec3 dir){
 
 	// convert direction to UV in environment map
 	vec2 uv = dirToEquirect(dir);
-	float u = fract(uv.x - 0.25);
+	float u = fract(uv.x);
     float v = uv.y;
 
 	// calculate unnormalized pixel coordinates
