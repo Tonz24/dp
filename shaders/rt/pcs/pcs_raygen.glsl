@@ -13,6 +13,4 @@ layout(push_constant, std140) uniform PushConstants {
     uint frameCtr;
 
     uint maxRecursionDepth;
-    uint sampleSky;
-    uint NEE;
 } pcs;

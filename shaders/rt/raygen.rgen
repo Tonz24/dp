@@ -172,12 +172,15 @@ vec3 evaluateSampleBrdfMisEnvArea(vec3 albedo, vec3 posWS, vec3 normal, inout ui
         float r_sqr = dot(toHit, toHit);
         float cos_theta_y = max(dot(-omega_i, brdfHit.hitNormal), 0.0f);
 
+        if (r_sqr <= 0.0 || cos_theta_y <= 0.0) return vec3(0.0);
+
         float areaToSolidMeasureFactor =  r_sqr / cos_theta_y;
-        pdfOther = (brdfHit.hitArea / emissiveCDF.area) * areaToSolidMeasureFactor;
+        pdfOther = (1/ emissiveCDF.area) * areaToSolidMeasureFactor;
     }
     // evaluating the env pdf only makes sense when the sample is unoccluded by scene geometry
     else {
         pdfOther = getPdfEnvironment(textures[pcs.skyCdfHandle],omega_i);
+        if (pdfOther <= 0.0) return vec3(0.0);
     }
     
     float misWeight = powerHeuristic(brdfPdf, pdfOther);
@@ -253,6 +256,16 @@ void main() {
     vec3 radiance = vec3(0.0);
     vec3 directContribution = mat.materialType == 1 ? vec3(0.0) : calculateDirect(albedo,posWS,normal,seed);
     vec3 weight = vec3(1.0);
+
+    radiance = directContribution;
+
+     if (pcs.accumulate == 1) {
+        vec3 oldRadiance = imageLoad(outputImage, ivec2(gl_LaunchIDEXT.xy)).xyz;
+        radiance = mix(oldRadiance,radiance, 1.0f / float(pcs.frameCtr + 1));
+    }
+
+    imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(radiance, 1.0));
+    return;
     
     resetPayload(payload);
     bool lastWasMirror = mat.materialType == 1;
@@ -276,16 +289,22 @@ void main() {
 
      
         // calculate NEE
-        if(pcs.NEE == 1)
-            radiance += weight * directContribution;
+        radiance += weight * directContribution;
 
         // NEE disallows hitting light sources with indirect rays as that would incorrectly double the contribution of lights
-        if(payload.hit && hitLight(payload) && pcs.NEE == 1 && !lastWasMirror)
+        if((payload.hit && hitLight(payload) && !lastWasMirror) || (!payload.hit && !lastWasMirror))
             break;
+
+        
 
         weight *= weightFactor;
         radiance += weight * payload.hitEmission;  
 
+
+        if (!payload.hit)
+            break;
+
+        // russian roulette
         float maxWeight = max(weight.x,max(weight.y,weight.z));
         float rouletteTerminate = rand(seed);
         if (maxWeight < rouletteTerminate) break;
@@ -302,7 +321,7 @@ void main() {
 
         // on miss, break
         // upon hitting a light, break
-        if(!payload.hit || hitLight(payload)) break;
+        //if(!payload.hit || hitLight(payload)) break;
     }
 
     if (pcs.accumulate == 1) {
