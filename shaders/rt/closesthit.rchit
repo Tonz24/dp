@@ -68,10 +68,18 @@ float powerHeuristic(float pdf, float pdfOther) {
 	return result;
 }
 
-// evaluates direct light sample, weighs it by MIS weight
-vec3 evaluateLightSample(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
+// samples an area light (emissive triangle) and returns incoming radiance
+// area-brdf MIS weighing. environmental map is not taken into consideration, since its the sampling domain is mutually exclusive with the area light domain: 
+//      if an environment sample has non-zero incoming radiance at an shading point, it must not be occluded by any scene geometry, which includes emissive surfaces
+//      equivalently, if the shading point has non-zero radiance coming from an emissive surface, there is zero radiance coming from that specific direction from the env map due to occlusion   
+
+vec3 evaluateSampleAreaMisBrdf(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
     // take CDF sample (pick an emissive triangle with probability proportional to the area of all emissive triangles)
     uint cdfSampleIndex = sampleCDFIndex(rand(seed));
+
+    if (cdfSampleIndex > emissiveCDF.size)
+        return vec3(0.0);
+
     CDFElement cdfSample = emissiveCDF.cdf[cdfSampleIndex];
 
     TrianglePacked cdfTriangle = emissiveBuffer.tris[cdfSample.triIndex];
@@ -115,36 +123,75 @@ vec3 evaluateLightSample(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
     return L_direct;
 }
 
-vec3 evaluateBRDFSample(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
+// TODO: retrieve the texure value immediately after sampling to get rid of double cartesian -> polar -> uv transformation
+// samples the environment map and evaluates incoming radiance
+// env-brdf MIS weighing. Area lights (emissive triangles) are not taken into consideration since their sampling domain is not overlapping with the env map domain  
+vec3 evaluateSampleEnvMisBrdf(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
+    vec4 envSample = sampleEnvironment(textures[pcs.skyCdfHandle], seed);
+    vec3 omega_i = envSample.xyz;
+    float envPdf = envSample.w;
 
-    //  sample the BRDF
+    //  send a ray in the env map sample direction
+    TracedSample brdfHit = traceBRDFLighting(posWS, omega_i);
+
+    //  if the ray hits anything (env map is occluded), early exit
+    //  occlusion of the env map means that zero radiance would come from this direction anyway
+    if (brdfHit.didHit) return vec3(0.0);
+
+    // retrieve radiance coming from the env map
+    vec3 L_i = sampleSphericalMap(omega_i, pcs.skyHandle);
+
+    // get the pdf of the env map sample as if it came from sampling the BRDF
+    float brdfPdf = getPdfHemisphereCosineWeighted(omega_i, normal);
+
+    float misWeight = powerHeuristic(envPdf, brdfPdf);
+
+    if (misWeight <= 0.0) return vec3(0.0);
+
+    float cos_theta_i = max(dot(omega_i, normal), 0.0f);
+
+    vec3 brdf = albedo * INVPI;
+    vec3 L_direct = misWeight * L_i * brdf * cos_theta_i / envPdf; 
+    return L_direct;
+
+}
+
+vec3 evaluateSampleBrdfMisEnvArea(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
+
+    // sample the BRDF
     vec4 brdfSample = sampleHemisphereCosineWeighted(normal, seed);
     vec3 omega_i = brdfSample.xyz;
     float brdfPdf = brdfSample.w;
 
-    //  check what the BRDF sample hits 
+    // check what the BRDF sample hits 
     TracedSample brdfHit = traceBRDFLighting(posWS, omega_i);
-
-    //  if the BRDF sample hits nothing or it hits a non emissive surface, early exit
-    if (!brdfHit.didHit || !hitLight(brdfHit)) return vec3(0.0);
-
     vec3 L_i = brdfHit.hitEmission;
 
-    vec3 toHit = brdfHit.hitPosition - posWS;
-    float r_sqr = dot(toHit, toHit);
+    // if the sample can't contribute any radiance (it hit a non-emissive scene surface) do an early exit
+    // TODO: reuse the sample for next bounce direction
+    if (brdfHit.didHit && all(lessThanEqual(brdfHit.hitEmission,vec3(0.0))))
+        return vec3(0.0);
 
+    float pdfOther = 0;
+
+    // emissive surface case -- calculate the pdf of hitting the emissive surface, convert it to solid angle measure
+    if (brdfHit.didHit){
+        L_i = brdfHit.hitEmission;
+
+        vec3 toHit = brdfHit.hitPosition - posWS;
+        float r_sqr = dot(toHit, toHit);
+        float cos_theta_y = max(dot(-omega_i, brdfHit.hitNormal), 0.0f);
+
+        float areaToSolidMeasureFactor =  r_sqr / cos_theta_y;
+        pdfOther = (brdfHit.hitArea / emissiveCDF.area) * areaToSolidMeasureFactor;
+    }
+    // evaluating the env pdf only makes sense when the sample is unoccluded by scene geometry
+    else {
+        pdfOther = getPdfEnvironment(textures[pcs.skyCdfHandle],omega_i);
+    }
+    
+    float misWeight = powerHeuristic(brdfPdf, pdfOther);
     float cos_theta_i = max(dot(omega_i, normal), 0.0f);
-    float cos_theta_y = max(dot(-omega_i, brdfHit.hitNormal), 0.0f);
-
-    if (cos_theta_i == 0.0 || cos_theta_y == 0.0) return vec3(0.0);
-
-    float areaMeasureFactor = cos_theta_y / r_sqr;
-    float brdfPdfAreaMeasure = brdfPdf * areaMeasureFactor;
-
-    float pdfLight = (1.0 / brdfHit.hitArea) * (brdfHit.hitArea / emissiveCDF.area);
-    float misWeight = powerHeuristic(brdfPdfAreaMeasure, pdfLight);
-
-    if (misWeight <= 0.0) return vec3(0.0);
 
     vec3 brdf = albedo * INVPI;
     vec3 L_direct = misWeight * L_i * brdf * cos_theta_i / brdfPdf; 
@@ -154,8 +201,9 @@ vec3 evaluateBRDFSample(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
 vec3 calculateDirect(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
     vec3 directContribution = vec3(0.0);
 
-    directContribution += evaluateLightSample(albedo, posWS, normal, seed);
-    directContribution += evaluateBRDFSample(albedo, posWS, normal, seed);
+    directContribution += evaluateSampleAreaMisBrdf(albedo, posWS, normal, seed);
+    directContribution += evaluateSampleEnvMisBrdf(albedo, posWS, normal, seed);
+    directContribution += evaluateSampleBrdfMisEnvArea(albedo, posWS, normal, seed);
 
     return directContribution;
 }
@@ -213,7 +261,6 @@ void main() {
         return;
     
     if (pcs.NEE == 1){
-        //payload.directContribution = evaluateDirectLighting(params.albedo,posWS,params.normal,seed);
         payload.directContribution = calculateDirect(params.albedo,posWS,params.normal,seed);
     }
 

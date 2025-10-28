@@ -1,5 +1,5 @@
-/*
 
+/*
 //https://github.com/yknishidate/single-file-vulkan-pathtracing
 //https://nvpro-samples.github.io/vk_raytracing_tutorial_KHR/
 #version 460
@@ -344,8 +344,6 @@ void main() {
         if(!payload.hit || hitLight(payload)) break;
     }
 
-
-    radiance = sampleEnvironment(seed).www;
     if (pcs.accumulate == 1){
         vec3 oldRadiance = imageLoad(outputImage, ivec2(gl_LaunchIDEXT.xy)).xyz;
         radiance = mix(oldRadiance,radiance, 1.0f / float(pcs.frameCtr + 1));

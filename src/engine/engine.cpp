@@ -881,7 +881,7 @@ void Engine::initDescriptorPool() {
 
 void Engine::recreateSwapchain() {
 
-    //  if width or height is 0 (the window is minimized), the program hangs here until it is not minimized again
+    //  if width or height is 0 (the window is minimized), the program hangs out here until it is not minimized again
     int width{0}, height{0};
     glfwGetFramebufferSize(window->getGlfwWindow(),&width,&height);
     while (width == 0 || height == 0){

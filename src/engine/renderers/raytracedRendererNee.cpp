@@ -37,6 +37,7 @@ void RaytracedRendererNEE::initGraphicsPipelines() {
     auto rtStages = std::vector<RasterPipeline::ShaderStageInfo>{
                 {"shaders/raygen_rgen.spv",vk::ShaderStageFlagBits::eRaygenKHR},
                 {"shaders/miss_rmiss.spv",vk::ShaderStageFlagBits::eMissKHR},
+                {"shaders/miss_brdf_sample_rmiss.spv",vk::ShaderStageFlagBits::eMissKHR},
                 {"shaders/closesthit_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
                 {"shaders/closesthit_mirror_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
                 {"shaders/closesthit_brdf_sample_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
