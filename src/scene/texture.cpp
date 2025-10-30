@@ -6,6 +6,7 @@
 #include <iostream>
 #include <numeric>
 #include <glm/ext/scalar_constants.hpp>
+#include <glm/detail/type_half.hpp>
 
 #include "vertex.h"
 #include "../engine/engine.h"
@@ -64,8 +65,20 @@ std::shared_ptr<Texture> Texture::getCdf() {
             glm::vec3 rgb{0.0f};
             if (freeImageFormat_ == FIF_JPEG || freeImageFormat_ == FIF_PNG || freeImageFormat_ == FIF_BMP)
                 rgb = static_cast<glm::vec<3,float>>(getTexel<glm::vec<4,uint8_t>>(x, y)) / 255.0f;
-            if (freeImageFormat_ == FIF_HDR || freeImageFormat_ == FIF_EXR )
-                rgb = static_cast<glm::vec<3,float>>(getTexel<glm::vec4>(x, y));
+
+            if (freeImageFormat_ == FIF_HDR || freeImageFormat_ == FIF_EXR ) {
+                uint32_t dataOffset = y * scanWidth_ + x * pixelSize_;
+
+                // convert float16 pixel to float32 rgb data
+                uint16_t rgbData[3] {};
+                memcpy(&rgbData, data_.data() + dataOffset , sizeof(rgbData));
+
+                rgb = {
+                    glm::detail::toFloat32(rgbData[0]),
+                    glm::detail::toFloat32(rgbData[1]),
+                    glm::detail::toFloat32(rgbData[2])
+                };
+            }
 
             // opencv formula
             rgb *= glm::vec3( 0.299,0.587, 0.114);
@@ -77,6 +90,10 @@ std::shared_ptr<Texture> Texture::getCdf() {
 
             imgScalar[y * width_ + x] = weightedLuminance; // insert weighted luminance into scalar image
             sumTotal += weightedLuminance; // accumulate total sum of scalar values
+
+            if (glm::isinf(sumTotal) || glm::isnan(sumTotal))
+                int breakpoint = 10;
+
             marginalSum[y] += weightedLuminance; // accumulate sum for every row
         }
     }
@@ -102,8 +119,9 @@ std::shared_ptr<Texture> Texture::getCdf() {
     }
 
     // build conditional cdf for each row
-    for (uint32_t y = 0; y < height_; y++) {
-        for (uint32_t x = 1; x < width_; ++x) {
+    #pragma omp parallel for collapse(2)
+    for (int y = 0; y < height_; y++) {
+        for (int x = 1; x < width_; ++x) {
             conditionalCdf[y * width_ + x] += conditionalCdf[y * width_ + (x - 1)];
         }
     }
@@ -123,6 +141,7 @@ std::shared_ptr<Texture> Texture::getCdf() {
 
     return cdfTexture;
 }
+
 
 void Texture::initVkImage() {
     vk::ImageCreateInfo imageInfo{
@@ -215,62 +234,124 @@ Texture::Texture(std::string_view fileName, bool isSrgb, bool generateMipmaps) :
     extension_ = correctFileName.substr(extensionSeparator, correctFileName.size() - extensionSeparator);
 
     FREE_IMAGE_FORMAT fif = FreeImage_GetFileType(correctFileName.c_str(), 0);
+
+    // get image format
     if (fif == FIF_UNKNOWN)
         fif = FreeImage_GetFIFFromFilename(correctFileName.c_str());
+    if (fif == FIF_UNKNOWN)
+            throw std::runtime_error("ERROR! Failed to load texture " + std::string{fileName} + " due to unknown format");
 
-    if ( fif != FIF_UNKNOWN){
+    // get image data
+    FIBITMAP* bitmap = FreeImage_Load(fif,correctFileName.c_str());
+    if (bitmap == nullptr)
+        throw std::runtime_error("ERROR! could not open texture " + std::string{fileName});
 
-        FIBITMAP* bitmap{nullptr};
+    freeImageFormat_ = fif;
+    freeImageType_ = FreeImage_GetImageType(bitmap);
+    width_ = FreeImage_GetWidth(bitmap);
+    height_ = FreeImage_GetHeight(bitmap);
 
-        if (fif == FIF_JPEG || fif == FIF_PNG) {
-            FIBITMAP* tempBitmap = FreeImage_Load(fif,correctFileName.c_str());
-            bitmap = FreeImage_ConvertTo32Bits(tempBitmap);
-            FreeImage_Unload(tempBitmap);
-        }
-        if (fif == FIF_EXR || fif == FIF_HDR) {
-            FIBITMAP* tempBitmap = FreeImage_Load(fif,correctFileName.c_str());
-            bitmap = FreeImage_ConvertToRGBAF(tempBitmap);
-            FreeImage_Unload(tempBitmap);
-        }
+    if (width_ == 0 || height_ == 0)
+        throw std::runtime_error("ERROR! Texture " + std::string{fileName} + " has zero width or height!");
 
-        if (bitmap){
-            uint8_t * bits = nullptr;
 
-            bits = FreeImage_GetBits( bitmap );
+    if (fif == FIF_EXR || fif == FIF_HDR)
+        initializeEnvMap(bitmap);
+    else
+        initializeTexture(bitmap, isSrgb);
 
-            width_ = FreeImage_GetWidth(bitmap);
-            height_ = FreeImage_GetHeight(bitmap);
+/*
+    if (fif == FIF_JPEG || fif == FIF_PNG) {
+        FIBITMAP* tempBitmap = FreeImage_Load(fif,correctFileName.c_str());
+        bitmap = FreeImage_ConvertTo32Bits(tempBitmap);
+        FreeImage_Unload(tempBitmap);
+    }
+    if (fif == FIF_EXR || fif == FIF_HDR) {
+        FIBITMAP* tempBitmap = FreeImage_Load(fif,correctFileName.c_str());
 
-            freeImageFormat_ = FreeImage_GetFIFFromFilename(correctFileName.c_str());
-            freeImageType_ = FreeImage_GetImageType(bitmap);
+        // as per documentation, FreeImage_ConvertToRGBAF() NORMALIZES VALUES, MEANING THAT HDR VALUES ARE SQUISHED TO [0, 1] range
+        bitmap = FreeImage_ConvertToRGBAF(tempBitmap);
 
-            if (bits != nullptr && width_ != 0 && height_ != 0) {
-                pixelSize_ = FreeImage_GetBPP(bitmap) / 8;
-                scanWidth_ = FreeImage_GetPitch(bitmap);
-                channelCount_ = getChannelCount(freeImageType_,FreeImage_GetBPP(bitmap));
+        // set bitmap values manually
+        #pragma omp parallel for collapse(2)
+        for (int y = 0; y < FreeImage_GetHeight(tempBitmap); ++y) {
 
-                data_.reserve(scanWidth_ * height_);
-                data_.resize(scanWidth_ * height_,0);
-                
-                FreeImage_ConvertToRawBits(data_.data(),bitmap,scanWidth_,pixelSize_ * 8, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, FALSE);
-                isFromDisk_ = true;
+            auto srcScan = reinterpret_cast<FIRGBF*>(FreeImage_GetScanLine(tempBitmap, y));
+            auto dstScan = reinterpret_cast<FIRGBAF*>(FreeImage_GetScanLine(bitmap, y));
 
-                //  transfer src for generating mipmaps!
-                imageUsageFlags_ = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc;
-
-                vkFormat_ = chooseVkFormat(isSrgb);
-                if (generateMipmaps)
-                    mipLevelCount_ = static_cast<uint32_t>(std::floor(std::log2(std::max(width_, height_)))) + 1;
-                initVkImage();
+            for (int x = 0; x < FreeImage_GetWidth(tempBitmap); ++x) {
+                dstScan[x].red   = srcScan[x].red;
+                dstScan[x].green = srcScan[x].green;
+                dstScan[x].blue  = srcScan[x].blue;
+                dstScan[x].alpha = 1.0f;
             }
         }
-        FreeImage_Unload(bitmap);
-    }
-    else
-        throw std::runtime_error("ERROR! Failed to load texture " + std::string{fileName});
+        FreeImage_Unload(tempBitmap);
+    }*/
 
+
+    isFromDisk_ = true;
+    //  transfer src for generating mipmaps
+    imageUsageFlags_ = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc;
+
+    if (generateMipmaps)
+        mipLevelCount_ = static_cast<uint32_t>(std::floor(std::log2(std::max(width_, height_)))) + 1;
+
+    initVkImage();
+
+    FreeImage_Unload(bitmap);
     FreeImage_DeInitialise();
 }
+
+
+void Texture::initializeEnvMap(FIBITMAP* bitmap) {
+
+    channelCount_ = 4;
+    elementSize_ = 2;  // two bytes per one half float
+    pixelSize_ = channelCount_ * elementSize_;
+    scanWidth_ = width_ * pixelSize_;
+    vkFormat_ = vk::Format::eR16G16B16A16Sfloat;
+
+    data_.reserve(scanWidth_ * height_);
+    data_.resize(scanWidth_ * height_,0);
+
+    // set bitmap values manually
+    #pragma omp parallel for collapse(2)
+    for (int y = 0; y < height_; ++y) {
+        auto srcScan = reinterpret_cast<FIRGBF*>(FreeImage_GetScanLine(bitmap, y));
+
+        for (int x = 0; x < width_; ++x) {
+            uint32_t pixelOffset = y * scanWidth_ + x * pixelSize_;
+
+            // convert pixel data to float16 manually
+            // IMPORTANT: clamp them to a safe max so that they don't get turned to inf or nan
+            short pixelData[4] = {
+                glm::detail::toFloat16(glm::clamp(srcScan[x].red,0.0f,65500.0f)),
+                glm::detail::toFloat16(glm::clamp(srcScan[x].green,0.0f,65500.0f)),
+                glm::detail::toFloat16(glm::clamp(srcScan[x].blue,0.0f,65500.0f)),
+                glm::detail::toFloat16(1.0f)
+            };
+
+            memcpy(data_.data() + pixelOffset, pixelData, sizeof(pixelData));
+        }
+    }
+}
+
+void Texture::initializeTexture(FIBITMAP* bitmap, bool isSrgb) {
+    bitmap = FreeImage_ConvertTo32Bits(bitmap);
+
+    pixelSize_ = FreeImage_GetBPP(bitmap) / 8;
+    scanWidth_ = FreeImage_GetPitch(bitmap);
+    channelCount_ = getChannelCount(freeImageType_,FreeImage_GetBPP(bitmap));
+    vkFormat_ = chooseVkFormat(isSrgb);
+
+    data_.reserve(scanWidth_ * height_);
+    data_.resize(scanWidth_ * height_,0);
+
+
+    FreeImage_ConvertToRawBits(data_.data(),bitmap,scanWidth_,pixelSize_ * 8, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, FALSE);
+}
+
 
 std::string Texture::getResourceType() const {
     return "Texture";

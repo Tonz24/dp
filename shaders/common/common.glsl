@@ -1,3 +1,4 @@
+
 #include "math_constants.glsl"
 
 //====================MATERIAL====================
@@ -98,5 +99,6 @@ vec2 dirToEquirect(vec3 dir){
 
 vec3 sampleSphericalMap(vec3 dir, uint skyTextureIndex){
     vec2 uv = dirToEquirect(dir);
+
     return texture(textures[skyTextureIndex],uv).xyz;
 }

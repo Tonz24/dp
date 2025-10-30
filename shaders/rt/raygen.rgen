@@ -45,7 +45,7 @@ TracedSample traceBRDFLighting(vec3 posWS, vec3 direction){
             topLevelAS,
             gl_RayFlagsOpaqueEXT,
             0xff, // cullMask
-            2,    // sbtRecordOffset
+            2,    // start at brdf sample region
             0,    // sbtRecordStride
             1,    // missIndex
             posWS,
@@ -191,6 +191,7 @@ vec3 evaluateSampleBrdfMisEnvArea(vec3 albedo, vec3 posWS, vec3 normal, inout ui
     return L_direct;
 }
 
+
 vec3 calculateDirect(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
     vec3 directContribution = vec3(0.0);
 
@@ -270,15 +271,15 @@ void main() {
     vec3 directContribution = mat.materialType == 1 ? vec3(0.0) : calculateDirect(albedo,posWS,normal,seed);
     vec3 weight = vec3(1.0);
 
+/*
     radiance = directContribution;
-
     if (pcs.accumulate == 1) {
         vec3 oldRadiance = imageLoad(outputImage, ivec2(gl_LaunchIDEXT.xy)).xyz;
         radiance = mix(oldRadiance,radiance, 1.0f / float(pcs.frameCtr + 1));
     }
 
     imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(radiance, 1.0));
-    return;
+    return;*/
     
     resetPayload(payload);
     bool lastWasMirror = mat.materialType == 1;
@@ -308,11 +309,8 @@ void main() {
         if((payload.hit && hitLight(payload) && !lastWasMirror) || (!payload.hit && !lastWasMirror))
             break;
 
-        
-
         weight *= weightFactor;
         radiance += weight * payload.hitEmission;  
-
 
         if (!payload.hit)
             break;

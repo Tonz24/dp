@@ -12,6 +12,7 @@ layout(location = 0) out vec4 fragColor;
 #include "pcs/pcs_skypass.glsl"
 
 void main() {
+
     vec4 camRay = cameraUBO.matInvVP * vec4(inNDCxy,1,1);
     vec3 dir = normalize(camRay.xyz / camRay.w - cameraUBO.posWS);
 

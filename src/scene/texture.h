@@ -68,6 +68,12 @@ public:
 
 private:
 
+    // initialize member fields from a FreeImage HDR texture
+    void initializeEnvMap(FIBITMAP* bitmap);
+
+    // initialize member fields from a FreeImage non HDR texture
+    void initializeTexture(FIBITMAP* bitmap, bool isSrgb);
+
     void initVkImage();
 
     vk::Format chooseVkFormat(bool isSrgb) const;
@@ -77,12 +83,20 @@ private:
 
     static uint32_t getFormatPixelSize(vk::Format format);
 
+    // width in texels
     uint32_t width_{};
+    // height in texels
     uint32_t height_{};
+    // channel count
     uint32_t channelCount_{};
+    // pixel size in (channel count * element size) in bytes
     uint32_t pixelSize_{};
+    // size of one element in bytes
+    uint32_t elementSize_{};
+    // size of one row (width * channel count * element size) in bytes
     uint32_t scanWidth_{};
 
+    // raw texture data in bytes
     std::vector<uint8_t> data_;
     std::shared_ptr<Texture> textureCdf_{nullptr};
 
