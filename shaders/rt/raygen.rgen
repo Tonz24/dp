@@ -270,8 +270,12 @@ void main() {
     float tMax = 10000.0f;
 
     vec3 radiance = vec3(0.0);
-    vec3 directContribution = mat.materialType == 1 ? vec3(0.0) : calculateDirect(albedo,posWS,normal,seed);
     vec3 weight = vec3(1.0);
+
+    vec3 directContribution = mat.materialType == 1 ? vec3(0.0) : calculateDirect(albedo,posWS,normal,seed);
+
+    // calculate NEE
+    radiance += weight * directContribution;
 
 /*
     radiance = directContribution;
@@ -285,7 +289,7 @@ void main() {
     
     resetPayload(payload);
     bool lastWasMirror = mat.materialType == 1;
-    for (uint depth = 0; depth < pcs.maxRecursionDepth; depth++){
+    for (uint depth = 0; depth < pcs.maxRecursionDepth - 1; depth++){
 
         resetPayload(payload);
         payload.seed = seed;
@@ -304,9 +308,7 @@ void main() {
         );
 
      
-        // calculate NEE
         
-        radiance += weight * directContribution;
 
         // NEE disallows hitting light sources with indirect rays as that would incorrectly double the contribution of lights
         if((payload.hit && hitLight(payload) && !lastWasMirror) || (!payload.hit && !lastWasMirror))
@@ -332,6 +334,8 @@ void main() {
         weightFactor = payload.weightFactor;
         seed = payload.seed;
         lastWasMirror = payload.mirror;
+
+        radiance += weight * directContribution;
 
         // on miss, break
         // upon hitting a light, break

@@ -68,7 +68,7 @@ bool isVisible(vec3 a, vec3 b, vec3 normalA){
         gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT,
         0xFF,
         a + tMin * normalA,
-        0.01,
+        tMin,
         dirToLight,
         dstToLight
     );
