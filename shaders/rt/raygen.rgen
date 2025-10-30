@@ -109,7 +109,6 @@ void main() {
         // hitting a light from a material that was not a mirror previously ends the path (emissive surfaces handled in direct lighting calculation)
         if(payload.hit && hitLight(payload) && !lastWasMirror)
             break;
-
         // missing from a material that was not a mirror previously ends the path (env map is handled in direct lighting calculation)
         if (!payload.hit && !lastWasMirror)
             break;
@@ -120,11 +119,13 @@ void main() {
         if (!payload.hit)
             break;
 
-        // russian roulette
-        /*float maxWeight = max(weight.x,max(weight.y,weight.z));
+        ///////////////////////////////////////////////////////////
+        // russian roulette termination
+        float maxWeight = max(weight.x,max(weight.y,weight.z));
         float rouletteTerminate = rand(seed);
         if (maxWeight < rouletteTerminate) break;
-        weight /= maxWeight;*/
+        weight /= maxWeight;
+        ///////////////////////////////////////////////////////////
 
         posWS = payload.hitPosition;
         direction = payload.nextSample.xyz;

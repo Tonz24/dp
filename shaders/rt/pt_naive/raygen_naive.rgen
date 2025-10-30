@@ -115,11 +115,14 @@ void main() {
         if(!payload.hit) 
             break;
 
-        /*
+        
+        ///////////////////////////////////////////////////////////
+        // russian roulette termination
         float maxWeight = max(weight.x,max(weight.y,weight.z));
         float rouletteTerminate = rand(seed);
         if (maxWeight < rouletteTerminate) break;
-        weight /= maxWeight;*/
+        weight /= maxWeight;
+        ///////////////////////////////////////////////////////////
 
         posWS = payload.hitPosition;
         direction = payload.nextSample.xyz;

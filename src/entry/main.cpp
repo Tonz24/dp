@@ -21,7 +21,8 @@ int main() {
 
     //auto scene = std::make_shared<Scene>(ModelLoader::loadModel("room/room2.obj", false),cam,std::move(sky));
     //auto scene = std::make_shared<Scene>(ModelLoader::loadModel("living_room/living_room2.obj", false),cam,std::move(sky));
-    auto scene = std::make_shared<Scene>(ModelLoader::loadModel("cornell/cornell.obj", false),cam,std::move(sky));
+    //auto scene = std::make_shared<Scene>(ModelLoader::loadModel("cornell/cornell.obj", false),cam,std::move(sky));
+    auto scene = std::make_shared<Scene>(ModelLoader::loadModel("shapespark/shapespark2.fbx", false),cam,std::move(sky));
 
     //auto scene = std::make_shared<Scene>(ModelLoader::loadModel("cornell/cornell.obj", false),cam,std::move(sky));
 
