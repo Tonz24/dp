@@ -89,7 +89,7 @@ vec3 evaluateSampleAreaMisBrdf(vec3 albedo, vec3 posWS, vec3 normal, inout uint 
     omega_i = normalize(omega_i);
 
     // early exit when invalid numbers are present
-    if (r_sqr == 0.0 || any(isnan(omega_i)) || any(isinf(omega_i)) || lightPdf == 0.0) return vec3(0.0);
+    if (r_sqr == 0.0 || any(isnan(omega_i)) || any(isinf(omega_i)) || lightPdf <= 0.0) return vec3(0.0);
 
     float cos_theta_i = max(dot(omega_i, normal),0.0);
     float cos_theta_y = max(dot(-omega_i, sampledPoint.normal),0.0);
@@ -303,6 +303,7 @@ void main() {
 
      
         // calculate NEE
+        
         radiance += weight * directContribution;
 
         // NEE disallows hitting light sources with indirect rays as that would incorrectly double the contribution of lights

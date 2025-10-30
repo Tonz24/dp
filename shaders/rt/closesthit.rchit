@@ -259,10 +259,9 @@ void main() {
     payload.nextSample = nextSample;
 
     payload.weightFactor = hitBrdf * max(dot(nextDir,params.normal),0.0) / pdf;
-    payload.seed = seed;
 
-    if(hitLight(payload))
-        return;
-    
-    payload.directContribution = calculateDirect(params.albedo,posWS,params.normal,seed);
+    if(!hitLight(payload))
+        payload.directContribution = calculateDirect(params.albedo,posWS,params.normal,seed);
+
+    payload.seed = seed;
 }
