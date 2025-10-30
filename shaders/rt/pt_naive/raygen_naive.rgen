@@ -112,11 +112,14 @@ void main() {
         weight *= weightFactor;
         radiance += weight * payload.hitEmission;  
 
+        if(!payload.hit) 
+            break;
+
+        /*
         float maxWeight = max(weight.x,max(weight.y,weight.z));
         float rouletteTerminate = rand(seed);
         if (maxWeight < rouletteTerminate) break;
-
-        weight /= maxWeight;
+        weight /= maxWeight;*/
 
         posWS = payload.hitPosition;
         direction = payload.nextSample.xyz;
@@ -125,8 +128,7 @@ void main() {
         seed = payload.seed;
         normal = payload.hitNormal;
 
-        if(!payload.hit) 
-            break;
+        
     }
 
     if (pcs.accumulate == 1){
