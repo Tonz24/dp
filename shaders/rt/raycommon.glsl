@@ -70,6 +70,8 @@ bool isVisible(vec3 a, vec3 b){
     );
     rayQueryProceedEXT(query);
 
+    while (rayQueryProceedEXT(query)) { }
+
     return rayQueryGetIntersectionTypeEXT(query, true) == gl_RayQueryCommittedIntersectionNoneEXT;
 };
 

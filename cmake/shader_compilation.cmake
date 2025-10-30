@@ -28,7 +28,14 @@ else()
     set(SHADER_COMPILE_FLAGS "-O")
 endif ()
 
-set(TARGET_ENV "--target-env=vulkan1.3")
+
+# Rozhodnutí o způsobu sledování závislostí
+set(USE_DEPFILE FALSE)
+if(CMAKE_GENERATOR MATCHES "Ninja")
+    set(USE_DEPFILE TRUE)
+endif()
+
+set(TARGET_ENV "--target-env=vulkan1.4")
 set(SHADER_SPV_FILES "")
 foreach (SHADER_SRC ${SHADER_SOURCE_FILES})
 

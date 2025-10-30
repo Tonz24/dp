@@ -102,7 +102,7 @@ vec3 evaluateSampleAreaMisBrdf(vec3 albedo, vec3 posWS, vec3 normal, inout uint 
     if (r_sqr == 0.0 || any(isnan(omega_i)) || any(isinf(omega_i)) || lightPdf == 0.0) return vec3(0.0);
 
     float cos_theta_i = max(dot(omega_i, normal),0.0);
-    float cos_theta_y = max(dot(-omega_i, sampledPoint.normal),0.0);
+    float cos_theta_y = abs(dot(-omega_i, sampledPoint.normal));
 
     // any of these being zero means that radiance is also zero
     if (cos_theta_i == 0.0 || cos_theta_y == 0.0) return vec3(0.0);
@@ -180,12 +180,12 @@ vec3 evaluateSampleBrdfMisEnvArea(vec3 albedo, vec3 posWS, vec3 normal, inout ui
 
         vec3 toHit = brdfHit.hitPosition - posWS;
         float r_sqr = dot(toHit, toHit);
-        float cos_theta_y = max(dot(-omega_i, brdfHit.hitNormal), 0.0f);
+        float cos_theta_y = abs(dot(-omega_i, brdfHit.hitNormal));
 
         if (r_sqr <= 0.0 || cos_theta_y <= 0.0) return vec3(0.0);
 
         float areaToSolidMeasureFactor =  r_sqr / cos_theta_y;
-        pdfOther = (1/ emissiveCDF.area) * areaToSolidMeasureFactor;
+        pdfOther = (1 / emissiveCDF.area) * areaToSolidMeasureFactor;
     }
     // evaluating the env pdf only makes sense when the sample is unoccluded by scene geometry
     else {
