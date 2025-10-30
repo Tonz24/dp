@@ -125,6 +125,7 @@ void Mesh::extractEmissiveTriangles() {
     if (material_->isEmissive()) {
 
         const auto& modelMat = transform_.getModelMat();
+        const auto& normalMat = transform_.getNormalMat();
         glm::vec3 emission = material_->getEmission();
 
         const int triCount = static_cast<int>(indices_.size() / 3);
@@ -136,24 +137,32 @@ void Mesh::extractEmissiveTriangles() {
         for (int t = 0; t < triCount; t++) {
             int i = t * 3;
 
-
             //  world space position is of interest
             glm::vec3 v0Pos = modelMat * glm::vec4{vertices_[indices_[i]].position,1.0f};
             glm::vec3 v1Pos = modelMat * glm::vec4{vertices_[indices_[i+1]].position,1.0f};
             glm::vec3 v2Pos = modelMat * glm::vec4{vertices_[indices_[i+2]].position,1.0f};
 
+            glm::vec3 v0Normal = normalMat * glm::vec4{vertices_[indices_[i]].normal,0.0f};
+            glm::vec3 v1Normal = normalMat * glm::vec4{vertices_[indices_[i+1]].normal,0.0f};
+            glm::vec3 v2Normal = normalMat * glm::vec4{vertices_[indices_[i+2]].normal,0.0f};
+
             //  pack emission into fourth components of position vectors
             TrianglePacked tri{
-                .v0 = {v0Pos,emission.x},
-                .v1 = {v1Pos,emission.y},
-                .v2 = {v2Pos,emission.z},
+                .v0eR = {v0Pos,emission.x},
+                .v1eG = {v1Pos,emission.y},
+                .v2eB = {v2Pos,emission.z},
+
+                .n0a = {v0Normal,0.0},
+                .n1 = {v1Normal,0.0},
+                .n2 = {v2Normal, 0.0},
             };
 
-            glm::vec3 ab = tri.v1 - tri.v0;
-            glm::vec3 ac = tri.v2 - tri.v0;
-            tri.area = 0.5f * glm::length(glm::cross(ab, ac));
+            glm::vec3 ab = tri.v1eG - tri.v0eR;
+            glm::vec3 ac = tri.v2eB - tri.v0eR;
+            float area = 0.5f * glm::length(glm::cross(ab, ac));
+            tri.n0a.w = area;
 
-            areaSum +=tri.area;
+            areaSum += area;
             emissiveTriangles_[t] = tri;
         }
         emissiveSurfaceArea_ = areaSum;

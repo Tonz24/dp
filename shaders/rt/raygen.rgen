@@ -79,7 +79,7 @@ vec3 evaluateSampleAreaMisBrdf(vec3 albedo, vec3 posWS, vec3 normal, inout uint 
     TriangleSample sampledPoint = sampleTriangle(cdfTriangle,seed);
 
     // early exit if occlusion test fails as there wouldn't be any light contribution anyway
-    if (!isVisible(posWS, sampledPoint.position)) return vec3(0.0);
+    if (!isVisible(posWS, sampledPoint.position, normal)) return vec3(0.0);
 
     float pdfCDF = cdfSampleIndex == 0 ? cdfSample.cdfVal : cdfSample.cdfVal - emissiveCDF.cdf[cdfSampleIndex-1].cdfVal;
     float lightPdf = sampledPoint.pdf * pdfCDF;
@@ -200,7 +200,7 @@ vec3 calculateDirect(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
     if (any(isinf(contribArea)) || any(isnan(contribArea)) || any(lessThan(contribArea,vec3(0.0))))
         return vec3(10,0,0);
 
-        
+
 
     vec3 contribEnv = evaluateSampleEnvMisBrdf(albedo, posWS, normal, seed);
 
@@ -296,7 +296,7 @@ void main() {
             0,    // sbtRecordOffset
             0,    // sbtRecordStride
             0,    // missIndex
-            posWS,
+            posWS + tMin * direction,
             tMin,
             direction,
             tMax,

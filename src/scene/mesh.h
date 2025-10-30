@@ -13,12 +13,23 @@
 #include "../engine/vk/accelerationStructure.h"
 #include "../engine/vk/vkUtils.h"
 
+
+// packed triangle struct
+// RGB emission is packed into fourth components of vertex positions
+// area is packed into the fourth component of n0
 struct alignas(16) TrianglePacked {
-    glm::vec4 v0;
-    glm::vec4 v1;
-    glm::vec4 v2;
-    float area{0.0f};
-    float pad[3]{0,0,0};
+    // vertex 0 position (xyz), red emission channel (w)
+    glm::vec4 v0eR;
+    // vertex 1 position (xyz), green emission channel (w)
+    glm::vec4 v1eG;
+    // vertex 2 position (xyz), blue emission channel (w)
+    glm::vec4 v2eB;
+    // vertex 0 normal (xyz), triangle surface area (w)
+    glm::vec4 n0a;
+    // vertex 1 normal (xyz)
+    glm::vec4 n1;
+    // vertex 2 normal (xyz)
+    glm::vec4 n2;
 };
 
 

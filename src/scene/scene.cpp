@@ -131,7 +131,7 @@ void Scene::extractEmissiveMeshes() {
         const auto& triangles = mesh->getEmissiveTriangles();
 
         for (const auto & tri: triangles) {
-            float normArea = tri.area / surfaceAreaTotal;
+            float normArea = tri.n0a.w / surfaceAreaTotal;
             float predecessorVal = cdfIndex == 0 ? 0 : cdf_[cdfIndex - 1].pdf;
 
             cdf_.emplace_back(CDFElement{ cdfIndex , predecessorVal + normArea });

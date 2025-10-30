@@ -15,11 +15,14 @@ struct ObjDesc {
 
 // fourth components together make RGB emission of the triangle
 struct TrianglePacked {
-    vec4 v0eR;
+   vec4 v0eR;
     vec4 v1eG;
     vec4 v2eB;
-    float area;
+    vec4 n0eA;
+    vec4 n1;
+    vec4 n2;
 };
+
 
 struct TriangleSample{
     vec3 position;
@@ -48,13 +51,14 @@ layout(set = 0, binding = 8, std430) readonly buffer EmissiveCDF {
 
 // tests visibility between points a and b using a ray query
 // avoids touching the SBT at all (should reduce unwanted overhead)
-bool isVisible(vec3 a, vec3 b){
+bool isVisible(vec3 a, vec3 b, vec3 normalA){
 
-    float tMin = 0.01;
+    float tMin = 0.001;
 
     vec3 toLightUnnorm = b - a;
     vec3 dirToLight = normalize(toLightUnnorm);
-    float dstToLight = max(length(toLightUnnorm) - tMin* 1.5, tMin);
+    float dstToLight = length(toLightUnnorm) - tMin * 3.0f;
+    //float dstToLight = max( - tMin* 3, tMin);
 
     // tmax is distance to light - if the ray hits anything, the surface is NOT visible, otherwise it is
     rayQueryEXT query;
@@ -63,8 +67,8 @@ bool isVisible(vec3 a, vec3 b){
         topLevelAS,
         gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT,
         0xFF,
-        a,
-        tMin,
+        a + tMin * normalA,
+        0.01,
         dirToLight,
         dstToLight
     );
@@ -105,11 +109,11 @@ TriangleSample sampleTriangle(TrianglePacked tri, inout uint seed){
     float z = sqrt(r1) * r2;
 
     TriangleSample s;
-    //  barycentric interpolation of hit position
+    // barycentric interpolation of hit position
     s.position = tri.v0eR.xyz * x + tri.v1eG.xyz * y + tri.v2eB.xyz * z;
-    // calculate normal
-    s.normal = normalize(cross(normalize(tri.v1eG.xyz - tri.v0eR.xyz),normalize(tri.v2eB.xyz - tri.v0eR.xyz)));
-    // pdf of hitting this point on the triangle is always 1.0/area (the probablility of choosing any point is uniform)
-    s.pdf = 1.0f / tri.area;
+    // barycentric interpolation of hit normal
+    s.normal = normalize(tri.n0eA.xyz * x + tri.n1.xyz * y + tri.n2.xyz * z);
+    // pdf of hitting this point on the triangle is always 1.0 / area (the probablility of choosing any point is uniform)
+    s.pdf = 1.0f / tri.n0eA.w;
     return s;
 }

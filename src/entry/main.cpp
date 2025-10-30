@@ -23,7 +23,7 @@ int main() {
     //auto scene = std::make_shared<Scene>(ModelLoader::loadModel("living_room/living_room2.obj", false),cam,std::move(sky));
     //auto scene = std::make_shared<Scene>(ModelLoader::loadModel("car/car.obj", false),cam,std::move(sky));
 
-    auto scene = std::make_shared<Scene>(ModelLoader::loadModel("cornell/cornell_normal.obj", false),cam,std::move(sky));
+    auto scene = std::make_shared<Scene>(ModelLoader::loadModel("cornell/cornell.obj", false),cam,std::move(sky));
 
     Engine::getInstance().setScene(std::move(scene));
     Engine::getInstance().run();

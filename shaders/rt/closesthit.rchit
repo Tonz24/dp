@@ -89,7 +89,7 @@ vec3 evaluateSampleAreaMisBrdf(vec3 albedo, vec3 posWS, vec3 normal, inout uint 
     TriangleSample sampledPoint = sampleTriangle(cdfTriangle,seed);
 
     // early exit if occlusion test fails as there wouldn't be any light contribution anyway
-    if (!isVisible(posWS, sampledPoint.position)) return vec3(0.0);
+    if (!isVisible(posWS, sampledPoint.position, normal)) return vec3(0.0);
 
     float pdfCDF = cdfSampleIndex == 0 ? cdfSample.cdfVal : cdfSample.cdfVal - emissiveCDF.cdf[cdfSampleIndex-1].cdfVal;
     float lightPdf = sampledPoint.pdf * pdfCDF;
