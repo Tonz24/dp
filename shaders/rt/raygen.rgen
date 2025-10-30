@@ -273,23 +273,11 @@ void main() {
     vec3 weight = vec3(1.0);
 
     vec3 directContribution = mat.materialType == 1 ? vec3(0.0) : calculateDirect(albedo,posWS,normal,seed);
-
-    // calculate NEE
-    radiance += weight * directContribution;
-
-/*
-    radiance = directContribution;
-    if (pcs.accumulate == 1) {
-        vec3 oldRadiance = imageLoad(outputImage, ivec2(gl_LaunchIDEXT.xy)).xyz;
-        radiance = mix(oldRadiance,radiance, 1.0f / float(pcs.frameCtr + 1));
-    }
-
-    imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(radiance, 1.0));
-    return;*/
     
-    resetPayload(payload);
     bool lastWasMirror = mat.materialType == 1;
-    for (uint depth = 0; depth < pcs.maxRecursionDepth - 1; depth++){
+    for (uint depth = 0; depth < pcs.maxRecursionDepth; depth++){
+
+        radiance += weight * directContribution;
 
         resetPayload(payload);
         payload.seed = seed;
@@ -300,18 +288,19 @@ void main() {
             0,    // sbtRecordOffset
             0,    // sbtRecordStride
             0,    // missIndex
-            posWS + tMin * direction,
+            posWS + tMin * normal,
             tMin,
             direction,
             tMax,
             0     // payloadLocation
         );
 
-     
-        
+        // hitting a light from a material that was not a mirror previously ends the path (emissive surfaces handled in direct lighting calculation)
+        if(payload.hit && hitLight(payload) && !lastWasMirror)
+            break;
 
-        // NEE disallows hitting light sources with indirect rays as that would incorrectly double the contribution of lights
-        if((payload.hit && hitLight(payload) && !lastWasMirror) || (!payload.hit && !lastWasMirror))
+        // missing from a material that was not a mirror previously ends the path (env map is handled in direct lighting calculation)
+        if (!payload.hit && !lastWasMirror)
             break;
 
         weight *= weightFactor;
@@ -334,12 +323,7 @@ void main() {
         weightFactor = payload.weightFactor;
         seed = payload.seed;
         lastWasMirror = payload.mirror;
-
-        radiance += weight * directContribution;
-
-        // on miss, break
-        // upon hitting a light, break
-        //if(!payload.hit || hitLight(payload)) break;
+        normal = payload.hitNormal;
     }
 
     if (pcs.accumulate == 1) {

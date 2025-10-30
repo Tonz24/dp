@@ -3,6 +3,7 @@ struct HitPayload{
     vec3 hitEmission;
     vec3 directContribution;
     vec3 weightFactor;
+    vec3 hitNormal;
     vec4 nextSample;
     uint seed;
     bool hit;
@@ -15,6 +16,7 @@ void resetPayload(inout HitPayload payload){
     payload.hitEmission = vec3(0.0);
     payload.weightFactor = vec3(0.0);
     payload.nextSample = vec4(0.0);
+    payload.hitNormal = vec3(0.0);
     payload.hit = false;
     payload.directContribution = vec3(0.0);
     payload.seed = 0;
@@ -70,6 +72,7 @@ struct HitPayloadNaive{
     vec3 hitPosition;
     vec3 hitEmission;
     vec3 weightFactor;
+    vec3 hitNormal;
     vec4 nextSample;
     uint seed;
     bool hit;
@@ -80,5 +83,6 @@ void resetPayload(inout HitPayloadNaive payload){
     payload.hitEmission = vec3(0.0);
     payload.weightFactor = vec3(0.0);
     payload.nextSample = vec4(0.0);
+    payload.hitNormal = vec3(0.0);
     payload.seed = 0;
 }

@@ -102,7 +102,7 @@ void main() {
             0,    // sbtRecordOffset
             0,    // sbtRecordStride
             0,    // missIndex
-            posWS + tMin * direction,
+            posWS + tMin * normal,
             tMin,
             direction,
             tMax,
@@ -123,6 +123,7 @@ void main() {
         pdf = payload.nextSample.w;
         weightFactor = payload.weightFactor;
         seed = payload.seed;
+        normal = payload.hitNormal;
 
         if(!payload.hit) 
             break;
