@@ -53,14 +53,15 @@ std::shared_ptr<Texture> Texture::getCdf() {
 
     double sumTotal{0.0};
 
+    # pragma omp parallel for reduction(+:sumTotal)
     //  compute luminance values for every pixel
-    for (uint32_t y = 0; y < height_; y++) {
-        //  get vertical texture coordinate in [0,1] (offset by 0.5 in pixel coordinates to sample pixel center)
+    for (int y = 0; y < height_; y++) {
+        //  get vertical texture coordinate in [0,1] (offset by 0.5 to sample pixel centers)
         //  sinTheta corrects for the fact that sphere poles would otherwise get oversampled
         float v = (static_cast<float>(y) + 0.5f) / static_cast<float>(height_);
         float sinTheta = glm::sin(glm::pi<float>() * v);
 
-        for (uint32_t x = 0; x < width_; ++x) {
+        for (int x = 0; x < width_; ++x) {
 
             glm::vec3 rgb{0.0f};
             if (freeImageFormat_ == FIF_JPEG || freeImageFormat_ == FIF_PNG || freeImageFormat_ == FIF_BMP)
@@ -84,15 +85,12 @@ std::shared_ptr<Texture> Texture::getCdf() {
             rgb *= glm::vec3( 0.299,0.587, 0.114);
             float luminance = rgb.x + rgb.y + rgb.z;
 
-            // set a minimum value for black pixels, otherwise they couldn't be sampled at all
+            // set a minimum value for black pixels, otherwise they can't be sampled at all
             // that would result in incorrect estimation where bilinear interpolation should return nonzero radiance when sampling such pixels
             float weightedLuminance = glm::max(luminance * sinTheta, 1e-5f * sinTheta);
 
             imgScalar[y * width_ + x] = weightedLuminance; // insert weighted luminance into scalar image
             sumTotal += weightedLuminance; // accumulate total sum of scalar values
-
-            if (glm::isinf(sumTotal) || glm::isnan(sumTotal))
-                int breakpoint = 10;
 
             marginalSum[y] += weightedLuminance; // accumulate sum for every row
         }
@@ -100,6 +98,7 @@ std::shared_ptr<Texture> Texture::getCdf() {
 
     auto marginalSumNorm = marginalSum;
     // normalize the marginal sum
+    #pragma omp parallel for
     for (int i = 0; i < height_; ++i) {
         marginalSumNorm[i] = static_cast<float>(marginalSum[i] / sumTotal);
     }
@@ -112,14 +111,15 @@ std::shared_ptr<Texture> Texture::getCdf() {
     std::vector conditionalCdf(width_ * height_,0.0f);
 
     // normalize every pixel by corresponding row sum
-    for (uint32_t y = 0; y < height_; y++) {
-        for (uint32_t x = 0; x < width_; ++x) {
+    #pragma omp parallel for
+    for (int y = 0; y < height_; y++) {
+        for (int x = 0; x < width_; ++x) {
             conditionalCdf[y * width_ + x] = imgScalar[y * width_ + x] / marginalSum[y];
         }
     }
 
     // build conditional cdf for each row
-    #pragma omp parallel for collapse(2)
+    #pragma omp parallel for
     for (int y = 0; y < height_; y++) {
         for (int x = 1; x < width_; ++x) {
             conditionalCdf[y * width_ + x] += conditionalCdf[y * width_ + (x - 1)];
@@ -127,8 +127,9 @@ std::shared_ptr<Texture> Texture::getCdf() {
     }
 
     float* dataFloat = reinterpret_cast<float*>(cdfTexture->data_.data());
-    for (uint32_t y = 0; y < cdfTexture->getHeight(); y++) {
-        for (uint32_t x = 0; x < cdfTexture->getWidth(); ++x) {
+    #pragma omp parallel for
+    for (int y = 0; y < cdfTexture->getHeight(); y++) {
+        for (int x = 0; x < cdfTexture->getWidth(); ++x) {
             float val = x == 0 ? marginalCdf[y] : conditionalCdf[y * width_ + (x - 1)];
             dataFloat[y * cdfTexture->getWidth() + x] = val;
         }
