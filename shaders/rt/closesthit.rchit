@@ -8,7 +8,6 @@
 #include "../common/common.glsl"
 #include "../common/math_constants.glsl"
 #include "pcs/pcs_raygen.glsl"
-#include "raycommon.glsl"
 #include "mis.glsl"
 
 layout(location = 0) rayPayloadInEXT HitPayload payload;

@@ -1,8 +1,12 @@
 #include "structs/payload.glsl"
+#include "raycommon.glsl"
 
 layout(location = 1) rayPayloadEXT BRDFSamplePayload payloadBRDF;
 
-TracedSample traceBRDFLighting(vec3 posWS, vec3 direction, vec3 normal){
+
+// trace a ray for BRDF lighting
+// mirror reflections are recursively unfolded
+TracedSample traceBRDFLightingMirrors(vec3 posWS, vec3 direction, vec3 normal, inout bool unfolded){
     float tMin = 0.001f;
     float tMax = 10000.0f;
 
@@ -20,10 +24,59 @@ TracedSample traceBRDFLighting(vec3 posWS, vec3 direction, vec3 normal){
             tMax,
             1     // brdf sample always has payload location 1
     );
+    vec3 throughput = payloadBRDF.throughput;
+    TracedSample result = makeTraced(payloadBRDF);
 
-    return makeTraced(payloadBRDF);
+    while (payloadBRDF.didHit && payloadBRDF.mirror){
+        unfolded = true;
+
+        vec3 reflectedDir = reflect(direction, result.hitNormal);
+
+        resetBRDFSamplePayload(payloadBRDF);
+        traceRayEXT(
+            topLevelAS,
+            gl_RayFlagsOpaqueEXT,
+            0xff, // cullMask
+            2,    // start at brdf sample region
+            0,    // sbtRecordStride
+            1,    // missIndex
+            result.hitPosition + result.hitNormal * tMin,
+            tMin,
+            reflectedDir,
+            tMax,
+            1     // brdf sample always has payload location 1
+        );
+        throughput *= payloadBRDF.throughput;
+    }
+
+    // emission is returned from the first non-mirror hit (or miss -- envmap is returned in this case) modulated by the accumulated throughput of hit mirrors
+    result.hitEmission = payloadBRDF.hitEmission * throughput;
+    return result;
 }
 
+
+// trace a ray for BRDF lighting
+TracedSample traceBRDFLighting(vec3 posWS, vec3 direction, vec3 normal, inout bool unfolded){
+    float tMin = 0.001f;
+    float tMax = 10000.0f;
+
+    resetBRDFSamplePayload(payloadBRDF);
+    traceRayEXT(
+            topLevelAS,
+            gl_RayFlagsOpaqueEXT,
+            0xff, // cullMask
+            2,    // start at brdf sample region
+            0,    // sbtRecordStride
+            1,    // missIndex
+            posWS + normal * tMin,
+            tMin,
+            direction,
+            tMax,
+            1     // brdf sample always has payload location 1
+    );
+    
+    return makeTraced(payloadBRDF);
+}
 
 float powerHeuristic(float pdf, float pdfOther) {
 	const float pdf_sqr = pdf * pdf;
@@ -81,6 +134,8 @@ vec3 evaluateSampleAreaMisBrdf(vec3 albedo, vec3 posWS, vec3 normal, inout uint 
     if (misWeight <= 0.0) return vec3(0.0);
 
     vec3 brdf = albedo / PI;
+
+    
     float G = areaMeasureFactor;
     vec3 L_direct = misWeight * L_i * brdf * G * cos_theta_i / lightPdf;
 
@@ -95,12 +150,9 @@ vec3 evaluateSampleEnvMisBrdf(vec3 albedo, vec3 posWS, vec3 normal, inout uint s
     vec3 omega_i = envSample.xyz;
     float envPdf = envSample.w;
 
-    //  send a ray in the env map sample direction
-    TracedSample brdfHit = traceBRDFLighting(posWS, omega_i, normal);
-
     //  if the ray hits anything (env map is occluded), early exit
     //  occlusion of the env map means that zero radiance would come from this direction anyway
-    if (brdfHit.didHit) return vec3(0.0);
+    if (!isVisible(posWS, omega_i * 1000.f, normal)) return vec3(0.0);
 
     // retrieve radiance coming from the env map
     vec3 L_i = sampleSphericalMap(omega_i, pcs.skyHandle);
@@ -127,6 +179,7 @@ vec3 evaluateSampleBrdfMisEnvArea(vec3 albedo, vec3 posWS, vec3 normal, inout ui
     vec3 omega_i = brdfSample.xyz;
     float brdfPdf = brdfSample.w;
 
+    bool unfolded = false;
     // check what the BRDF sample hits 
     TracedSample brdfHit = traceBRDFLighting(posWS, omega_i, normal);
     vec3 L_i = brdfHit.hitEmission;
@@ -136,31 +189,35 @@ vec3 evaluateSampleBrdfMisEnvArea(vec3 albedo, vec3 posWS, vec3 normal, inout ui
     if (brdfHit.didHit && all(lessThanEqual(brdfHit.hitEmission,vec3(0.0))))
         return vec3(0.0);
 
-    float pdfOther = 0;
+    float pdfOther = 0.0;
 
     // emissive surface case -- calculate the pdf of hitting the emissive surface, convert it to solid angle measure
-    if (brdfHit.didHit){
-        L_i = brdfHit.hitEmission;
 
-        vec3 toHit = brdfHit.hitPosition - posWS;
-        float r_sqr = dot(toHit, toHit);
-        float cos_theta_y = abs(dot(-omega_i, brdfHit.hitNormal));
+    //if (!unfolded){
+        if (brdfHit.didHit){
+            L_i = brdfHit.hitEmission;
 
-        if (r_sqr <= 0.0 || cos_theta_y <= 0.0) return vec3(0.0);
+            vec3 toHit = brdfHit.hitPosition - posWS;
+            float r_sqr = dot(toHit, toHit);
+            float cos_theta_y = abs(dot(-omega_i, brdfHit.hitNormal));
 
-        float areaToSolidMeasureFactor =  r_sqr / cos_theta_y;
-        pdfOther = (1/ emissiveCDF.area) * areaToSolidMeasureFactor;
-    }
-    // evaluating the env pdf only makes sense when the sample is unoccluded by scene geometry
-    else {
-        pdfOther = getPdfEnvironment(textures[pcs.skyCdfHandle],omega_i);
-        if (pdfOther <= 0.0) return vec3(0.0);
-    }
-    
+            if (r_sqr <= 0.0 || cos_theta_y <= 0.0) return vec3(0.0);
+
+            float areaToSolidMeasureFactor =  r_sqr / cos_theta_y;
+            pdfOther = (1/ emissiveCDF.area) * areaToSolidMeasureFactor;
+        }
+        // evaluating the env pdf only makes sense when the sample is unoccluded by scene geometry
+        else {
+            pdfOther = getPdfEnvironment(textures[pcs.skyCdfHandle],omega_i);
+            if (pdfOther <= 0.0) return vec3(0.0);
+        }
+   // }
     float misWeight = powerHeuristic(brdfPdf, pdfOther);
-    float cos_theta_i = max(dot(omega_i, normal), 0.0f);
 
+
+    float cos_theta_i = max(dot(omega_i, normal), 0.0f);
     vec3 brdf = albedo * INVPI;
+
     vec3 L_direct = misWeight * L_i * brdf * cos_theta_i / brdfPdf; 
     return L_direct;
 }

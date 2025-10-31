@@ -27,12 +27,18 @@ bool hitLight(HitPayload payload){
     return any(greaterThan(payload.hitEmission,vec3(0.0)));
 }
 
+bool hitLight(vec3 emission){
+    return any(greaterThan(emission,vec3(0.0)));
+}
+
 struct BRDFSamplePayload{
     vec3 hitPosition;
     vec3 hitEmission;
     vec3 hitNormal;
+    vec3 throughput;
     float hitArea;
     bool didHit;
+    bool mirror;
 };
 
 struct TracedSample{
@@ -41,6 +47,7 @@ struct TracedSample{
     vec3 hitNormal;
     float hitArea;
     bool didHit;
+    bool mirror;
 };
 
 TracedSample makeTraced(BRDFSamplePayload payload){
@@ -51,6 +58,7 @@ TracedSample makeTraced(BRDFSamplePayload payload){
     s.hitNormal = payload.hitNormal;
     s.hitArea = payload.hitArea;
     s.didHit = payload.didHit;
+    s.mirror = payload.mirror;
 
     return s;
 }
@@ -61,12 +69,12 @@ void resetBRDFSamplePayload(inout BRDFSamplePayload payload){
     payload.hitNormal = vec3(0.0);
     payload.hitArea = 0.0;
     payload.didHit = false;
+    payload.mirror = false;
 }
 
 bool hitLight(TracedSample payload){
     return any(greaterThan(payload.hitEmission,vec3(0.0)));
 }
-
 
 struct HitPayloadNaive{
     vec3 hitPosition;

@@ -60,4 +60,6 @@ void main() {
     inPayloadBRDF.hitEmission = material.emission;
     inPayloadBRDF.hitArea = 0.5 * length(cross(ab, ac)) * float(any(greaterThan(inPayloadBRDF.hitEmission,vec3(0.0))));
     inPayloadBRDF.didHit = true;
+    inPayloadBRDF.mirror = material.materialType == 1;
+    inPayloadBRDF.throughput = params.albedo;
 }
