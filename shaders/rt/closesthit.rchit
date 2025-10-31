@@ -72,4 +72,5 @@ void main() {
         payload.directContribution = calculateDirect(params.albedo,posWS,params.normal,seed);
 
     payload.seed = seed;
+    payload.mirror = false;
 }

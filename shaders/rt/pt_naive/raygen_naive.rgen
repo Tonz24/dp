@@ -119,7 +119,7 @@ void main() {
         // russian roulette termination
         // use troughput as weight to set survival probability
         // activate only at depth > 4 to avoid premature termination of paths and potential energy loss
-      if (depth > 4) {
+        if (depth > 4) {
             float survivalProb = max(weight.x,max(weight.y,weight.z));
             survivalProb = max(survivalProb, 0.15);
             float rnd = rand(seed);
