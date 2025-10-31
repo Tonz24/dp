@@ -84,12 +84,12 @@ void main() {
     vec3 weight = vec3(1.0);
 
     vec3 directContribution = mat.materialType == 1 ? vec3(0.0) : calculateDirect(albedo,posWS,normal,seed);
-    payload.directContribution = directContribution;
+    radiance += directContribution;
 
     bool lastWasMirror = mat.materialType == 1;
     for (uint depth = 0; depth < pcs.maxRecursionDepth; depth++){
         
-        radiance += weight * payload.directContribution;
+       
 
         resetPayload(payload);
         payload.seed = seed;
@@ -116,17 +116,12 @@ void main() {
 
         weight *= weightFactor;
         radiance += weight * payload.hitEmission;  
-       
-
-
+        radiance += weight * payload.directContribution;
         
         // missing from a material that was not a mirror previously ends the path (env map is handled in direct lighting calculation)
         if (!payload.hit && !payload.mirror)
             break;
-
-        
-
-
+    
         ///////////////////////////////////////////////////////////
         // russian roulette termination
         if (depth > 4) {
