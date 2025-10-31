@@ -116,3 +116,13 @@ void GBuffer::transitionToTrace(vk::raii::CommandBuffer& cmdBuf) const {
     depthMap_->transitionLayout(vk::ImageLayout::eDepthReadOnlyOptimal,vk::PipelineStageFlagBits2::eRayTracingShaderKHR,vk::AccessFlagBits2::eShaderSampledRead,cmdBuf);
     accumulator_->transitionLayout(vk::ImageLayout::eGeneral,vk::PipelineStageFlagBits2::eRayTracingShaderKHR,vk::AccessFlagBits2::eShaderStorageWrite | vk::AccessFlagBits2::eShaderStorageRead,cmdBuf);
 }
+
+GBuffer::~GBuffer() {
+    target_.reset();
+    albedoMap_.reset();
+    normalMap_.reset();
+    materialIdMap_.reset();
+    depthMap_.reset();
+    accumulator_.reset();
+    objectIdMap_.reset();
+}

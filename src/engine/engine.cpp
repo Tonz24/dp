@@ -8,6 +8,7 @@
 #include <ranges>
 #include <set>
 #define GLM_ENABLE_EXPERIMENTAL
+#include <filesystem>
 #include <queue>
 #include <glm/gtx/string_cast.hpp>
 
@@ -16,6 +17,7 @@
 #include <imgui/imgui_impl_vulkan.h>
 
 #include "constants.h"
+#include "modelLoader.h"
 #include "managers/inputManager.h"
 #include "vk/vkUtils.h"
 #include "../scene/texture.h"
@@ -37,6 +39,57 @@ void Engine::run() {
         mainLoop();
 }
 
+void Engine::scanEnvironments() {
+    envmapNames_.clear();
+    envmapNamesCstr_.clear();
+
+    std::filesystem::current_path(Paths::envmapPrefix);
+    for (const auto& item : std::filesystem::recursive_directory_iterator(std::filesystem::current_path())) {
+        if (!std::filesystem::is_regular_file(item))
+            continue;
+
+        auto filename = item.path().stem().string();
+        auto extension = item.path().extension().string();
+
+        if (extension == ".jpg" || extension == ".png" || extension == ".hdr" || extension == ".exr") {
+            auto combined = filename + extension;
+            envmapNames_.push_back(combined);
+        }
+    }
+    for (const auto & name : envmapNames_)
+        envmapNamesCstr_.push_back(name.c_str());
+}
+
+void Engine::scanScenes() {
+    sceneNames_.clear();
+    sceneNamesCstr_.clear();
+
+    std::filesystem::path h = std::filesystem::current_path() /= "../assets/models";
+    std::filesystem::current_path(h);
+    for (const auto& item : std::filesystem::recursive_directory_iterator(std::filesystem::current_path())) {
+
+        if (!std::filesystem::is_regular_file(item))
+            continue;
+
+        auto extension = item.path().extension().string();
+
+        if (extension == ".obj" || extension == ".fbx") {
+            auto toModel = std::filesystem::relative(item.path(),h);
+            sceneNames_.emplace_back(toModel.string());
+        }
+    }
+    for (const auto & name : sceneNames_)
+        sceneNamesCstr_.push_back(name.c_str());
+}
+
+void Engine::scanAssets() {
+    auto currentWorkingDir = std::filesystem::current_path();
+    scanEnvironments();
+    std::filesystem::current_path(currentWorkingDir);
+    scanScenes();
+    std::filesystem::current_path(currentWorkingDir);
+}
+
 void Engine::init() {
 
     if (isInitialized_)
@@ -45,6 +98,7 @@ void Engine::init() {
     initGLFW();
     initVulkan();
     initImGui();
+    scanAssets();
 
     isInitialized_ = true;
 }
@@ -55,6 +109,34 @@ bool Engine::drawGUI() {
     ImGui::NewFrame();
 
     ImGui::Begin("DP");
+
+    if (ImGui::CollapsingHeader("Data loader",ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Indent();
+
+        if (ImGui::Combo("Load environment", &selectedEnvmap_ ,envmapNamesCstr_.data(), envmapNames_.size())) {
+            const auto& name =  envmapNames_[selectedEnvmap_];
+            const auto& path =  Paths::envmapPrefix + name;
+
+            auto newEnvmap = TextureManager::getInstance()->getResource(name);
+            if (newEnvmap == nullptr)
+                newEnvmap = TextureManager::getInstance()->registerResource(name, path, true, false);
+
+            scene_->setSky(newEnvmap);
+        }
+
+        if (ImGui::Combo("Load scene", &selectedScene_ ,sceneNamesCstr_.data(), sceneNames_.size())) {
+            const auto& name =  sceneNames_[selectedScene_];
+
+
+            auto envmap = scene_->getSky();
+            auto cam = scene_->getCameraPtr();
+
+            scene_ = std::make_shared<Scene>(ModelLoader::loadModel(name, false),cam,std::move(envmap));
+        }
+
+        ImGui::Unindent();
+    }
+
 
     if (ImGui::CollapsingHeader("Engine",ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Indent();
@@ -109,6 +191,8 @@ bool Engine::drawGUI() {
 
     return false;
 }
+
+
 
 
 void Engine::initGLFW() {
@@ -212,7 +296,6 @@ void Engine::initVulkan() {
     initSyncObjects();
 
     Renderer::initLayouts();
-    //initDummyTexture();
 
     VmaAllocationCreateFlags allocationCreateFlags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
     idMapTransferBuffer_ = VkUtils::createBufferVMA(sizeof(uint32_t),vk::BufferUsageFlagBits::eTransferDst, allocationCreateFlags);
@@ -385,30 +468,62 @@ void Engine::initLogicalDevice() {
             .pQueuePriorities = &graphicsFamilyPriority
         }
     };
-    
 
-    // Create a chain of feature structures
-    vk::StructureChain<
-        vk::PhysicalDeviceFeatures2,
-        vk::PhysicalDeviceVulkan12Features,
-        vk::PhysicalDeviceVulkan13Features,
-        vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT,
-        vk::PhysicalDeviceRayTracingPipelineFeaturesKHR,
-        vk::PhysicalDeviceAccelerationStructureFeaturesKHR,
-        vk::PhysicalDeviceMemoryPriorityFeaturesEXT,
-        vk::PhysicalDevicePageableDeviceLocalMemoryFeaturesEXT,
-        vk::PhysicalDeviceRayQueryFeaturesKHR
-        >
-            featureChain {
-                {.features = {.samplerAnisotropy = vk::True}},
-                {.storageBuffer8BitAccess = vk::True, .scalarBlockLayout = true, .timelineSemaphore = vk::True,  .bufferDeviceAddress = vk::True,  .vulkanMemoryModel = vk::True,  .vulkanMemoryModelDeviceScope = vk::True},
-                {.shaderDemoteToHelperInvocation =  vk::True, .synchronization2 = vk::True, .dynamicRendering = vk::True,},      // Enable dynamic rendering from Vulkan 1.3
-                {.extendedDynamicState = vk::True },
-                {.rayTracingPipeline = vk::True},
-                {.accelerationStructure = vk::True},
-                {},
-                {},
-                {.rayQuery = vk::True},
+
+    vk::PhysicalDeviceFeatures2 physicalDeviceFeatures;
+    physicalDeviceFeatures.features = {
+        .samplerAnisotropy = vk::True
+    };
+
+    vk::PhysicalDeviceVulkan12Features physicalDeviceVulkan12Features;
+    physicalDeviceVulkan12Features.storageBuffer8BitAccess = vk::True;
+    physicalDeviceVulkan12Features.scalarBlockLayout = vk::True;
+    physicalDeviceVulkan12Features.timelineSemaphore = vk::True;
+    physicalDeviceVulkan12Features.bufferDeviceAddress = vk::True;
+    physicalDeviceVulkan12Features.vulkanMemoryModel = vk::True;
+    physicalDeviceVulkan12Features.vulkanMemoryModelDeviceScope = vk::True;
+    physicalDeviceVulkan12Features.descriptorIndexing = vk::True;
+    physicalDeviceVulkan12Features.descriptorBindingUniformBufferUpdateAfterBind = vk::True;
+    physicalDeviceVulkan12Features.descriptorBindingStorageBufferUpdateAfterBind = vk::True;
+    physicalDeviceVulkan12Features.descriptorBindingSampledImageUpdateAfterBind = vk::True;
+    physicalDeviceVulkan12Features.descriptorBindingStorageImageUpdateAfterBind = vk::True;
+
+
+    vk::PhysicalDeviceVulkan13Features physicalDeviceVulkan13Features;
+    physicalDeviceVulkan13Features.shaderDemoteToHelperInvocation = vk::True;
+    physicalDeviceVulkan13Features.synchronization2 = vk::True;
+    physicalDeviceVulkan13Features.dynamicRendering = vk::True;
+
+    vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT physicalDeviceExtendedDynamicStateFeaturesExt;
+    physicalDeviceExtendedDynamicStateFeaturesExt.extendedDynamicState = vk::True;
+
+    vk::PhysicalDeviceRayTracingPipelineFeaturesKHR physicalDeviceRayTracingPipelineFeaturesKhr;
+    physicalDeviceRayTracingPipelineFeaturesKhr.rayTracingPipeline = vk::True;
+
+    vk::PhysicalDeviceAccelerationStructureFeaturesKHR physicalDeviceAccelerationStructureFeaturesKhr;
+    physicalDeviceAccelerationStructureFeaturesKhr.accelerationStructure = vk::True;
+    physicalDeviceAccelerationStructureFeaturesKhr.descriptorBindingAccelerationStructureUpdateAfterBind = vk::True;
+
+    vk::PhysicalDeviceMemoryPriorityFeaturesEXT physicalDeviceMemoryPriorityFeaturesExt;
+    physicalDeviceMemoryPriorityFeaturesExt.memoryPriority = vk::True;
+
+    vk::PhysicalDevicePageableDeviceLocalMemoryFeaturesEXT physicalDevicePageableDeviceLocalMemoryFeaturesExt;
+    physicalDevicePageableDeviceLocalMemoryFeaturesExt.pageableDeviceLocalMemory = vk::True;
+
+    vk::PhysicalDeviceRayQueryFeaturesKHR physicalDeviceRayQueryFeaturesKhr;
+    physicalDeviceRayQueryFeaturesKhr.rayQuery = vk::True;
+
+
+    vk::StructureChain featureChain = vk::StructureChain{
+        physicalDeviceFeatures,
+        physicalDeviceVulkan12Features,
+        physicalDeviceVulkan13Features,
+        physicalDeviceExtendedDynamicStateFeaturesExt,
+        physicalDeviceRayTracingPipelineFeaturesKhr,
+        physicalDeviceAccelerationStructureFeaturesKhr,
+        physicalDeviceMemoryPriorityFeaturesExt,
+        physicalDevicePageableDeviceLocalMemoryFeaturesExt,
+        physicalDeviceRayQueryFeaturesKhr
     };
 
     vk::DeviceCreateInfo deviceCreateInfo{
@@ -700,6 +815,8 @@ void Engine::drawFrame() {
     //  reset the current frame's fence
     vk::raii::Fence& frameFence = inFlightFences_[frameInFlightIndex_];
     device_.waitForFences(*frameFence, vk::True, UINT64_MAX );
+    emptyDeletionQueue();
+
 
     selectedRenderer_->flushExportBuffer();
 
@@ -820,13 +937,13 @@ void Engine::mainLoop() {
 
 void Engine::cleanup() {
     scene_.reset();
-
     gBuffer_.reset();
-
     VkUtils::destroyBufferVMA(std::move(idMapTransferBuffer_));
 
     rasterRenderer_.reset();
     rtRendererNaive_.reset();
+    rtRendererNEE_.reset();
+    emptyDeletionQueue();
     Renderer::destroy();
 
     VkUtils::destroy();
@@ -870,7 +987,7 @@ void Engine::initDescriptorPool() {
     };
 
     vk::DescriptorPoolCreateInfo poolInfo{
-        .flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+        .flags = {vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet | vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind},
         .maxSets = 1000,
         .poolSizeCount = poolSize.size(),
         .pPoolSizes = poolSize.data()
@@ -958,4 +1075,24 @@ void Engine::clickSceneObject(const glm::vec<2,double>& cursorPos) const {
     // id 0 is reserved as invalid
     if (clickedObjectId != 0)
         scene_->setSelectedObject(clickedObjectId);
+}
+
+void Engine::addToDeletionQueue(ManagedResource* resource) {
+    std::lock_guard<std::mutex> lock(deletionQueueMutex);
+    deletionQueue_.emplace_back(resource);
+}
+
+void Engine::emptyDeletionQueue() {
+
+    std::vector<std::unique_ptr<ManagedResource>> local{};
+    {
+        std::lock_guard<std::mutex> lock(deletionQueueMutex);
+        std::swap(deletionQueue_,local);
+    }
+
+    for (auto & localResource : local) {
+        if (localResource != nullptr)
+            localResource->printDeleteMessage();
+    }
+
 }

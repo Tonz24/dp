@@ -12,12 +12,16 @@
 
 Scene::Scene(const std::vector<std::shared_ptr<Mesh>>&& meshes, std::shared_ptr<Camera> camera, std::shared_ptr<Texture> sky): meshes_(meshes), camera_(std::move(camera)), sky_(std::move(sky)) {
 
-    initDescriptorSet();
+    initEnvmap();
     initTLAS();
     extractEmissiveMeshes();
 
     if (!meshes_.empty())
         selectedObject_ = meshes_[0];
+}
+
+Scene::~Scene() {
+
 }
 
 bool Scene::drawGUI() {
@@ -48,7 +52,7 @@ bool Scene::drawGUI() {
     return false;
 }
 
-void Scene::initDescriptorSet(){
+void Scene::initEnvmap(){
     if (sky_) {
         VkUtils::BufferAlloc stagingBuffer = VkUtils::createBufferVMA(sky_->getTotalSize(),vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingAllocFlagsVMA);
         sky_->stage(stagingBuffer);

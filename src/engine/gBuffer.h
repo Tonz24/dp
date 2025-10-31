@@ -19,7 +19,7 @@ public:
     void transitionToBlit(vk::raii::CommandBuffer& cmdBuf) const;
     void transitionToTrace(vk::raii::CommandBuffer& cmdBuf) const;
 
-    ~GBuffer() override = default;
+    ~GBuffer() override;
 
     void resizeContents(uint32_t width, uint32_t height);
 

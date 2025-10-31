@@ -7,6 +7,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <memory>
+#include <mutex>
 
 #include <vulkan/vulkan_raii.hpp>
 #include <glm/glm.hpp>
@@ -25,6 +26,12 @@ public:
     static Engine& getInstance();
 
     void run();
+
+    void scanEnvironments();
+    void scanScenes();
+
+    void scanAssets();
+
     void init();
     void cleanup();
 
@@ -45,6 +52,8 @@ public:
 
     [[nodiscard]] const vk::raii::PhysicalDevice& getPhysicalDevice() const { return physicalDevice; }
     [[nodiscard]] float getDeltaTime() const {return deltaTime_;}
+
+    void addToDeletionQueue(ManagedResource* resource);
 
 private:
     friend class VkUtils;
@@ -104,13 +113,8 @@ private:
 
     static VKAPI_ATTR vk::Bool32 VKAPI_CALL debugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::DebugUtilsMessageTypeFlagsEXT type, const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData, void*);
 
-
-
-
-
     static inline Engine* engineInstance{nullptr};
     std::unique_ptr<Window> window{nullptr};
-
 
 
 
@@ -238,4 +242,18 @@ private:
 
     std::string exportFileName_{};
     uint32_t autoExportFrameCount_;
+
+
+    std::vector<std::string> envmapNames_{};
+    std::vector<const char*> envmapNamesCstr_{};
+    int selectedEnvmap_{0};
+
+    std::vector<std::string> sceneNames_{};
+    std::vector<const char*> sceneNamesCstr_{};
+    int selectedScene_{0};
+
+    std::vector<std::unique_ptr<ManagedResource>> deletionQueue_{};
+    std::mutex deletionQueueMutex;
+    void emptyDeletionQueue();
+
 };

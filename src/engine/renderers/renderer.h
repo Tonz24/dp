@@ -138,7 +138,27 @@ private:
         }
     };
 
-    static constexpr vk::DescriptorSetLayoutCreateInfo frameLayoutInfo{
+
+    //static constexpr vk::DescriptorBindingFlags bindingFlags{vk::DescriptorBindingFlagBits::eUpdateAfterBind};
+    static constexpr std::array<vk::DescriptorBindingFlags, frameDescriptorBindings.size()> bindingFlags{
+        vk::DescriptorBindingFlagBits::eUpdateAfterBind,
+        vk::DescriptorBindingFlagBits::eUpdateAfterBind,
+        vk::DescriptorBindingFlagBits::eUpdateAfterBind,
+        vk::DescriptorBindingFlagBits::eUpdateAfterBind,
+        vk::DescriptorBindingFlagBits::eUpdateAfterBind,
+        vk::DescriptorBindingFlagBits::eUpdateAfterBind,
+        vk::DescriptorBindingFlagBits::eUpdateAfterBind,
+        vk::DescriptorBindingFlagBits::eUpdateAfterBind,
+    };
+
+    static constexpr vk::DescriptorSetLayoutBindingFlagsCreateInfo  createInfo{
+        .bindingCount = static_cast<uint32_t>(frameDescriptorBindings.size()),
+        .pBindingFlags = bindingFlags.data()
+    };
+
+    static inline const vk::DescriptorSetLayoutCreateInfo frameLayoutInfo{
+        .pNext = createInfo,
+        .flags = vk::DescriptorSetLayoutCreateFlagBits::eUpdateAfterBindPool,
         .bindingCount = static_cast<uint32_t>(frameDescriptorBindings.size()),
         .pBindings = frameDescriptorBindings.data()
     };

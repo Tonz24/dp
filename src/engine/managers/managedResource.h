@@ -4,9 +4,8 @@
 
 #pragma once
 #include <cstdint>
+#include <functional>
 #include <string>
-
-#include "../constants.h"
 
 class ManagedResource;
 
@@ -18,7 +17,7 @@ class ResourceManager;
 class ManagedResource {
 public:
 
-    virtual ~ManagedResource() = default;
+    virtual ~ManagedResource();
 
     [[nodiscard]] virtual uint32_t getCID() const {return categoryId_;}
     [[nodiscard]] virtual uint32_t getGID() const {return globalId_;}
@@ -35,8 +34,12 @@ public:
     template <ManagedResourceConcept T, typename Derived, uint32_t IdLimit>
     friend class ResourceManager;
 
+    void printDeleteMessage() const;
+
 protected:
     ManagedResource() = default;
+
+
 
     uint32_t globalId_{0};
     uint32_t categoryId_{0};
@@ -47,4 +50,6 @@ protected:
 
     bool isFromDisk_{false};
     bool isRegistered_{false};
+
+    std::function<void(uint32_t)> recycleFunc;
 };

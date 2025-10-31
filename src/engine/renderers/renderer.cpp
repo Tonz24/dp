@@ -277,7 +277,7 @@ void Renderer::flushExportBuffer() {
                                                 FI_RGBA_BLUE_MASK,
                                                 true);
 
-    std::string fullPath {Paths::exportPathPrefix};
+    std::string fullPath {Paths::exportPrefix};
     fullPath.append(exportFileName_.size() > 0 ? exportFileName_ : "untitled.png");
 
     FreeImage_Save(FIF_PNG, image, fullPath.data(), PNG_DEFAULT);

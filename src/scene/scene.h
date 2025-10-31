@@ -15,7 +15,10 @@ public:
 
     explicit Scene(const std::vector<std::shared_ptr<Mesh>>&& meshes, std::shared_ptr<Camera> camera, std::shared_ptr<Texture> sky = {nullptr});
 
+    ~Scene() override;
+
     [[nodiscard]] Camera& getCamera() const { return *camera_; }
+    [[nodiscard]] std::shared_ptr<Camera> getCameraPtr() const { return camera_; }
     void setCamera(std::shared_ptr<Camera> camera) { std::swap(camera_, camera);}
 
     [[nodiscard]] const std::vector<std::shared_ptr<Mesh>>& getMeshes() const { return meshes_; }
@@ -27,7 +30,7 @@ public:
 
     void setSky(std::shared_ptr<Texture> newSky) {
         sky_ = std::move(newSky);
-        initDescriptorSet();
+        initEnvmap();
     }
 
     [[nodiscard]] const std::shared_ptr<Texture>& getSky() const { return sky_; }
@@ -35,16 +38,15 @@ public:
 
 private:
 
+
     struct alignas(4) CDFElement {
         uint32_t triIndex;
         float pdf;
     };
 
-    void initDescriptorSet() ;
+    void initEnvmap();
     void initTLAS();
     void extractEmissiveMeshes();
-    void initCDFBuffers();
-    void recalculateCDF();
 
     std::vector<std::shared_ptr<Mesh>> meshes_{};
     std::shared_ptr<Camera> camera_{};

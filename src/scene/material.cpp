@@ -80,3 +80,8 @@ bool Material::drawGUI() {
 bool Material::isEmissive() const {
     return glm::any(glm::notEqual(uboFormat_.emission,glm::vec3{0.0f}));
 }
+
+Material::~Material() {
+    for (auto texture : textures_)
+        texture.reset();
+}

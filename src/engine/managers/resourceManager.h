@@ -12,6 +12,7 @@
 #include "managedResource.h"
 #include "resourceManagerBase.h"
 #include "../constants.h"
+#include "../engine.h"
 #include "../gBuffer.h"
 #include "../../scene/material.h"
 #include "../../scene/mesh.h"
@@ -58,6 +59,10 @@ public:
         newResource->resourceName_ = resourceName;
         newResource->isRegistered_ = true;
 
+        newResource->recycleFunc = [](uint32_t cid) {
+            Derived::getInstance()->recycleCid(cid);
+        };
+
         nameToIdMap_[std::string{resourceName}] = newCID;
         idToResourceMap_[newCID] = newResource;
 
@@ -79,18 +84,24 @@ public:
         newResource->resourceName_ = resourceName;
         newResource->isRegistered_ = true;
 
+        newResource->recycleFunc = [](uint32_t cid) {
+            Derived::getInstance()->recycleCid(cid);
+        };
+
         nameToIdMap_[std::string{resourceName}] = newCId;
         idToResourceMap_[newCId] = newResource;
 
         return newResource;
     }
 
-    void deleterFunction(const T& resource) {
+    void deleterFunction(T* resource) {
 
-        std::cout << "Resource [" << resource.getResourceType() << "]: " << resource.getResourceName() << " (cID: " << resource.getCID() << " | gID: " << resource.getGID()  << ")" << " freed" << std::endl;
-        cidRecycleQueue.push(resource.getCID());
-        nameToIdMap_.erase(resource.getResourceName());
-        idToResourceMap_.erase(resource.getCID());
+        std::cout << "Resource [" << resource->getResourceType() << "]: " << resource->getResourceName() << " (cID: " << resource->getCID() << " | gID: " << resource->getGID()  << ")" << " sent to deletion queue" << std::endl;
+
+        nameToIdMap_.erase(resource->getResourceName());
+        idToResourceMap_.erase(resource->getCID());
+
+        Engine::getInstance().addToDeletionQueue(resource);
     }
 
     uint32_t assignCategoryId() {
@@ -105,7 +116,7 @@ public:
 
         uint32_t newId = ++cidCounter_;
 
-        if (newId >= IdLimit - 1)
+        if (newId > IdLimit)
             throw std::runtime_error("ERROR: invalid CID reached!");
 
         return newId;
@@ -113,10 +124,10 @@ public:
 
 
     struct ResourceDeleter {
-        void operator()(const T* t) const {
+        void operator()(T* t) const {
             if (t) {
-                Derived::getInstance()->deleterFunction(*t);
-                delete t;
+                Derived::getInstance()->deleterFunction(t);
+                //delete t;
             }
         }
     };
@@ -125,7 +136,8 @@ protected:
 
     ResourceManager() = default;
 
-    constexpr static const char* assetPathPrefix{"../assets/"};
+
+
 
     inline static ResourceManagerBase* instance_{nullptr};
 
@@ -135,6 +147,12 @@ protected:
     std::unordered_map<uint32_t,std::weak_ptr<T>> idToResourceMap_{};
     std::unordered_map<std::string,uint32_t> nameToIdMap_{};
     std::queue<uint32_t>  cidRecycleQueue{};
+
+
+    void recycleCid(uint32_t idToRecycle) {
+        std::lock_guard<std::mutex> lock(cidMutex_);
+        cidRecycleQueue.push(idToRecycle);
+    }
 };
 
 class Mesh;
@@ -171,6 +189,10 @@ public:
         nameToIdMap_[std::string{resourceName}] = newCID;
         idToResourceMap_[newCID] = newResource;
 
+        newResource->recycleFunc = [](uint32_t cid) {
+           getInstance()->recycleCid(cid);
+        };
+
         registerTexture(*newResource);
 
         return newResource;
@@ -190,6 +212,10 @@ public:
         newResource->globalId_ = newGId;
         newResource->resourceName_ = resourceName;
         newResource->isRegistered_ = true;
+
+        newResource->recycleFunc = [](uint32_t cid) {
+            getInstance()->recycleCid(cid);
+        };
 
         nameToIdMap_[std::string{resourceName}] = newCId;
         idToResourceMap_[newCId] = newResource;
@@ -236,6 +262,10 @@ public:
         newResource->globalId_ = newGId;
         newResource->resourceName_ = resourceName;
         newResource->isRegistered_ = true;
+
+        newResource->recycleFunc = [](uint32_t cid) {
+            getInstance()->recycleCid(cid);
+        };
 
         nameToIdMap_[std::string{resourceName}] = newCId;
         idToResourceMap_[newCId] = newResource;

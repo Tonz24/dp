@@ -32,6 +32,8 @@ public:
 
     Material() : ManagedResource(){}
 
+    ~Material() override;
+
 
     std::shared_ptr<Texture> getTexture(TextureMapSlot slot);
 

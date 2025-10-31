@@ -16,7 +16,7 @@
 #include "managers/resourceManager.h"
 
 std::vector<std::shared_ptr<Mesh>> ModelLoader::loadModel(std::string_view path, bool multithread) {
-    std::string fullPath{Paths::modelPathPrefix + std::string{path}};
+    std::string fullPath{Paths::scenePrefix + std::string{path}};
 
     Assimp::Importer importer;
 
@@ -34,6 +34,7 @@ std::vector<std::shared_ptr<Mesh>> ModelLoader::loadModel(std::string_view path,
         throw std::runtime_error(importer.GetErrorString());
     }
 
+    std::replace(fullPath.begin(),fullPath.end(),'\\','/');
     auto lastSlashPos = std::string{ fullPath }.find_last_of('/');
     std::string directory{fullPath};
     directory = directory.substr(0, lastSlashPos + 1);

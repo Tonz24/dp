@@ -758,5 +758,6 @@ uint32_t Texture::getFormatPixelSize(vk::Format format) {
 }
 
 Texture::~Texture() {
+    data_.clear();
     VkUtils::destroyImageVMA(std::move(imageAlloc_));
 }

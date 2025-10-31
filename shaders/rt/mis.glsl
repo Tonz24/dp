@@ -56,7 +56,7 @@ TracedSample traceBRDFLightingMirrors(vec3 posWS, vec3 direction, vec3 normal, i
 
 
 // trace a ray for BRDF lighting
-TracedSample traceBRDFLighting(vec3 posWS, vec3 direction, vec3 normal, inout bool unfolded){
+TracedSample traceBRDFLighting(vec3 posWS, vec3 direction, vec3 normal){
     float tMin = 0.001f;
     float tMax = 10000.0f;
 
@@ -135,7 +135,7 @@ vec3 evaluateSampleAreaMisBrdf(vec3 albedo, vec3 posWS, vec3 normal, inout uint 
 
     vec3 brdf = albedo / PI;
 
-    
+
     float G = areaMeasureFactor;
     vec3 L_direct = misWeight * L_i * brdf * G * cos_theta_i / lightPdf;
 

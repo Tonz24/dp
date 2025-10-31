@@ -32,7 +32,8 @@ class Paths{
 public:
   Paths() = delete;
 
-  static inline const std::string exportPathPrefix{"../exports/"};
-  static inline const std::string modelPathPrefix{"../assets/models/"};
+  static inline const std::string exportPrefix{"../exports/"};
+  static inline const std::string scenePrefix{"../assets/models/"};
+  static inline const std::string envmapPrefix{"../assets/envmaps/"};
 
 };
