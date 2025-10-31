@@ -89,8 +89,6 @@ void main() {
     bool lastWasMirror = mat.materialType == 1;
     for (uint depth = 0; depth < pcs.maxRecursionDepth; depth++){
         
-       
-
         resetPayload(payload);
         payload.seed = seed;
         traceRayEXT(
@@ -111,16 +109,12 @@ void main() {
             break;
 
         // hitting a light from a material that was not a mirror previously ends the path (emissive surfaces handled in direct lighting calculation)
-        if(payload.hit && hitLight(payload) && !payload.mirror)
+        if(hitLight(payload) && !payload.mirror)
             break;
 
         weight *= weightFactor;
         radiance += weight * payload.hitEmission;  
         radiance += weight * payload.directContribution;
-        
-        // missing from a material that was not a mirror previously ends the path (env map is handled in direct lighting calculation)
-        if (!payload.hit && !payload.mirror)
-            break;
     
         ///////////////////////////////////////////////////////////
         // russian roulette termination
@@ -136,7 +130,6 @@ void main() {
         posWS = payload.hitPosition;
         direction = payload.nextSample.xyz;
         pdf = payload.nextSample.w;
-        directContribution = payload.directContribution;
         weightFactor = payload.weightFactor;
         seed = payload.seed;
         lastWasMirror = payload.mirror;
