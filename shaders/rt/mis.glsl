@@ -2,7 +2,7 @@
 
 layout(location = 1) rayPayloadEXT BRDFSamplePayload payloadBRDF;
 
-TracedSample traceBRDFLighting(vec3 posWS, vec3 direction){
+TracedSample traceBRDFLighting(vec3 posWS, vec3 direction, vec3 normal){
     float tMin = 0.001f;
     float tMax = 10000.0f;
 
@@ -14,7 +14,7 @@ TracedSample traceBRDFLighting(vec3 posWS, vec3 direction){
             2,    // start at brdf sample region
             0,    // sbtRecordStride
             1,    // missIndex
-            posWS,
+            posWS + normal * tMin,
             tMin,
             direction,
             tMax,
@@ -96,7 +96,7 @@ vec3 evaluateSampleEnvMisBrdf(vec3 albedo, vec3 posWS, vec3 normal, inout uint s
     float envPdf = envSample.w;
 
     //  send a ray in the env map sample direction
-    TracedSample brdfHit = traceBRDFLighting(posWS, omega_i);
+    TracedSample brdfHit = traceBRDFLighting(posWS, omega_i, normal);
 
     //  if the ray hits anything (env map is occluded), early exit
     //  occlusion of the env map means that zero radiance would come from this direction anyway
@@ -128,7 +128,7 @@ vec3 evaluateSampleBrdfMisEnvArea(vec3 albedo, vec3 posWS, vec3 normal, inout ui
     float brdfPdf = brdfSample.w;
 
     // check what the BRDF sample hits 
-    TracedSample brdfHit = traceBRDFLighting(posWS, omega_i);
+    TracedSample brdfHit = traceBRDFLighting(posWS, omega_i, normal);
     vec3 L_i = brdfHit.hitEmission;
 
     // if the sample can't contribute any radiance (it hit a non-emissive scene surface) do an early exit
