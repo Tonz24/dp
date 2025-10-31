@@ -84,7 +84,7 @@ void main() {
     vec3 weight = vec3(1.0);
 
     vec3 directContribution = mat.materialType == 1 ? vec3(0.0) : calculateDirect(albedo,posWS,normal,seed);
-    radiance += directContribution;
+    //radiance += directContribution;
 
     bool lastWasMirror = mat.materialType == 1;
     for (uint depth = 0; depth < pcs.maxRecursionDepth; depth++){
@@ -105,16 +105,19 @@ void main() {
             0     // payloadLocation
         );
 
+        radiance += weight * directContribution;
+
+
         if (!payload.hit)
             break;
 
+
         // hitting a light from a material that was not a mirror previously ends the path (emissive surfaces handled in direct lighting calculation)
-        if(hitLight(payload) && !payload.mirror)
+        if(hitLight(payload) && !lastWasMirror)
             break;
 
         weight *= weightFactor;
-        radiance += weight * payload.hitEmission;  
-        radiance += weight * payload.directContribution;
+        radiance += weight * payload.hitEmission; 
     
         ///////////////////////////////////////////////////////////
         // russian roulette termination
@@ -133,6 +136,7 @@ void main() {
         weightFactor = payload.weightFactor;
         seed = payload.seed;
         lastWasMirror = payload.mirror;
+        directContribution = payload.directContribution;
         normal = payload.hitNormal;
 
     }
