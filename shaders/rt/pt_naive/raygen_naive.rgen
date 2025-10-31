@@ -115,13 +115,17 @@ void main() {
         if(!payload.hit) 
             break;
 
-        
         ///////////////////////////////////////////////////////////
         // russian roulette termination
-        float maxWeight = max(weight.x,max(weight.y,weight.z));
-        float rouletteTerminate = rand(seed);
-        if (maxWeight < rouletteTerminate) break;
-        weight /= maxWeight;
+        // use troughput as weight to set survival probability
+        // activate only at depth > 4 to avoid premature termination of paths and potential energy loss
+      if (depth > 4) {
+            float survivalProb = max(weight.x,max(weight.y,weight.z));
+            survivalProb = max(survivalProb, 0.15);
+            float rnd = rand(seed);
+            if (rnd > survivalProb) break;
+            weight /= survivalProb;
+        }
         ///////////////////////////////////////////////////////////
 
         posWS = payload.hitPosition;
@@ -130,8 +134,6 @@ void main() {
         weightFactor = payload.weightFactor;
         seed = payload.seed;
         normal = payload.hitNormal;
-
-        
     }
 
     if (pcs.accumulate == 1){

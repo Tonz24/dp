@@ -84,11 +84,14 @@ void main() {
     vec3 weight = vec3(1.0);
 
     vec3 directContribution = mat.materialType == 1 ? vec3(0.0) : calculateDirect(albedo,posWS,normal,seed);
-    
-    bool lastWasMirror = mat.materialType == 1;
-    for (uint depth = 0; depth < pcs.maxRecursionDepth; depth++){
 
-        radiance += weight * directContribution;
+    radiance += weight * directContribution;
+    
+    float p_survive = 1.0;
+
+    bool lastWasMirror = mat.materialType == 1;
+    for (uint depth = 0; depth < pcs.maxRecursionDepth - 1; depth++){
+
 
         resetPayload(payload);
         payload.seed = seed;
@@ -115,16 +118,21 @@ void main() {
 
         weight *= weightFactor;
         radiance += weight * payload.hitEmission;  
+        radiance += weight * payload.directContribution;
 
         if (!payload.hit)
             break;
 
+
         ///////////////////////////////////////////////////////////
         // russian roulette termination
-        float maxWeight = max(weight.x,max(weight.y,weight.z));
-        float rouletteTerminate = rand(seed);
-        if (maxWeight < rouletteTerminate) break;
-        weight /= maxWeight;
+        if (depth > 4) {
+            float survivalProb = max(weight.x,max(weight.y,weight.z));
+            survivalProb = max(survivalProb, 0.15);
+            float rnd = rand(seed);
+            if (rnd > survivalProb) break;
+            weight /= survivalProb;
+        }
         ///////////////////////////////////////////////////////////
 
         posWS = payload.hitPosition;
@@ -135,6 +143,7 @@ void main() {
         seed = payload.seed;
         lastWasMirror = payload.mirror;
         normal = payload.hitNormal;
+
     }
 
     if (pcs.accumulate == 1) {
