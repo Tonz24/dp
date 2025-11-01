@@ -62,7 +62,7 @@ void main() {
     float pdf = nextSample.w;
 
     payload.hitPosition = posWS;
-    payload.hitEmission = material.emission;
+    payload.hitEmission = material.emissionMetallic.rgb;
     vec3 hitBrdf = params.albedo * INVPI;
     payload.hit = true;
     payload.nextSample = nextSample;

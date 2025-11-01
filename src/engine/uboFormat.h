@@ -26,21 +26,19 @@ struct CameraUBOFormat {
     float zFar{700.0f};
 };
 
+
 struct alignas(16) MaterialUBOFormat {
-    glm::vec3 diffuseAlbedo{0};
-    float shininess{32};
+    glm::vec4 albedoRoughness{0.0f,0.0f,0.0f,0.01f};
+    glm::vec4 emissionMetallic{0.0f,0.0f,0.0f,0.01f};
+    glm::vec4 attenuationIor{0.0f,0.0f,0.0f,1.46f};
 
-    glm::vec3 specularAlbedo{0};
-    float ior{};
-
-    glm::vec3 emission{0};
-    uint32_t diffuseAlbedoMapHandle{0};
-
-    glm::vec3 attenuation{0};
-    uint32_t specularALbedoMapHandle{0};
-
-    uint32_t shininessMapHandle{0};
+    uint32_t albedoMapHandle{0};
+    uint32_t roughnessMapHandle{0};
+    uint32_t metallicMapHandle{0};
     uint32_t normalMapHandle{0};
+
     uint32_t materialType{0};
+    float padding;
+    float padding1;
     float padding2;
 };

@@ -2,6 +2,7 @@
 #include "math_constants.glsl"
 
 //====================MATERIAL====================
+/*
 struct Material{
     vec3 diffuseAlbedo;
     float shininess;
@@ -18,6 +19,22 @@ struct Material{
     uint shininessMapHandle;
     uint normalMapHandle;
     uint materialType;
+    float padding2;
+};*/
+
+struct Material{
+    vec4 albedoRoughness;
+    vec4 emissionMetallic;
+    vec4 attenuationIor;
+
+    uint albedoMapHandle;
+    uint roughnessMapHandle;
+    uint metallicMapHandle;
+    uint normalMapHandle;
+
+    uint materialType;
+    float padding;
+    float padding1;
     float padding2;
 };
 
@@ -73,17 +90,17 @@ layout(set = 0, binding = 3) uniform accelerationStructureEXT topLevelAS;
 ShadeParams unpackMaterial(Material mat,vec3 normal, mat3 tbn, vec2 texCoord){
     ShadeParams params;
 
-    bool hasAlbedoMap = mat.diffuseAlbedoMapHandle > 0;
-    params.albedo = hasAlbedoMap ? texture(textures[mat.diffuseAlbedoMapHandle], texCoord).rgb :  mat.diffuseAlbedo;
+    bool hasAlbedoMap = mat.albedoMapHandle > 0;
+    params.albedo = hasAlbedoMap ? texture(textures[mat.albedoMapHandle], texCoord).rgb :  mat.albedoRoughness.rgb;
 
     bool hasNormalMap = mat.normalMapHandle > 0;
     params.normal = hasNormalMap ? normalize(tbn * (texture(textures[mat.normalMapHandle],texCoord).xyz * 2.0 - 1.0)) : normalize(normal);
 
-    bool hasShininessMap = mat.shininessMapHandle > 0;
-    params.shininess = hasShininessMap ? texture(textures[mat.shininessMapHandle], texCoord).r : mat.shininess;
+    bool hasShininessMap = mat.roughnessMapHandle > 0;
+    params.shininess = hasShininessMap ? texture(textures[mat.roughnessMapHandle], texCoord).r : mat.albedoRoughness.w;
 
     // roughness to shininess remapping https://simonstechblog.blogspot.com/2011/12/microfacet-brdf.html
-    params.shininess = mix(params.shininess,2.0f / (params.shininess * params.shininess) - 2.0f,hasShininessMap);
+    params.shininess = 2.0f / (params.shininess * params.shininess) - 2.0f;
 
     return params;
 }

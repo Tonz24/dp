@@ -12,26 +12,26 @@
 #include "../engine/managers/resourceManager.h"
 
 std::shared_ptr<Texture> Material::getTexture(TextureMapSlot slot) {
-    if (slot == TextureMapSlot::invalidMapSlot)
+    if (slot == TextureMapSlot::invalid)
         throw std::runtime_error("ERROR: trying to get texture at invalid slot offset!");
 
     return textures_[static_cast<uint8_t>(slot)];
 }
 
 void Material::setTexture(std::shared_ptr<Texture> texture, TextureMapSlot slot) {
-    if (slot == TextureMapSlot::invalidMapSlot)
+    if (slot == TextureMapSlot::invalid)
         throw std::runtime_error("ERROR: trying to set texture at invalid slot offset!");
 
     textures_[static_cast<uint8_t>(slot)] = std::move(texture);
 
-    if (slot == TextureMapSlot::diffuseMapSlot)
-        uboFormat_.diffuseAlbedoMapHandle = textures_[static_cast<uint8_t>(TextureMapSlot::diffuseMapSlot)]->getCID();
-    else if (slot == TextureMapSlot::specularMapSlot)
-        uboFormat_.specularALbedoMapHandle = textures_[static_cast<uint8_t>(TextureMapSlot::specularMapSlot)]->getCID();
-    else if (slot == TextureMapSlot::normalMapSlot)
-        uboFormat_.normalMapHandle = textures_[static_cast<uint8_t>(TextureMapSlot::normalMapSlot)]->getCID();
-    else if (slot == TextureMapSlot::shininessMapSlot)
-        uboFormat_.shininessMapHandle = textures_[static_cast<uint8_t>(TextureMapSlot::shininessMapSlot)]->getCID();
+    if (slot == TextureMapSlot::albedo)
+        uboFormat_.albedoMapHandle = textures_[static_cast<uint8_t>(TextureMapSlot::albedo)]->getCID();
+    else if (slot == TextureMapSlot::roughness)
+        uboFormat_.roughnessMapHandle = textures_[static_cast<uint8_t>(TextureMapSlot::roughness)]->getCID();
+    else if (slot == TextureMapSlot::normal)
+        uboFormat_.normalMapHandle = textures_[static_cast<uint8_t>(TextureMapSlot::normal)]->getCID();
+    else if (slot == TextureMapSlot::metallic)
+        uboFormat_.metallicMapHandle = textures_[static_cast<uint8_t>(TextureMapSlot::metallic)]->getCID();
 }
 
 void Material::updateUBO() const {
@@ -59,15 +59,17 @@ bool Material::drawGUI() {
             changed = true;
             changedUBO = true;
         }
-        changedUBO |= ImGui::ColorEdit3("Diffuse albedo",&uboFormat_.diffuseAlbedo[0]);
-        changedUBO |= ImGui::ColorEdit3("Specular albedo",&uboFormat_.specularAlbedo[0]);
-        changedUBO |= ImGui::DragFloat("Shininess",&uboFormat_.shininess,1,1.0f,10000.0f);
-        changedUBO |= ImGui::DragFloat("Index of refraction",&uboFormat_.ior,0.01,1.0f,5.0f);
-        if (ImGui::ColorEdit3("Emission",&uboFormat_.emission[0],ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float)) {
+        changedUBO |= ImGui::ColorEdit3("Albedo",&uboFormat_.albedoRoughness[0]);
+        changedUBO |= ImGui::DragFloat("Roughness",&uboFormat_.albedoRoughness[3],0.001f,0.001f,1.0f);
+        changedUBO |= ImGui::DragFloat("Metallic",&uboFormat_.emissionMetallic[3],0.001f,0.001f,1.0f);
+        changedUBO |= ImGui::DragFloat("Index of refraction",&uboFormat_.attenuationIor[3],0.01,1.0f,5.0f);
+        changedUBO |= ImGui::DragFloat3("Transmission attenuation",&uboFormat_.attenuationIor[0],0.01,0.0f,9999.0f);
+
+        if (ImGui::ColorEdit3("Emission",&uboFormat_.emissionMetallic[0],ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float)) {
             changedUBO = true;
             changed = true;
         }
-        changedUBO |= ImGui::ColorEdit3("Attenuation",&uboFormat_.attenuation[0]);
+
         ImGui::Unindent();
     }
 
@@ -78,7 +80,7 @@ bool Material::drawGUI() {
 }
 
 bool Material::isEmissive() const {
-    return glm::any(glm::notEqual(uboFormat_.emission,glm::vec3{0.0f}));
+    return glm::any(glm::notEqual(glm::vec3{uboFormat_.emissionMetallic},glm::vec3{0.0f}));
 }
 
 Material::~Material() {

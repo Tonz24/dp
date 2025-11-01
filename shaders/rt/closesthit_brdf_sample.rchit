@@ -57,7 +57,7 @@ void main() {
 
     inPayloadBRDF.hitPosition = posWS;
     inPayloadBRDF.hitNormal = params.normal;
-    inPayloadBRDF.hitEmission = material.emission;
+    inPayloadBRDF.hitEmission = material.emissionMetallic.rgb;
     inPayloadBRDF.hitArea = 0.5 * length(cross(ab, ac)) * float(any(greaterThan(inPayloadBRDF.hitEmission,vec3(0.0))));
     inPayloadBRDF.didHit = true;
     inPayloadBRDF.mirror = material.materialType == 1;

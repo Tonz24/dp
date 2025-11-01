@@ -18,11 +18,11 @@ class Material : public ManagedResource, public UBOFormat<MaterialUBOFormat>, pu
 public:
 
     enum class TextureMapSlot : uint8_t {
-        invalidMapSlot = 255,
-        diffuseMapSlot = 0,
-        specularMapSlot = 1,
-        normalMapSlot = 2,
-        shininessMapSlot = 3,
+        invalid = 255,
+        albedo = 0,
+        roughness = 1,
+        metallic = 2,
+        normal = 3,
     };
 
     enum class MaterialType : uint32_t {
@@ -36,51 +36,37 @@ public:
 
 
     std::shared_ptr<Texture> getTexture(TextureMapSlot slot);
-
     void setTexture(std::shared_ptr<Texture> texture, TextureMapSlot slot);
 
-    [[nodiscard]] const glm::vec3 &getDiffuseAlbedo() const { return uboFormat_.diffuseAlbedo; }
-
-
-    [[nodiscard]] const glm::vec3 &getSpecularAlbedo() const { return uboFormat_.specularAlbedo; }
-
-    [[nodiscard]] const glm::vec3 &getEmission() const { return uboFormat_.emission; }
-
-    // float getRoughness() const {
-    //     return roughness_;
-    // }
-    //
-    // float getMetallic() const {
-    //     return metallic_;
-    // }
-
-    void setDiffuseAlbedo(const glm::vec3 &diffuseAlbedo) { uboFormat_.diffuseAlbedo = diffuseAlbedo; }
-
-    void setSpecularAlbedo(const glm::vec3 &specularAlbedo) { uboFormat_.specularAlbedo = specularAlbedo; }
-
-    void setEmission(const glm::vec3 &emission) { uboFormat_.emission = emission;}
-
-    // void setRoughness(float roughness) {
-    //     roughness_ = roughness;
-    // }
-    //
-    // void setMetallic(float metallic) {
-    //     metallic_ = metallic;
-    // }
-
-    float getShininess() const { return uboFormat_.shininess; }
-
-    float getIor() const { return uboFormat_.ior; }
-
-    const glm::vec3 &getAttenuation() const { return uboFormat_.attenuation; }
-
-    void setShininess(float shininess) { uboFormat_.shininess = shininess; }
-
-    void setIor(float ior) { uboFormat_.ior = ior; }
-
-    void setAttenuation(const glm::vec3 &attenuation) { uboFormat_.attenuation = attenuation; }
+    [[nodiscard]] const glm::vec3& getAlbedo() const { return reinterpret_cast<const glm::vec3&>(uboFormat_.albedoRoughness); }
+    [[nodiscard]] const glm::vec3& getEmission() const { return reinterpret_cast<const glm::vec3&>(uboFormat_.emissionMetallic); }
+    [[nodiscard]] float getRoughness() const { return uboFormat_.albedoRoughness.w;}
+    [[nodiscard]] float getMetallic() const { return uboFormat_.emissionMetallic.w; }
+    [[nodiscard]] float getIor() const { return uboFormat_.attenuationIor.w; }
+    [[nodiscard]] const glm::vec3 &getAttenuation() const { return reinterpret_cast<const glm::vec3&>(uboFormat_.attenuationIor); }
+    MaterialType getMaterialType() const {return static_cast<MaterialType>(uboFormat_.materialType);}
 
     [[nodiscard]] std::string getResourceType() const override { return "Material"; }
+
+    void setAlbedo(const glm::vec3 &diffuseAlbedo) {
+        uboFormat_.albedoRoughness.x  = diffuseAlbedo.x;
+        uboFormat_.albedoRoughness.y  = diffuseAlbedo.y;
+        uboFormat_.albedoRoughness.z  = diffuseAlbedo.z;
+    }
+    void setEmission(const glm::vec3 &emission) {
+        uboFormat_.emissionMetallic.x  = emission.x;
+        uboFormat_.emissionMetallic.y  = emission.y;
+        uboFormat_.emissionMetallic.z  = emission.z;
+    }
+    void setAttenuation(const glm::vec3 &attenuation) {
+        uboFormat_.attenuationIor.x  = attenuation.x;
+        uboFormat_.attenuationIor.y  = attenuation.y;
+        uboFormat_.attenuationIor.z  = attenuation.z;
+    }
+
+    void setRoughness(float roughness) {uboFormat_.albedoRoughness.w = roughness; }
+    void setMetallic(float metallic) { uboFormat_.emissionMetallic.w = metallic; }
+    void setIor(float ior) { uboFormat_.attenuationIor.w = ior; }
 
     void updateUBO() const;
     void updateUBONow() const;
@@ -89,29 +75,10 @@ public:
 
     bool isEmissive() const;
 
-    MaterialType getMaterialType() const {return static_cast<MaterialType>(uboFormat_.materialType);}
-
 
     friend class MaterialManager;
 private:
-    // glm::vec3 diffuseAlbedo_{};
-    // glm::vec3 specularAlbedo_{};
-    // glm::vec3 emission_{};
-    //
-    // float shininess_{};
-    // float ior_{};
-    // glm::vec3 attenuation_{};
-    //
-    //
-    // //unused
-    // float roughness_{};
-    // float metallic_{};
 
-
-    // [0 - diffuse albedo map
-    //  1 - specular albedo map
-    //  2 - normal map
-    //  3 - shininnes map]
     std::array<std::shared_ptr<Texture>,4> textures_{};
 };
 

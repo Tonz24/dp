@@ -57,8 +57,8 @@ void main() {
 
     // early exit on emissive materials -- write emission directly into output image
     Material mat = materialUBO.materials[uint(texture(utextures[pcs.materialMapHandle],uv).r)];
-    if (any(notEqual(mat.emission,vec3(0.0)))){
-        imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(mat.emission, 1.0));
+    if (any(notEqual(mat.emissionMetallic.rgb,vec3(0.0)))){
+        imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(mat.emissionMetallic.rgb, 1.0));
         return;
     }
 

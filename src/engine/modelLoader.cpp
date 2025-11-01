@@ -165,27 +165,22 @@ void ModelLoader::loadMaterials(const std::string& directory, const aiScene& sce
         //====================================================
         //gamma correctable values first
         if (aiColor3D aiDiffuse{}; assimpMaterial->Get(AI_MATKEY_COLOR_DIFFUSE, aiDiffuse) == aiReturn_SUCCESS) {
-            mat->setDiffuseAlbedo({ aiDiffuse.r,aiDiffuse.g,aiDiffuse.b });
+            mat->setAlbedo({ aiDiffuse.r,aiDiffuse.g,aiDiffuse.b });
             if (ModelLoader::gammaCorrectOnLoad)
-                mat->setDiffuseAlbedo(Utils::expand(mat->getDiffuseAlbedo()));
-        }
-
-        if (aiColor3D aiSpecular{}; assimpMaterial->Get(AI_MATKEY_COLOR_SPECULAR, aiSpecular) == aiReturn_SUCCESS) {
-            mat->setSpecularAlbedo({ aiSpecular.r,aiSpecular.g,aiSpecular.b });
-            if (ModelLoader::gammaCorrectOnLoad)
-                mat->setSpecularAlbedo(Utils::expand(mat->getSpecularAlbedo()));
+                mat->setAlbedo(Utils::expand(mat->getAlbedo()));
         }
         //====================================================
 
         //====================================================
-        //remaining material_ attributes
+        //remaining material_attributes
         if (aiColor3D aiEmissive{}; assimpMaterial->Get(AI_MATKEY_COLOR_EMISSIVE, aiEmissive) == aiReturn_SUCCESS)
             mat->setEmission({ aiEmissive.r,aiEmissive.g,aiEmissive.b });
 
-        if (float aiShininess{}; assimpMaterial->Get(AI_MATKEY_SHININESS, aiShininess) == aiReturn_SUCCESS) {
-            if (aiShininess > 0)    //  for whatever reason assimp says that shininess is there even if it isn't
-                mat->setShininess(aiShininess);
-        }
+        if (float aiRoughness{}; assimpMaterial->Get(AI_MATKEY_ROUGHNESS_FACTOR, aiRoughness) == aiReturn_SUCCESS)
+            mat->setRoughness(aiRoughness);
+
+        if (float aiMetallic{}; assimpMaterial->Get(AI_MATKEY_METALLIC_FACTOR, aiMetallic) == aiReturn_SUCCESS)
+                mat->setMetallic(aiMetallic);
 
         if (float aiIOR{}; assimpMaterial->Get(AI_MATKEY_REFRACTI, aiIOR) == aiReturn_SUCCESS)
             mat->setIor(aiIOR);
@@ -209,8 +204,8 @@ void ModelLoader::loadMaterials(const std::string& directory, const aiScene& sce
                 auto texture = TextureManager::getInstance()->getResource(fullName);
 
                 if (texture == nullptr) {
-                    bool isSrgb = slot != Material::TextureMapSlot::normalMapSlot;
-                    bool generateMipmaps = slot == Material::TextureMapSlot::diffuseMapSlot;
+                    bool isSrgb = slot != Material::TextureMapSlot::normal;
+                    bool generateMipmaps = slot == Material::TextureMapSlot::albedo;
                     texture  = TextureManager::getInstance()->registerResource(fullName, fullName, isSrgb, generateMipmaps);
 
                     //  this is a new texture, so mark it for staging

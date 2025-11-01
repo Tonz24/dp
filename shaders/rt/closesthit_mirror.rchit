@@ -53,7 +53,7 @@ void main() {
     vec4 nextSample = sampleMirror(params.normal,gl_WorldRayDirectionEXT);
 
     payload.hitPosition = posWS;
-    payload.hitEmission = material.emission;
+    payload.hitEmission = material.emissionMetallic.rgb;
     vec3 hitBrdf = params.albedo;
     payload.hit = true;
     payload.nextSample = nextSample;

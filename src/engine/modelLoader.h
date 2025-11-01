@@ -21,8 +21,8 @@ private:
 
     inline static bool gammaCorrectOnLoad{false};
 
-    static constexpr std::array textureTypes = {aiTextureType_SPECULAR, aiTextureType_SHININESS, aiTextureType_NORMALS, aiTextureType_DIFFUSE, };
-    static constexpr std::array slots = {Material::TextureMapSlot::specularMapSlot,Material::TextureMapSlot::shininessMapSlot,Material::TextureMapSlot::normalMapSlot, Material::TextureMapSlot::diffuseMapSlot,};
+    static constexpr std::array textureTypes = {aiTextureType_METALNESS, aiTextureType_DIFFUSE_ROUGHNESS, aiTextureType_NORMALS, aiTextureType_DIFFUSE, };
+    static constexpr std::array slots = {Material::TextureMapSlot::metallic,Material::TextureMapSlot::roughness,Material::TextureMapSlot::normal, Material::TextureMapSlot::albedo,};
 
     inline static std::mutex materialVectorMutex_{};
 };
