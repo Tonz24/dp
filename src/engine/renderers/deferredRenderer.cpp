@@ -14,7 +14,16 @@ bool DeferredRenderer::drawGUI() {
     if (ImGui::CollapsingHeader("Deferred renderer")) {
         ImGui::Indent();
 
-        static constexpr std::array items{"Debug Phong","Albedo map","Normal map","Depth map","World space position"};
+        static constexpr std::array items{
+            "Debug Phong",
+            "Albedo map",
+            "Roughness map",
+            "Metallic map",
+            "Normal map",
+            "Depth map",
+            "World space position",
+            "Debug Torrance-Sparrow",
+        };
         if (ImGui::Combo("Show target", &pcs_.overlayIndex, items.data(), items.size())) {
 
         }
@@ -24,8 +33,7 @@ bool DeferredRenderer::drawGUI() {
             ImGui::DragFloat3("Debug light position",&pcs_.lightPosWS[0],0.1);
             ImGui::ColorEdit3("Debug light emission",&pcs_.lightEmission[0],ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
         }
-
-        if (pcs_.overlayIndex == 2) {
+        if (pcs_.overlayIndex == 4) {
             ImGui::Checkbox("Remap to [0,1] range",reinterpret_cast<bool*>(&pcs_.remapNormals));
         }
 

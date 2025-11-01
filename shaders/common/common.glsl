@@ -42,7 +42,8 @@ struct Material{
 struct ShadeParams{
     vec3 albedo;
     vec3 normal;
-    float shininess;
+    float roughness;
+    float metallic;
 };
 //================================================
 
@@ -96,11 +97,11 @@ ShadeParams unpackMaterial(Material mat,vec3 normal, mat3 tbn, vec2 texCoord){
     bool hasNormalMap = mat.normalMapHandle > 0;
     params.normal = hasNormalMap ? normalize(tbn * (texture(textures[mat.normalMapHandle],texCoord).xyz * 2.0 - 1.0)) : normalize(normal);
 
-    bool hasShininessMap = mat.roughnessMapHandle > 0;
-    params.shininess = hasShininessMap ? texture(textures[mat.roughnessMapHandle], texCoord).r : mat.albedoRoughness.w;
+    bool hasRoughnessMap = mat.roughnessMapHandle > 0;
+    params.roughness = hasRoughnessMap ? texture(textures[mat.roughnessMapHandle], texCoord).r : mat.albedoRoughness.w;
 
-    // roughness to shininess remapping https://simonstechblog.blogspot.com/2011/12/microfacet-brdf.html
-    params.shininess = 2.0f / (params.shininess * params.shininess) - 2.0f;
+    bool hasMetallicMap = mat.metallicMapHandle > 0;
+    params.metallic = hasMetallicMap ? texture(textures[mat.metallicMapHandle], texCoord).r : mat.emissionMetallic.w;
 
     return params;
 }

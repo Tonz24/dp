@@ -10,10 +10,10 @@ int main() {
     auto cam = std::make_shared<Camera>(glm::vec3{0,2,7},glm::vec3{0,0,0});
     auto sky = TextureManager::getInstance()->registerResource("sky", "../assets/envmaps/test.jpg", true, false);
 
-    //auto scene = std::make_shared<Scene>(ModelLoader::loadModel("room/room2.obj", false),cam,std::move(sky));
+    auto scene = std::make_shared<Scene>(ModelLoader::loadModel("room/room2.obj", false),cam,std::move(sky));
     //auto scene = std::make_shared<Scene>(ModelLoader::loadModel("living_room/living_room2.obj", false),cam,std::move(sky));
     //auto scene = std::make_shared<Scene>(ModelLoader::loadModel("cornell/cornell.obj", false),cam,std::move(sky));
-    auto scene = std::make_shared<Scene>(ModelLoader::loadModel("car/car.obj", false),cam,std::move(sky));
+   // auto scene = std::make_shared<Scene>(ModelLoader::loadModel("car/car.obj", false),cam,std::move(sky));
 
     //auto scene = std::make_shared<Scene>(ModelLoader::loadModel("cornell/cornell.obj", false),cam,std::move(sky));
 
