@@ -124,5 +124,4 @@ GBuffer::~GBuffer() {
     materialIdMap_.reset();
     depthMap_.reset();
     accumulator_.reset();
-    objectIdMap_.reset();
 }

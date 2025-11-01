@@ -37,6 +37,10 @@ RaytracingPipeline::RaytracingPipeline(const std::vector<ShaderStageInfo>& shade
     initSBT();
 }
 
+RaytracingPipeline::~RaytracingPipeline() {
+    VkUtils::destroyBufferVMA(std::move(sbtBuffer_));
+}
+
 void RaytracingPipeline::initShaderGroups(const std::vector<ShaderStageInfo>& shaderInfos) {
 
     //for (const auto & shaderInfo : shaderInfos) {

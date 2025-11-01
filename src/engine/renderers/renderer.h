@@ -12,7 +12,7 @@ public:
                         swapchainImageView, const vk::Extent2D&
                         swapchainExtent) = 0;
 
-    ~Renderer() override = default;
+    ~Renderer() override;
 
     void setExportSignal(std::string_view fileName);
 
@@ -60,6 +60,7 @@ protected:
     VkUtils::BufferAlloc exportBuffer_{};
     vk::Extent2D exportExtent_;
     bool pendingExport_{false};
+
 
     void recordSwapchainImageExport(const vk::Image& swapchainImage, vk::Extent2D extent, std::string_view fileName,
                                     const vk::raii::CommandBuffer& cmdBuf);

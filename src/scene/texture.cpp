@@ -255,41 +255,10 @@ Texture::Texture(std::string_view fileName, bool isSrgb, bool generateMipmaps) :
     if (width_ == 0 || height_ == 0)
         throw std::runtime_error("ERROR! Texture " + std::string{fileName} + " has zero width or height!");
 
-
     if (fif == FIF_EXR || fif == FIF_HDR)
         initializeEnvMap(bitmap);
     else
         initializeTexture(bitmap, isSrgb);
-
-/*
-    if (fif == FIF_JPEG || fif == FIF_PNG) {
-        FIBITMAP* tempBitmap = FreeImage_Load(fif,correctFileName.c_str());
-        bitmap = FreeImage_ConvertTo32Bits(tempBitmap);
-        FreeImage_Unload(tempBitmap);
-    }
-    if (fif == FIF_EXR || fif == FIF_HDR) {
-        FIBITMAP* tempBitmap = FreeImage_Load(fif,correctFileName.c_str());
-
-        // as per documentation, FreeImage_ConvertToRGBAF() NORMALIZES VALUES, MEANING THAT HDR VALUES ARE SQUISHED TO [0, 1] range
-        bitmap = FreeImage_ConvertToRGBAF(tempBitmap);
-
-        // set bitmap values manually
-        #pragma omp parallel for collapse(2)
-        for (int y = 0; y < FreeImage_GetHeight(tempBitmap); ++y) {
-
-            auto srcScan = reinterpret_cast<FIRGBF*>(FreeImage_GetScanLine(tempBitmap, y));
-            auto dstScan = reinterpret_cast<FIRGBAF*>(FreeImage_GetScanLine(bitmap, y));
-
-            for (int x = 0; x < FreeImage_GetWidth(tempBitmap); ++x) {
-                dstScan[x].red   = srcScan[x].red;
-                dstScan[x].green = srcScan[x].green;
-                dstScan[x].blue  = srcScan[x].blue;
-                dstScan[x].alpha = 1.0f;
-            }
-        }
-        FreeImage_Unload(tempBitmap);
-    }*/
-
 
     isFromDisk_ = true;
     //  transfer src for generating mipmaps
@@ -339,18 +308,18 @@ void Texture::initializeEnvMap(FIBITMAP* bitmap) {
 }
 
 void Texture::initializeTexture(FIBITMAP* bitmap, bool isSrgb) {
-    bitmap = FreeImage_ConvertTo32Bits(bitmap);
+    auto bitmapConverted = FreeImage_ConvertTo32Bits(bitmap);
 
-    pixelSize_ = FreeImage_GetBPP(bitmap) / 8;
-    scanWidth_ = FreeImage_GetPitch(bitmap);
-    channelCount_ = getChannelCount(freeImageType_,FreeImage_GetBPP(bitmap));
+    pixelSize_ = FreeImage_GetBPP(bitmapConverted) / 8;
+    scanWidth_ = FreeImage_GetPitch(bitmapConverted);
+    channelCount_ = getChannelCount(freeImageType_,FreeImage_GetBPP(bitmapConverted));
     vkFormat_ = chooseVkFormat(isSrgb);
 
     data_.reserve(scanWidth_ * height_);
     data_.resize(scanWidth_ * height_,0);
 
-
-    FreeImage_ConvertToRawBits(data_.data(),bitmap,scanWidth_,pixelSize_ * 8, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, FALSE);
+    FreeImage_ConvertToRawBits(data_.data(),bitmapConverted,scanWidth_,pixelSize_ * 8, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, FALSE);
+    FreeImage_Unload(bitmapConverted);
 }
 
 

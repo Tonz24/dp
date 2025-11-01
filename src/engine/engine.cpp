@@ -937,17 +937,25 @@ void Engine::mainLoop() {
 
 void Engine::cleanup() {
     scene_.reset();
-    gBuffer_.reset();
+
     VkUtils::destroyBufferVMA(std::move(idMapTransferBuffer_));
 
     rasterRenderer_.reset();
     rtRendererNaive_.reset();
     rtRendererNEE_.reset();
-    emptyDeletionQueue();
+    gBuffer_.reset();
     Renderer::destroy();
 
-    VkUtils::destroy();
+    emptyDeletionQueue();
+    emptyDeletionQueue();
+
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
+
     glfwTerminate();
+    VkUtils::destroy();
 }
 
 void Engine::initSyncObjects() {

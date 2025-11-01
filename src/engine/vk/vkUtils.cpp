@@ -26,6 +26,16 @@ VkUtils::BufferAlloc VkUtils::createBufferVMA(vk::DeviceSize bufferSize, vk::Buf
 
     if (bufferUsage & vk::BufferUsageFlagBits::eShaderDeviceAddress)
         bufferAlloc.deviceAddress = getDevice().getBufferAddress({.buffer =  bufferAlloc.buffer});
+
+
+    std::string bufferDesc{"buffer\n size" + std::to_string(bufferSize)};
+    allocMap_[reinterpret_cast<uint64_t>(bufferAlloc.allocation)] = bufferDesc;
+
+    for (vk::DeviceSize suspectSize : suspectSizes) {
+        if (bufferSize == suspectSize)
+            int breakpoint = 5;
+    }
+
     return bufferAlloc;
 }
 
@@ -47,15 +57,21 @@ VkUtils::BufferAlloc VkUtils::createBufferVMA(vk::DeviceSize bufferSize, vk::Buf
 
     if (createResult != vk::Result::eSuccess)
         throw std::runtime_error("ERROR: failed to create buffer!");
-
     if (bufferUsage & vk::BufferUsageFlagBits::eShaderDeviceAddress)
         bufferAlloc.deviceAddress = getDevice().getBufferAddress({.buffer =  bufferAlloc.buffer});
+
+    std::string bufferDesc{"buffer \nsize " + std::to_string(bufferSize) + "\nalignment " + std::to_string(alignment)};
+    allocMap_[reinterpret_cast<uint64_t>(bufferAlloc.allocation)] = bufferDesc;
+
+    for (vk::DeviceSize suspectSize : suspectSizes) {
+        if (bufferSize == suspectSize)
+            int breakpoint = 5;
+    }
 
     return bufferAlloc;
 }
 
 VkUtils::ImageAlloc VkUtils::createImageVMA(const vk::ImageCreateInfo& imageInfo, VmaAllocationCreateFlags allocationFlags) {
-
 
     VmaAllocationCreateInfo allocInfo{
         .flags = allocationFlags,
@@ -68,12 +84,23 @@ VkUtils::ImageAlloc VkUtils::createImageVMA(const vk::ImageCreateInfo& imageInfo
     if (createResult != vk::Result::eSuccess)
         throw std::runtime_error("ERROR: failed to create buffer!");
 
+    std::string bufferDesc{"miage \nsize " + std::to_string(imageInfo.extent.width) + "x" + std::to_string(imageInfo.extent.height)};
+    allocMap_[reinterpret_cast<uint64_t>(imageAlloc.allocation)] = bufferDesc;
+
+    if (imageInfo.extent.width == 3800 || imageInfo.extent.width == 3801)
+        int breakpoint = 10;
     return imageAlloc;
 }
 
 void VkUtils::destroyImageVMA(ImageAlloc&& image) {
-    if (image.image && image.allocation)
+    if (image.image && image.allocation) {
+        auto key = reinterpret_cast<uint64_t>(image.allocation);
+        auto val = allocMap_[key];
+
+        std::cout << "destroying VMA image " << key  << " "  << val << std::endl;
+        allocMap_.erase(key);
         vmaDestroyImage(allocator_,image.image,image.allocation);
+    }
 
     image.image = nullptr;
     image.allocation = nullptr;
@@ -89,8 +116,14 @@ void VkUtils::unmapMemory(const BufferAlloc& buffer) {
 }
 
 void VkUtils::destroyBufferVMA(BufferAlloc&& buffer) {
-    if (buffer.buffer && buffer.allocation)
+    if (buffer.buffer && buffer.allocation) {
+        auto key = reinterpret_cast<uint64_t>(buffer.allocation);
+        auto val = allocMap_.at(key);
+
+        std::cout << "destroying VMA buffer " << key  << " "  << val << std::endl;
+        allocMap_.erase(key);
         vmaDestroyBuffer(allocator_,buffer.buffer,buffer.allocation);
+    }
 
     buffer.buffer = nullptr;
     buffer.allocation = nullptr;
@@ -227,6 +260,12 @@ void VkUtils::init(const vk::raii::Device* device, const vk::raii::PhysicalDevic
 }
 
 void VkUtils::destroy() {
+
+    std::cout << "unfreed allocations: " << std::endl;
+    for (const auto & allocMap : allocMap_) {
+        std::cout << allocMap.first << " " << allocMap.second << std::endl;
+    }
+
     vmaDestroyAllocator(allocator_);
 }
 

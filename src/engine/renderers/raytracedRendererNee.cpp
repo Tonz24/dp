@@ -41,7 +41,7 @@ void RaytracedRendererNEE::initGraphicsPipelines() {
                 {"shaders/closesthit_brdf_sample_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
         };
 
-    rtPipeline_ = RaytracingPipeline{rtStages,descSetFillLayouts,raygenRange};
+    new (&rtPipeline_) RaytracingPipeline{rtStages, descSetFillLayouts, raygenRange};
 
     pcs_.albedoMapHandle = gBuffer_->getAlbedoMap().getCID();
     pcs_.normalMapHandle = gBuffer_->getNormalMap().getCID();

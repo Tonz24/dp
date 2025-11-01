@@ -10,7 +10,7 @@
 #include "../engine/managers/resourceManager.h"
 
 
-Scene::Scene(const std::vector<std::shared_ptr<Mesh>>&& meshes, std::shared_ptr<Camera> camera, std::shared_ptr<Texture> sky): meshes_(meshes), camera_(std::move(camera)), sky_(std::move(sky)) {
+Scene::Scene(const std::vector<std::shared_ptr<Mesh>>&& meshes, std::shared_ptr<Camera> camera, std::shared_ptr<Texture> sky): meshes_(std::move(meshes)), camera_(std::move(camera)), sky_(std::move(sky)) {
 
     initEnvmap();
     initTLAS();
@@ -21,7 +21,11 @@ Scene::Scene(const std::vector<std::shared_ptr<Mesh>>&& meshes, std::shared_ptr<
 }
 
 Scene::~Scene() {
+    VkUtils::destroyBufferVMA(std::move(emissiveBuffer_));
+    VkUtils::destroyBufferVMA(std::move(cdfBuffer_));
 
+    sky_.reset();
+    skyCdf_.reset();
 }
 
 bool Scene::drawGUI() {

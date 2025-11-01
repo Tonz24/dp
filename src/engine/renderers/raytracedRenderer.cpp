@@ -50,7 +50,7 @@ void RaytracedRenderer::initGraphicsPipelines() {
             {"shaders/closesthit_mirror_naive_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
     };
 
-    rtPipeline_ = RaytracingPipeline{rtStages,descSetFillLayouts,raygenRange};
+    new (&rtPipeline_) RaytracingPipeline{rtStages, descSetFillLayouts, raygenRange};
 
    setPcsData();
 

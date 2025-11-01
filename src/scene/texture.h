@@ -98,7 +98,6 @@ private:
 
     // raw texture data in bytes
     std::vector<uint8_t> data_;
-    std::shared_ptr<Texture> textureCdf_{nullptr};
 
     FREE_IMAGE_FORMAT freeImageFormat_{};
     FREE_IMAGE_TYPE freeImageType_{};

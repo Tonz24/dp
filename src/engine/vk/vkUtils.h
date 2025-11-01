@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <unordered_map>
 #include <glm/glm.hpp>
 #include <vulkan/vulkan_raii.hpp>
 #include "vmaUsage.h"
@@ -24,7 +25,7 @@ public:
 
 
         BufferAlloc(BufferAlloc&& other) noexcept : buffer(std::move(other.buffer)), allocation(other.allocation), allocationInfo(std::move(other.allocationInfo)),
-              deviceAddress(other.deviceAddress)
+                                                    deviceAddress(other.deviceAddress)
         {
             other.buffer = nullptr;
             other.allocation = nullptr;
@@ -180,6 +181,12 @@ private:
     inline static const vk::raii::CommandPool* commandPool_{};
 
     inline static VmaAllocator allocator_{};
+
+    inline static std::unordered_map<uint64_t,std::string> allocMap_;
+
+    inline static std::vector<vk::DeviceSize> suspectSizes = {
+        192,
+    };
 };
 
 

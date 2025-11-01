@@ -16,6 +16,9 @@ public:
 
     RaytracingPipeline() = default;
 
+
+    ~RaytracingPipeline();
+
     [[nodiscard]] const VkUtils::BufferAlloc& getSBTBuffer() const { return sbtBuffer_; }
     [[nodiscard]] const vk::StridedDeviceAddressRegionKHR& getRaygenRegion() const { return raygenRegion_; }
     [[nodiscard]] const vk::StridedDeviceAddressRegionKHR& getMissRegion() const { return missRegion_; }

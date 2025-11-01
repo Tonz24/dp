@@ -7,6 +7,10 @@
 #include "../engine.h"
 #include "../managers/resourceManager.h"
 
+Renderer::~Renderer() {
+    VkUtils::destroyBufferVMA(std::move(exportBuffer_));
+}
+
 void Renderer::setExportSignal(std::string_view fileName) {
     exportSignal_ = true;
     exportFileName_ = fileName;
@@ -20,6 +24,7 @@ void Renderer::initLayouts() {
 void Renderer::destroy() {
     for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
         VkUtils::destroyBufferVMA(std::move(cameraUBOs_[i]));
+        VkUtils::destroyBufferVMA(std::move(objDescSSBOs_[i]));
         VkUtils::destroyBufferVMA(std::move(materialUBOs_[i]));
     }
 }
@@ -112,6 +117,7 @@ void Renderer::initDescSetLayout() {
 
         cameraUBOsMapped_.emplace_back(static_cast<unsigned char*>(buffer.allocationInfo.pMappedData));
         cameraUBOs_.emplace_back(std::move(buffer));
+
     }
 
     // material UBO
