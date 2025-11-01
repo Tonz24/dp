@@ -1,4 +1,6 @@
 # TODO:
+- move to roughness-metallic workflow
+- Torrance-Sparrow BRDF
 - organize descriptor set bindings
   - introduce variables
   - put them in a file somewhere where both shaders and cpp headers can include them
