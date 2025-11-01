@@ -210,7 +210,7 @@ void main() {
         vec3 omega_o = normalize(cameraUBO.posWS - posWS);
         vec3 omega_i = normalize(pcs.lightPosWS - posWS);
 
-
-        fragColor = vec4(evalPbr(albedo, roughness, metallic, normal, omega_o, omega_i, posWS),1.0);
+        vec3 L_o = evalPbr(albedo, roughness, metallic, normal, omega_o, omega_i, posWS);
+        fragColor = vec4(aces(L_o),1.0);
     }
 }

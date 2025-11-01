@@ -29,7 +29,7 @@ bool DeferredRenderer::drawGUI() {
         }
         ImGui::Checkbox("Draw skybox",reinterpret_cast<bool*>(&pcs_.drawSkybox));
 
-        if (pcs_.overlayIndex == 0) {
+        if (pcs_.overlayIndex == 0 || pcs_.overlayIndex == 7) {
             ImGui::DragFloat3("Debug light position",&pcs_.lightPosWS[0],0.1);
             ImGui::ColorEdit3("Debug light emission",&pcs_.lightEmission[0],ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
         }
