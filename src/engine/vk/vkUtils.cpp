@@ -84,11 +84,9 @@ VkUtils::ImageAlloc VkUtils::createImageVMA(const vk::ImageCreateInfo& imageInfo
     if (createResult != vk::Result::eSuccess)
         throw std::runtime_error("ERROR: failed to create buffer!");
 
-    std::string bufferDesc{"miage \nsize " + std::to_string(imageInfo.extent.width) + "x" + std::to_string(imageInfo.extent.height)};
+    std::string bufferDesc{"image \nsize " + std::to_string(imageInfo.extent.width) + "x" + std::to_string(imageInfo.extent.height)};
     allocMap_[reinterpret_cast<uint64_t>(imageAlloc.allocation)] = bufferDesc;
 
-    if (imageInfo.extent.width == 3800 || imageInfo.extent.width == 3801)
-        int breakpoint = 10;
     return imageAlloc;
 }
 

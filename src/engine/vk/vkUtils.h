@@ -185,7 +185,7 @@ private:
     inline static std::unordered_map<uint64_t,std::string> allocMap_;
 
     inline static std::vector<vk::DeviceSize> suspectSizes = {
-        192,
+        5632,
     };
 };
 

@@ -107,16 +107,17 @@ void main() {
         radiance += weight * directContribution;
 
 
-        if (!payload.hit)
-            break;
-
-
         // hitting a light from a material that was not a mirror previously ends the path (emissive surfaces handled in direct lighting calculation)
+        // break before integrating radiance (that would result in double counting)
         if(hitLight(payload) && !lastWasMirror)
             break;
 
         weight *= weightFactor;
         radiance += weight * payload.hitEmission; 
+
+        // break if no hit (after integrating radiance from environment map)
+        if (!payload.hit)
+            break;
     
         ///////////////////////////////////////////////////////////
         // russian roulette termination

@@ -26,30 +26,31 @@ void RaytracedRenderer::render(const Scene& scene, vk::raii::CommandBuffer& cmdB
 }
 
 RaytracedRenderer::RaytracedRenderer(const std::shared_ptr<GBuffer>& gBuffer): DeferredRenderer(gBuffer) {
-    initGraphicsPipelines();
+    initGraphicsPipelines(rtStages);
 }
 
 RaytracedRenderer::RaytracedRenderer(const std::string_view& gBufferName): DeferredRenderer(gBufferName) {
-    initGraphicsPipelines();
+    initGraphicsPipelines(rtStages);
 }
+
 
 void RaytracedRenderer::resizeScreen(uint32_t newWidth, uint32_t newHeight) {
     DeferredRenderer::resizeScreen(newWidth, newHeight);
     setPcsData();
 }
 
-void RaytracedRenderer::initGraphicsPipelines() {
+RaytracedRenderer::RaytracedRenderer(const std::string_view& gBufferName, const std::vector<RasterPipeline::ShaderStageInfo>& rtStages) : DeferredRenderer(gBufferName) {
+    initGraphicsPipelines(rtStages);
+}
+
+RaytracedRenderer::RaytracedRenderer(const std::shared_ptr<GBuffer>& gBuffer, const std::vector<RasterPipeline::ShaderStageInfo>& rtStages) : DeferredRenderer(gBuffer) {
+    initGraphicsPipelines(rtStages);
+}
+
+void RaytracedRenderer::initGraphicsPipelines(const std::vector<RasterPipeline::ShaderStageInfo>& rtStages) {
     std::vector descSetFillLayouts = {*Renderer::getDescSetLayoutFrame()};
 
     std::array raygenRange{PcsRaygen::getRange()};
-
-    auto rtStages = std::vector<RasterPipeline::ShaderStageInfo>{
-            {"shaders/raygen_naive_rgen.spv",vk::ShaderStageFlagBits::eRaygenKHR},
-            {"shaders/miss_naive_rmiss.spv",vk::ShaderStageFlagBits::eMissKHR},
-            {"shaders/closesthit_naive_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
-            {"shaders/closesthit_mirror_naive_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
-    };
-
     new (&rtPipeline_) RaytracingPipeline{rtStages, descSetFillLayouts, raygenRange};
 
    setPcsData();

@@ -66,7 +66,12 @@ AccelerationStructure::AccelerationStructure(vk::AccelerationStructureTypeKHR ty
 }
 
 AccelerationStructure::~AccelerationStructure() {
+    destroy();
+}
+
+void AccelerationStructure::destroy() {
     // destroy the acceleration structure before destroying the underlying data buffer
+    // tmp goes out of scope
     {auto tmp = std::move(accelStruct_);}
 
     VkUtils::destroyBufferVMA(std::move(storageBuffer_));

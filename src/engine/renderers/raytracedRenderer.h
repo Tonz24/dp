@@ -26,6 +26,11 @@ public:
 
 protected:
 
+    explicit RaytracedRenderer(const std::string_view& gBufferName, const std::vector<RasterPipeline::ShaderStageInfo>& rtStages);
+    explicit RaytracedRenderer(const std::shared_ptr<GBuffer>& gBuffer, const std::vector<RasterPipeline::ShaderStageInfo>& rtStages);
+
+
+
     void recordCommandBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage,
                              const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) override;
 
@@ -47,8 +52,19 @@ protected:
 
     uint32_t tonemap_{1};
 
-private:
-    void initGraphicsPipelines();
+    void initGraphicsPipelines(const std::vector<RasterPipeline::ShaderStageInfo>& rtStages);
+    virtual const std::vector<RasterPipeline::ShaderStageInfo>& getShaderStages() {
+        return rtStages;
+    }
 
+
+private:
+
+    const static inline std::vector<RasterPipeline::ShaderStageInfo>  rtStages = {
+        {"shaders/raygen_naive_rgen.spv",vk::ShaderStageFlagBits::eRaygenKHR},
+        {"shaders/miss_naive_rmiss.spv",vk::ShaderStageFlagBits::eMissKHR},
+        {"shaders/closesthit_naive_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
+        {"shaders/closesthit_mirror_naive_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
+    };
 
 };

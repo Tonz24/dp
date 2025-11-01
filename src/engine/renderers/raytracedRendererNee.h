@@ -11,8 +11,22 @@ public:
 
     bool drawGUI() override;
 
-    explicit RaytracedRendererNEE(const std::shared_ptr<GBuffer>& gBuffer);
-    explicit RaytracedRendererNEE(const std::string_view& gBufferName);
+    explicit RaytracedRendererNEE(const std::shared_ptr<GBuffer>& gBuffer) : RaytracedRenderer(gBuffer, rtStages) {}
+    explicit RaytracedRendererNEE(const std::string_view& gBufferName): RaytracedRenderer(gBufferName, rtStages) {}
+
+
+protected:
+    const std::vector<RasterPipeline::ShaderStageInfo>& getShaderStages() override {
+        return rtStages;
+    }
 private:
-    void initGraphicsPipelines();
+
+    static inline const std::vector<RasterPipeline::ShaderStageInfo> rtStages = {
+            {"shaders/raygen_rgen.spv",vk::ShaderStageFlagBits::eRaygenKHR},
+            {"shaders/miss_rmiss.spv",vk::ShaderStageFlagBits::eMissKHR},
+            {"shaders/miss_brdf_sample_rmiss.spv",vk::ShaderStageFlagBits::eMissKHR},
+            {"shaders/closesthit_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
+            {"shaders/closesthit_mirror_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
+            {"shaders/closesthit_brdf_sample_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
+    };
 };

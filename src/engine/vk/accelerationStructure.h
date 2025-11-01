@@ -17,14 +17,20 @@ public:
     AccelerationStructure(const AccelerationStructure& other) = delete;
     AccelerationStructure& operator=(const AccelerationStructure& other) = delete;
 
+    // fixed move ctor: steal + null out source
     AccelerationStructure(AccelerationStructure&& other) noexcept
         : accelStruct_(std::move(other.accelStruct_)),
-          storageBuffer_(std::move(other.storageBuffer_)) {}
+          storageBuffer_(std::move(other.storageBuffer_)) {
+        other.storageBuffer_ = {};
+    }
 
+    // fixed move assignment: destroy current, steal + null out source
     AccelerationStructure& operator=(AccelerationStructure&& other) noexcept {
         if (this == &other) return *this;
+        destroy();
         accelStruct_ = std::move(other.accelStruct_);
         storageBuffer_ = std::move(other.storageBuffer_);
+        other.storageBuffer_ = {};
         return *this;
     }
 
@@ -34,4 +40,6 @@ public:
 private:
     vk::raii::AccelerationStructureKHR accelStruct_{nullptr};
     VkUtils::BufferAlloc storageBuffer_{};
+
+    void destroy();
 };
