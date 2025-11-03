@@ -28,7 +28,6 @@ vec3 reconstructPositionWS(vec2 uv, float depth){
     return camRay.xyz / camRay.w;
 }
 
-
 // https://auzaiffe.wordpress.com/2024/04/15/vndf-importance-sampling-an-isotropic-distribution/
 // https://gist.github.com/jdupuy/4c6e782b62c92b9cb3d13fbb0a5bd7a0#file-samplevndf_ggx-cpp-L51
 vec3 SampleVndf_GGX(vec2 u, vec3 wi, float alpha, vec3 n)
@@ -215,6 +214,7 @@ void main() {
         float G = G(cos_theta_o, cos_theta_i, alpha); 
 
         brdf = NDF * G * F / (4.0f * cos_theta_o * cos_theta_i);
+        
 
         direction = omega_i;
         pdf = pdf_vndf_isotropic(omega_i, omega_o, alpha, normal) * specProb;
@@ -236,7 +236,7 @@ void main() {
     else {
         sampled = sampleHemisphereCosineWeighted(normal, seed);
 
-        vec3 kD = (1.0f - F) * (1.0f - mat.emissionMetallic.w);
+        vec3 kD = (1.0f - F0) * (1.0f - mat.emissionMetallic.w);
 
         brdf = kD * albedo * INVPI;
 
@@ -244,7 +244,6 @@ void main() {
         pdf = sampled.w * (1.0 - specProb); 
     }
     cosThetaI = max(dot(direction,normal), 0.0);
-
     weightFactor = brdf * cosThetaI / pdf;
 
     /*
