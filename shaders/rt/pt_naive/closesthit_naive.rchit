@@ -16,7 +16,6 @@ layout(location = 0) rayPayloadInEXT HitPayloadNaive payload;
 hitAttributeEXT vec2 attribs;
 
 
-
 void main() {
     ObjDesc object = objDesc.i[gl_InstanceCustomIndexEXT];
 

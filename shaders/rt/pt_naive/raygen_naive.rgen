@@ -28,11 +28,99 @@ vec3 reconstructPositionWS(vec2 uv, float depth){
     return camRay.xyz / camRay.w;
 }
 
-float powerHeuristic(float pdf, float pdfOther) {
-	const float pdf_sqr = pdf * pdf;
-	const float pdfOther_sqr = pdfOther * pdfOther;
-	const float result = pdf_sqr / (pdfOther_sqr + pdf_sqr);
-	return result;
+
+// https://auzaiffe.wordpress.com/2024/04/15/vndf-importance-sampling-an-isotropic-distribution/
+// https://gist.github.com/jdupuy/4c6e782b62c92b9cb3d13fbb0a5bd7a0#file-samplevndf_ggx-cpp-L51
+vec3 SampleVndf_GGX(vec2 u, vec3 wi, float alpha, vec3 n)
+{
+    // Dirac function for alpha = 0
+    if (alpha == 0.0f) return n;
+    // decompose the vector in parallel and perpendicular components
+    vec3 wi_z = n * dot(wi, n);
+    vec3 wi_xy = wi - wi_z;
+    // warp to the hemisphere configuration
+    vec3 wiStd = normalize(wi_z - alpha * wi_xy);
+    // sample a spherical cap in (-wiStd.z, 1]
+    float wiStd_z = dot(wiStd, n);
+    float phi = (2.0f * u.x - 1.0f) * PI;
+    float z = (1.0f - u.y) * (1.0f + wiStd_z) - wiStd_z;
+    float sinTheta = sqrt(clamp(1.0f - z * z, 0.0f, 1.0f));
+    float x = sinTheta * cos(phi);
+    float y = sinTheta * sin(phi);
+    vec3 cStd = vec3(x, y, z);
+    // reflect sample to align with normal
+    vec3 up = vec3(0, 0, 1);
+    vec3 wr = n + up;
+    // prevent division by zero
+    float wrz_safe = max(wr.z, 1e-6);
+    vec3 c = dot(wr, cStd) * wr / wrz_safe - cStd;
+    // compute halfway direction as standard normal
+    vec3 wmStd = c + wiStd;
+    vec3 wmStd_z = n * dot(n, wmStd);
+    vec3 wmStd_xy = wmStd_z - wmStd;
+    // warp back to the ellipsoid configuration
+    vec3 wm = normalize(wmStd_z + alpha * wmStd_xy);
+    // return final normal
+    return wm;
+}
+
+// https://auzaiffe.wordpress.com/2024/04/15/vndf-importance-sampling-an-isotropic-distribution/
+float pdf_vndf_isotropic(vec3 wo, vec3 wi, float alpha, vec3 n)
+{
+    float alphaSquare = alpha * alpha;
+    vec3 wm = normalize(wo + wi);
+    float zm = dot(wm, n);
+    float zi = dot(wi, n);
+    float nrm = inversesqrt((zi * zi) * (1.0f - alphaSquare) + alphaSquare);
+    float sigmaStd = (zi * nrm) * 0.5f + 0.5f;
+    float sigmaI = sigmaStd / nrm;
+    float nrmN = (zm * zm) * (alphaSquare - 1.0f) + 1.0f;
+    return alphaSquare / (PI * 4.0f * nrmN * nrmN * sigmaI);
+}
+
+vec3 fresnelSchlick(vec3 F_0, float cos_theta_h){
+    float v = 1.0 - cos_theta_h;
+    v = v * v * v * v * v; //fifth power
+    return F_0 + (1.0 - F_0) * v;
+}
+
+float distrGGX(float alpha, float cos_theta_m){
+
+    if (cos_theta_m <= 0)
+        return 0.0f;
+
+    alpha = max(alpha, 1e-3);
+    cos_theta_m = clamp(cos_theta_m, 0.0f, 1.0f);
+
+    float a2 = alpha * alpha;
+    float cos_theta_m2 = cos_theta_m * cos_theta_m;
+
+    float term = (a2 - 1.0f) * cos_theta_m2 + 1;
+    float term2 = term * term;
+
+    float denom = PI * term2;
+
+    float res = a2 / denom; 
+
+    if (isinf(res) || isnan(res))
+        return 0.0f;
+
+    return res;
+}
+
+float aux(float cos_theta, float alpha){
+    float a2 = alpha * alpha;
+    float cos_theta2 = cos_theta * cos_theta;
+    float term =  sqrt(1.0 + a2 * (1.0 / cos_theta2 - 1.0));
+
+    return (term - 1.0) / 2.0;
+}
+
+float G(float cos_theta_o, float cos_theta_i, float alpha){
+    float aux_theta_o = aux(cos_theta_o, alpha);
+    float aux_theta_i = aux(cos_theta_i, alpha);
+
+    return 1.0 / (1.0 + aux_theta_o + aux_theta_i);
 }
 
 void main() { 
@@ -74,13 +162,10 @@ void main() {
     vec3 rayDir = normalize(posWS - cameraUBO.posWS);
 
     vec4 sampled = sampleMaterial(normal, rayDir, mat.materialType, seed);
-    
     vec3 direction = sampled.xyz;
     float pdf = sampled.w;
-
     float cosThetaI = mat.materialType == 1 ? 1.0 : max(dot(direction,normal),0.0);
     vec3 brdf = mat.materialType == 1 ? albedo : albedo * INVPI;
-
     vec3 weightFactor = brdf * cosThetaI / pdf;
 
     float tMin = 0.001f;
@@ -88,7 +173,88 @@ void main() {
 
     vec3 radiance = vec3(0.0);
     vec3 weight = vec3(1.0);
+
+    ///////////////////////////////////////////////////////////////
+    // PBR TEST
+    vec3 omega_o = -rayDir;
+    float alpha =  mat.albedoRoughness.w *  mat.albedoRoughness.w;
+
+    // sample GGX VNDF to obtain omega_h -- microfacet normal
+    float ksi1 = rand(seed);
+    float ksi2 = rand(seed);
+    vec3 omega_h = SampleVndf_GGX(vec2(ksi1, ksi2), omega_o, alpha, normal);
     
+    // evaluate Fresnel term first and use it to choose between a diffuse or specular sample
+    float cos_theta_h = max(dot(omega_h, omega_o), 0.0f); // angle between microfacet normal and view direction
+    vec3 F0 = mix(vec3(0.04), mat.albedoRoughness.rgb, mat.emissionMetallic.w);
+    vec3 F = fresnelSchlick(F0, cos_theta_h);
+    float specProb = clamp(max(F.x,max(F.y,F.z)),0.05f,0.95f);
+
+    float ksi3 = rand(seed);
+    bool isSpecularBounce = ksi3 < specProb;
+    
+
+    if (isSpecularBounce) {
+
+        // evaluate omega_i (bounce direction): reflect view direction (omega_o) around the microfacet normal (omega_h)
+        vec3 omega_i = reflect(rayDir, omega_h);
+
+        float cos_theta_m = max(dot(omega_h, normal), 0.0f); // angle between microfacet normal and surface normal
+
+        float cos_theta_o = max(dot(omega_o, normal), 0.0); // angle between view direction and surface normal
+        float cos_theta_i = max(dot(omega_i, normal), 0.0); // angle between light direction and surface normal
+
+        
+        if (any(isinf(omega_h)) || any(isnan(omega_h)))
+            return;
+
+        if (cos_theta_o <= 0 || cos_theta_i <= 0 || cos_theta_m <= 0)
+            return;
+
+        float NDF = distrGGX(alpha, cos_theta_m);
+        float G = G(cos_theta_o, cos_theta_i, alpha); 
+
+        brdf = NDF * G * F / (4.0f * cos_theta_o * cos_theta_i);
+
+        direction = omega_i;
+        pdf = pdf_vndf_isotropic(omega_i, omega_o, alpha, normal) * specProb;
+
+
+        if (any(lessThan(brdf, vec3(0.0f))))
+            return;
+
+        if (pdf <= 0.0)
+            return;
+
+        if (isinf(pdf) || isnan(pdf))
+            return;
+
+        
+        if (any(isinf(brdf)) || any(isnan(brdf)))
+            return;
+    } 
+    else {
+        sampled = sampleHemisphereCosineWeighted(normal, seed);
+
+        vec3 kD = (1.0f - F) * (1.0f - mat.emissionMetallic.w);
+
+        brdf = kD * albedo * INVPI;
+
+        direction = sampled.xyz;
+        pdf = sampled.w * (1.0 - specProb); 
+    }
+    cosThetaI = max(dot(direction,normal), 0.0);
+
+    weightFactor = brdf * cosThetaI / pdf;
+
+    /*
+    if (pcs.accumulate == 1){
+        vec3 oldRadiance = imageLoad(outputImage, ivec2(gl_LaunchIDEXT.xy)).xyz;
+        radiance = mix(oldRadiance,radiance, 1.0f / float(pcs.frameCtr + 1));
+    }
+    imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(radiance, 1.0));
+    return;*/
+
     resetPayload(payload);
     bool lastWasMirror = mat.materialType == 1;
     for (uint depth = 0; depth < pcs.maxRecursionDepth; depth++){

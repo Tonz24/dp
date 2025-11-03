@@ -19,6 +19,7 @@ void GraphicsPipeline::initShaderStages(const std::vector<ShaderStageInfo>& shad
     for (const auto & shaderInfo : shaderInfos) {
         auto code = Utils::readFile(shaderInfo.shaderPath);
 
+
         shaderModules_.emplace_back(createShaderModule(code));
 
         vk::PipelineShaderStageCreateInfo createInfo{

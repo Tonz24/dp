@@ -53,7 +53,7 @@ bool Material::drawGUI() {
     if (ImGui::CollapsingHeader("Material")) {
         ImGui::Indent();
 
-        static constexpr std::array materialType{"diffuse","mirror"};
+        static constexpr std::array materialType{"diffuse","mirror","pbr"};
 
         if (ImGui::Combo("Material type", reinterpret_cast<int*>(&uboFormat_.materialType), materialType.data(), materialType.size())) {
             changed = true;

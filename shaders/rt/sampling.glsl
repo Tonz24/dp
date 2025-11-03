@@ -49,6 +49,12 @@ vec4 sampleMaterial(vec3 normal, vec3 rayDir, uint materialType, inout uint seed
 	if (materialType == 1)
 		return sampleMirror(normal, rayDir);
 
+	// pbr test
+	if (materialType == 2){
+		
+
+	}
+
 	return sampled;
 }
 
