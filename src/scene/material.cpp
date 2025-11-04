@@ -60,8 +60,8 @@ bool Material::drawGUI() {
             changedUBO = true;
         }
         changedUBO |= ImGui::ColorEdit3("Albedo",&uboFormat_.albedoRoughness[0]);
-        changedUBO |= ImGui::DragFloat("Roughness",&uboFormat_.albedoRoughness[3],0.001f,0.001f,1.0f);
-        changedUBO |= ImGui::DragFloat("Metallic",&uboFormat_.emissionMetallic[3],0.001f,0.001f,1.0f);
+        changedUBO |= ImGui::DragFloat("Roughness",&uboFormat_.albedoRoughness[3],0.001f,0.0f,1.0f);
+        changedUBO |= ImGui::DragFloat("Metallic",&uboFormat_.emissionMetallic[3],0.001f,0.0f,1.0f);
         changedUBO |= ImGui::DragFloat("Index of refraction",&uboFormat_.attenuationIor[3],0.01,1.0f,5.0f);
         changedUBO |= ImGui::DragFloat3("Transmission attenuation",&uboFormat_.attenuationIor[0],0.01,0.0f,9999.0f);
 

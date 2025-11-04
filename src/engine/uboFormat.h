@@ -28,8 +28,8 @@ struct CameraUBOFormat {
 
 
 struct alignas(16) MaterialUBOFormat {
-    glm::vec4 albedoRoughness{0.0f,0.0f,0.0f,0.01f};
-    glm::vec4 emissionMetallic{0.0f,0.0f,0.0f,0.01f};
+    glm::vec4 albedoRoughness{0.0f,0.0f,0.0f,0.05f};
+    glm::vec4 emissionMetallic{0.0f,0.0f,0.0f,0.0f};
     glm::vec4 attenuationIor{0.0f,0.0f,0.0f,1.46f};
 
     uint32_t albedoMapHandle{0};
