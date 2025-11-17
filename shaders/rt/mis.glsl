@@ -214,7 +214,6 @@ vec3 evaluateSampleBrdfMisEnvArea(vec3 albedo, vec3 posWS, vec3 normal, inout ui
    // }
     float misWeight = powerHeuristic(brdfPdf, pdfOther);
 
-
     float cos_theta_i = max(dot(omega_i, normal), 0.0f);
     vec3 brdf = albedo * INVPI;
 
@@ -230,8 +229,6 @@ vec3 calculateDirect(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
 
     if (any(isinf(contribArea)) || any(isnan(contribArea)) || any(lessThan(contribArea,vec3(0.0))))
         return vec3(10,0,0);
-
-
 
     vec3 contribEnv = evaluateSampleEnvMisBrdf(albedo, posWS, normal, seed);
 

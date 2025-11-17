@@ -58,12 +58,12 @@ void main() {
     ShadeParams params;
 
     //  load the rest of the textures
-    vec3 normal = normalize(normalRoughness.xyz);
-    float roughness = normalRoughness.w;
+    params.normal = normalize(normalRoughness.xyz);
+    params.roughness = normalRoughness.w;
 
     vec4 albedoMetallic = texture(textures[pcs.albedoMapHandle], uv);
-    vec3 albedo = albedoMetallic.rgb;
-    float metallic = albedoMetallic.w;
+    params.albedo = albedoMetallic.rgb;
+    params.metallic = albedoMetallic.w;
 
     float depth = texture(textures[pcs.depthMapHandle], uv).x;
 
@@ -72,20 +72,16 @@ void main() {
     vec3 posWS = reconstructPositionWS(uv,depth);
     vec3 rayDir = normalize(posWS - cameraUBO.posWS);
 
-    params.albedo = albedo;
-    params.normal = normal;
-    params.roughness = roughness;
-    params.metallic = metallic;
-
-    vec4 sampled = sampleMaterial(rayDir, params, mat.materialType, seed);
-    
+    vec3 brdf = vec3(0.0);
+    vec4 sampled = sampleMaterial(rayDir, params, mat.materialType, seed, brdf);
     vec3 direction = sampled.xyz;
     float pdf = sampled.w;
 
-    float cosThetaI = mat.materialType == 1 ? 1.0 : max(dot(direction,normal),0.0);
-    vec3 brdf = mat.materialType == 1 ? albedo : albedo * INVPI;
+    float cosThetaI = mat.materialType == MAT_MIRROR ? 1.0 : max(dot(direction,params.normal),0.0);
 
-    vec3 weightFactor = brdf * cosThetaI / pdf;
+    vec3 weightFactor = vec3(0.0);
+    if (pdf > 0.0f)
+        weightFactor = brdf * cosThetaI / pdf;
 
     float tMin = 0.001f;
     float tMax = 10000.0f;
@@ -93,8 +89,7 @@ void main() {
     vec3 radiance = vec3(0.0);
     vec3 weight = vec3(1.0);
 
-    vec3 directContribution = mat.materialType == 1 ? vec3(0.0) : calculateDirect(albedo,posWS,normal,seed);
-    //radiance += directContribution;
+    vec3 directContribution = mat.materialType == 1 ? vec3(0.0) : calculateDirect(params.albedo,posWS,params.normal,seed);
 
     bool lastWasMirror = mat.materialType == 1;
     for (uint depth = 0; depth < pcs.maxRecursionDepth; depth++){
@@ -108,7 +103,7 @@ void main() {
             0,    // sbtRecordOffset
             0,    // sbtRecordStride
             0,    // missIndex
-            posWS + tMin * normal,
+            posWS + tMin *  params.normal,
             tMin,
             direction,
             tMax,
@@ -148,7 +143,7 @@ void main() {
         seed = payload.seed;
         lastWasMirror = payload.mirror;
         directContribution = payload.directContribution;
-        normal = payload.hitNormal;
+        params.normal = payload.hitNormal;
 
     }
 

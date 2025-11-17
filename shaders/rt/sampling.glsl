@@ -10,7 +10,6 @@ vec3 orthogonal(vec3 vec) {
 }
 
 //====================BRDF SAMPLING====================
-
 vec4 sampleHemisphereCosineWeighted(vec3 normal, inout uint seed){
 
 	float r1 = rand(seed);
@@ -46,7 +45,7 @@ vec4 sampleMirror(vec3 normal, vec3 rayDir){
 	return vec4(sampled, 1.0);
 }
 
-vec4 samplePbr(vec3 rayDir, ShadeParams shadeParams, inout uint seed, inout vec3 Fr){
+vec4 samplePbr(vec3 rayDir, ShadeParams shadeParams, inout uint seed){
 
 	float alpha = shadeParams.roughness * shadeParams.roughness;
 
@@ -72,34 +71,27 @@ vec4 samplePbr(vec3 rayDir, ShadeParams shadeParams, inout uint seed, inout vec3
 	float pdf_spec = 0.0;
     float pdf_diff = 0.0;
 
-	Fr = vec3(cos_theta_h);
-
 	vec4 nextSample = vec4(0.0);
 	if (isSpecularBounce) {
 
         // evaluate omega_i (bounce direction): reflect view direction (omega_o) around the microfacet normal (omega_h)
         vec3 omega_i = reflect(-omega_o, omega_h);
 
-        pdf_spec = pdf_vndf_isotropic(omega_i, omega_o, alpha, shadeParams.normal);
         pdf_diff = getPdfHemisphereCosineWeighted(omega_i, shadeParams.normal);
+        pdf_spec = pdf_vndf_isotropic(omega_i, omega_o, alpha, shadeParams.normal);
 
         nextSample.xyz = omega_i;
-		// mixture pdfs
-        nextSample.w = pdf_spec * specProb + pdf_diff * (1.0f - specProb);
     } 
     else {
-
         vec4 sampled = sampleHemisphereCosineWeighted(shadeParams.normal, seed);
 
         pdf_diff = sampled.w; 
         pdf_spec = pdf_vndf_isotropic(sampled.xyz, omega_o, alpha, shadeParams.normal);
 
-        nextSample.xyz = sampled.xyz;
-
-		// mixture pdfs
-        nextSample.w = pdf_diff * (1.0 - specProb) + pdf_spec * specProb;
+        nextSample.xyz = sampled.xyz; 
     }
-
+	// mixture pdfs
+	nextSample.w = pdf_diff * (1.0 - specProb) + pdf_spec * specProb;
 	return nextSample;
 }
 
@@ -111,12 +103,11 @@ vec4 sampleMaterial(vec3 rayDir, ShadeParams shadeParams, uint matType, inout ui
 		return sampleHemisphereCosineWeighted(shadeParams.normal, seed);
 	if (matType == MAT_MIRROR)
 		return sampleMirror(shadeParams.normal, rayDir);
-	//if (matType == MAT_PBR)
-	//	return samplePbr(rayDir,shadeParams,seed);
+	if (matType == MAT_PBR)
+		return samplePbr(rayDir,shadeParams,seed);
 
 	return sampled;
 }
-
 //=====================================================
 
 
@@ -151,8 +142,6 @@ vec3 evalBrdfPbr( vec3 rayDir, vec3 lightDir, ShadeParams shadeParams, inout uin
     vec3 F0 = mix(vec3(0.04), shadeParams.albedo, shadeParams.metallic);
     vec3 F = fresnelSchlick(F0, cos_theta_h);
 
-	return vec3(cos_theta_h);
-    
 	float cos_theta_m = max(dot(omega_h, shadeParams.normal), 0.0f); // angle between microfacet normal and surface normal
 	float cos_theta_o = max(dot(omega_o, shadeParams.normal), 0.0); // angle between view direction and surface normal
 
@@ -178,10 +167,103 @@ vec3 evalBrdfMaterial(vec3 rayDir, vec3 lightDir, ShadeParams shadeParams, uint 
 		return evalBrdfDiffuse(shadeParams.albedo);
 	if (matType == MAT_MIRROR)
 		return evalBrdfMirror(shadeParams.albedo);
-	//if (matType == MAT_PBR)
-	//	return evalBrdfPbr(rayDir, lightDir, shadeParams, seed);
+	if (matType == MAT_PBR)
+		return evalBrdfPbr(rayDir, lightDir, shadeParams, seed);
 
 	return brdf;
+}
+
+//=====================================================
+
+
+
+//==================SAMPLE + BRDF EVAL=================
+
+vec4 samplePbr(vec3 rayDir, ShadeParams shadeParams, inout uint seed, inout vec3 brdf){
+
+	float alpha = shadeParams.roughness * shadeParams.roughness;
+	vec3 omega_o = -rayDir;
+
+	// sample GGX VNDF to obtain omega_h -- microfacet normal
+	float ksi1 = rand(seed);
+    float ksi2 = rand(seed);
+    vec3 omega_h = normalize(SampleVndf_GGX(vec2(ksi1,ksi2), omega_o, alpha, shadeParams.normal)); // microfacet normal, halfway vector between omega_o (viewDir) and omega_i (next bounce dir for specular)
+
+	// evaluate Fresnel term first and use it to choose between a diffuse or specular sample
+	float cos_theta_h = max(dot(omega_h, omega_o), 0.0f); // angle between microfacet normal and view direction
+
+	vec3 F0 = mix(vec3(0.04), shadeParams.albedo, shadeParams.metallic);
+    vec3 F = fresnelSchlick(F0, cos_theta_h);
+    float FMax = max(F.x,max(F.y,F.z));
+
+    float specProb = clamp(FMax, 0.0f, 1.0f);
+
+	float ksi3 = rand(seed);
+    bool isSpecularBounce = ksi3 < specProb;
+
+	float pdf_spec = 0.0;
+    float pdf_diff = 0.0;
+
+	vec4 nextSample = vec4(0.0);
+	brdf = vec3(0.0);
+	if (isSpecularBounce) {
+
+        // evaluate omega_i (bounce direction): reflect view direction (omega_o) around the microfacet normal (omega_h)
+        vec3 omega_i = reflect(-omega_o, omega_h);
+
+		 if (dot(omega_i, shadeParams.normal) <= 0.0)
+            return vec4(0.0);
+
+		float cos_theta_m = max(dot(omega_h, shadeParams.normal), 0.0); // angle between microfacet normal and surface normal
+        float cos_theta_o = max(dot(omega_o, shadeParams.normal), 0.0); // angle between view direction and surface normal
+        float cos_theta_i = max(dot(omega_i, shadeParams.normal), 0.0); // angle between light direction and surface normal
+
+        float NDF = distrGGX(alpha, cos_theta_m);
+        float G = G_Smith(cos_theta_o, cos_theta_i, alpha); 
+
+        brdf = NDF * G * F / (4.0f * cos_theta_o * cos_theta_i);
+
+        pdf_diff = getPdfHemisphereCosineWeighted(omega_i, shadeParams.normal);
+        pdf_spec = pdf_vndf_isotropic(omega_i, omega_o, alpha, shadeParams.normal);
+
+        nextSample.xyz = omega_i;
+    } 
+    else {
+        vec4 sampled = sampleHemisphereCosineWeighted(shadeParams.normal, seed);
+
+		vec3 kD = (1.0f - F) * (1.0f - shadeParams.metallic);
+        brdf = kD * evalBrdfDiffuse(shadeParams.albedo);
+
+        pdf_diff = sampled.w; 
+        pdf_spec = pdf_vndf_isotropic(sampled.xyz, omega_o, alpha, shadeParams.normal);
+
+        nextSample.xyz = sampled.xyz; 
+    }
+	// mixture pdfs
+	nextSample.w = pdf_diff * (1.0 - specProb) + pdf_spec * specProb;
+
+	// guard against invalid values, later check only for zeros
+	if (isinf(nextSample.w) || isnan(nextSample.w))
+		nextSample.w = 0.0f;
+		
+	return nextSample;
+}
+
+vec4 sampleMaterial(vec3 rayDir, ShadeParams shadeParams, uint matType, inout uint seed, inout vec3 brdf){
+	vec4 sampled = vec4(0.0);
+
+	if (matType == MAT_DIFFUSE){
+		brdf = evalBrdfDiffuse(shadeParams.albedo);
+		return sampleHemisphereCosineWeighted(shadeParams.normal, seed);
+	}
+	if (matType == MAT_MIRROR){
+		brdf = evalBrdfMirror(shadeParams.albedo);
+		return sampleMirror(shadeParams.normal, rayDir);
+	}
+	if (matType == MAT_PBR)
+		return samplePbr(rayDir,shadeParams,seed, brdf);
+
+	return sampled;
 }
 
 //=====================================================
