@@ -41,8 +41,8 @@ void main() {
 
     //  if there's no geometry, draw the sky into the output image and early exit (no rays traced)
     //  (in this case, the sky texture is already pre-rendered in the G buffer shading target texture) 
-    vec4 normalShininess = texture(textures[pcs.normalMapHandle], uv);
-    if (!isGeometryValid(normalShininess.xyz)){
+    vec4 normalRoughness = texture(textures[pcs.normalMapHandle], uv);
+    if (!isGeometryValid(normalRoughness.xyz)){
         vec3 sky = texture(textures[pcs.targetHandle],uv).xyz;
         imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(sky, 1.0));
         return;
@@ -55,10 +55,16 @@ void main() {
         return;
     }
 
+    ShadeParams params;
+
     //  load the rest of the textures
-    vec3 normal = normalize(normalShininess.xyz);
-    float shininess = normalShininess.w;
-    vec3 albedo = texture(textures[pcs.albedoMapHandle], uv).xyz;
+    vec3 normal = normalize(normalRoughness.xyz);
+    float roughness = normalRoughness.w;
+
+    vec4 albedoMetallic = texture(textures[pcs.albedoMapHandle], uv);
+    vec3 albedo = albedoMetallic.rgb;
+    float metallic = albedoMetallic.w;
+
     float depth = texture(textures[pcs.depthMapHandle], uv).x;
 
     // initial ray and shading parameters
@@ -66,7 +72,12 @@ void main() {
     vec3 posWS = reconstructPositionWS(uv,depth);
     vec3 rayDir = normalize(posWS - cameraUBO.posWS);
 
-    vec4 sampled = sampleMaterial(normal, rayDir, mat.materialType, seed);
+    params.albedo = albedo;
+    params.normal = normal;
+    params.roughness = roughness;
+    params.metallic = metallic;
+
+    vec4 sampled = sampleMaterial(rayDir, params, mat.materialType, seed);
     
     vec3 direction = sampled.xyz;
     float pdf = sampled.w;

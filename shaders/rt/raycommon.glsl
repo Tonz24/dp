@@ -1,3 +1,6 @@
+#ifndef RAYCOMMON_GLSL
+#define RAYCOMMON_GLSL
+
 #include "structs/structs.glsl"
 #include "sampling.glsl"
 
@@ -139,3 +142,5 @@ vec2 getTexCoord(vec3 uv, Vertex v0, Vertex v1, Vertex v2){
     vec2 texCoord = uv.x * v0.texCoord + uv.y * v1.texCoord + uv.z * v2.texCoord;
     return texCoord;
 }
+
+#endif // RAYCOMMON_GLSL

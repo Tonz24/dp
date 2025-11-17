@@ -1,3 +1,5 @@
+#ifndef RNG_GLSL
+#define RNG_GLSL
 
 // https://github.com/yknishidate/single-file-vulkan-pathtracing/blob/master/shaders/common.glsl
 uint pcg(inout uint state) {
@@ -26,3 +28,5 @@ float rand(inout uint seed) {
     uint val = pcg(seed);
     return (float(val) * (1.0 / float(0xffffffffu)));
 }
+
+#endif // RNG_GLSL

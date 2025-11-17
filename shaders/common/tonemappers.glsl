@@ -1,3 +1,5 @@
+#ifndef TONEMAPPERS_GLSL
+#define TONEMAPPERS_GLSL
 
 vec3 aces(vec3 x) {
     const float a = 2.51;
@@ -11,3 +13,5 @@ vec3 aces(vec3 x) {
 vec3 reinhard(vec3 x){
     return x / (1.0 + x);
 }
+
+#endif // TONEMAPPERS_GLSL

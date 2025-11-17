@@ -17,8 +17,6 @@ layout(location = 3) out uint outMaterialId;
 void main() {
     Material mat = materialUBO.materials[pcs.matIndex];
     ShadeParams params = unpackMaterial(mat, inNormal, inTBN, inTexCoord);
-
-    vec3 camRayDirWS =  normalize(inPosWS - cameraUBO.posWS);
     
     outAlbedo = vec4(params.albedo, params.metallic); // smuggle metallic into albedo texture
     outNormal = vec4(params.normal, params.roughness); // smuggle roughness into normal texture

@@ -1,15 +1,8 @@
+#ifndef COMMON_GLSL
+#define COMMON_GLSL
 
 #include "math_constants.glsl"
 #include "material.glsl"
-
-
-struct ShadeParams{
-    vec3 albedo;
-    vec3 normal;
-    float roughness;
-    float metallic;
-};
-//================================================
 
 
 //=============GLOBAL DESCRIPTOR SET==============
@@ -52,7 +45,7 @@ layout(set = 0, binding = 3) uniform accelerationStructureEXT topLevelAS;
 //    return params;
 //}
 
-ShadeParams unpackMaterial(Material mat,vec3 normal, mat3 tbn, vec2 texCoord){
+ShadeParams unpackMaterial(Material mat, vec3 normal, mat3 tbn, vec2 texCoord){
     ShadeParams params;
 
     bool hasAlbedoMap = mat.albedoMapHandle > 0;
@@ -84,3 +77,5 @@ vec3 sampleSphericalMap(vec3 dir, uint skyTextureIndex){
 
     return texture(textures[skyTextureIndex],uv).xyz;
 }
+
+#endif // COMMON_GLSL

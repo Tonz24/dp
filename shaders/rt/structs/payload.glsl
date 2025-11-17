@@ -1,3 +1,7 @@
+#ifndef PAYLOAD_GLSL
+#define PAYLOAD_GLSL
+
+
 struct HitPayload{
     vec3 hitPosition;
     vec3 hitEmission;
@@ -94,3 +98,5 @@ void resetPayload(inout HitPayloadNaive payload){
     payload.hitNormal = vec3(0.0);
     payload.seed = 0;
 }
+
+#endif // PAYLOAD_GLSL

@@ -11,6 +11,7 @@ layout(location = 0) out vec4 fragColor;
 #include "../common/tonemappers.glsl"
 #include "../common/math_constants.glsl"
 #include "../rt/raycommon.glsl"
+#include "../rt/pbr.glsl"
 
 const int OVERLAY_DEBUG_PHONG = 0;
 const int OVERLAY_ALBEDO_MAP = 1;
@@ -59,38 +60,7 @@ vec2 getShadowFactor(vec3 posWS, vec3 lightPos){
     return mix(noShadow,inShadow,float((rayQueryGetIntersectionTypeEXT(query, true) != gl_RayQueryCommittedIntersectionNoneEXT)));
 }
 
-vec3 fresnelSchlick(vec3 F_0, float cos_theta_h){
-    float v = 1.0 - cos_theta_h;
-    v = v * v * v * v * v; //fifth power
-    return F_0 + (1.0 - F_0) * v;
-}
 
-float distrGGX(float alpha, float cos_theta_m){
-    float a2 = alpha * alpha;
-    float cos_theta_m2 = cos_theta_m * cos_theta_m;
-
-    float term = (a2 - 1.0f) * cos_theta_m2 + 1;
-    float term2 = term * term;
-
-    float denom = PI * term2;
-    
-    return a2 / denom;
-}
-
-float aux(float cos_theta, float alpha){
-    float a2 = alpha * alpha;
-    float cos_theta2 = cos_theta * cos_theta;
-    float term =  sqrt(1.0 + a2 * (1.0 / cos_theta2 - 1.0));
-
-    return (term - 1.0) / 2.0;
-}
-
-float G(float cos_theta_o, float cos_theta_i, float alpha){
-    float aux_theta_o = aux(cos_theta_o, alpha);
-    float aux_theta_i = aux(cos_theta_i, alpha);
-
-    return 1.0 / (1.0 + aux_theta_o + aux_theta_i);
-}
 
 
 vec3 evalPbr(vec3 albedo, float roughness, float metallic, vec3 normal, vec3 omega_o, vec3 omega_i, vec3 pos){
@@ -109,7 +79,7 @@ vec3 evalPbr(vec3 albedo, float roughness, float metallic, vec3 normal, vec3 ome
     float alpha = roughness * roughness;
 
     float NDF = distrGGX(alpha, cos_theta_m);
-    float G = G(cos_theta_o, cos_theta_i, alpha); 
+    float G = G_Smith(cos_theta_o, cos_theta_i, alpha); 
 
     vec3 diff = albedo * INVPI;
     vec3 spec = (NDF * F * G) / (4.0 * cos_theta_o * cos_theta_i);
