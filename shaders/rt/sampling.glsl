@@ -39,24 +39,6 @@ vec4 sampleMirror(vec3 normal, vec3 rayDir){
 	return vec4(sampled, 1.0);
 }
 
-vec4 sampleMaterial(vec3 normal, vec3 rayDir, uint materialType, inout uint seed){
-	vec4 sampled = vec4(0.0);
-
-	// diffuse
-	if (materialType == 0)
-		return sampleHemisphereCosineWeighted(normal, seed);
-	// mirror
-	if (materialType == 1)
-		return sampleMirror(normal, rayDir);
-
-	// pbr test
-	if (materialType == 2){
-		
-
-	}
-
-	return sampled;
-}
 
 vec3 evalBrdfDiffuse(vec3 albedo){
 	return albedo * INVPI;
@@ -129,6 +111,39 @@ float pdf_vndf_isotropic(vec3 wo, vec3 wi, float alpha, vec3 n) {
     float sigmaI = sigmaStd / nrm;
     float nrmN = (zm * zm) * (alphaSquare - 1.0f) + 1.0f;
     return alphaSquare / (PI * 4.0f * nrmN * nrmN * sigmaI);
+}
+/*
+vec4 samplePbr(vec3 normal, vec3 rayDir, float alpha, inout uint seed){
+	vec3 omega_o = -gl_WorldRayDirectionEXT;
+
+	float ksi1 = rand(seed);
+    float ksi2 = rand(seed);
+
+    vec3 omega_h = SampleVndf_GGX(vec2(ksi1,ksi2), omega_o, alpha, params.normal); // microfacet normal, halfway vector between omega_o (viewDir) and omega_i (next bounce dir for specular)
+
+
+
+
+}*/
+
+
+vec4 sampleMaterial(vec3 normal, vec3 rayDir, uint materialType, inout uint seed){
+	vec4 sampled = vec4(0.0);
+
+	// diffuse
+	if (materialType == 0)
+		return sampleHemisphereCosineWeighted(normal, seed);
+	// mirror
+	if (materialType == 1)
+		return sampleMirror(normal, rayDir);
+
+	// pbr test
+	if (materialType == 2){
+		
+
+	}
+
+	return sampled;
 }
 
 

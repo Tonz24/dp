@@ -204,16 +204,9 @@ void main() {
     vec3 radiance = vec3(0.0);
     vec3 weight = vec3(1.0);
 
-    
-    weightFactor = getWeightFactorPbr(rayDir, normal, albedo, roughness,metallic, seed, direction);
+    if (mat.materialType == 2)
+        weightFactor = getWeightFactorPbr(rayDir, normal, albedo, roughness,metallic, seed, direction);
 
-    /*
-    if (pcs.accumulate == 1){
-        vec3 oldRadiance = imageLoad(outputImage, ivec2(gl_LaunchIDEXT.xy)).xyz;
-        radiance = mix(oldRadiance,radiance, 1.0f / float(pcs.frameCtr + 1));
-    }
-    imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(radiance, 1.0));
-    return;*/
 
     resetPayload(payload);
     bool lastWasMirror = mat.materialType == 1;

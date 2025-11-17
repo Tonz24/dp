@@ -37,7 +37,7 @@ struct alignas(16) MaterialUBOFormat {
     uint32_t metallicMapHandle{0};
     uint32_t normalMapHandle{0};
 
-    uint32_t materialType{0};
+    uint32_t materialType{2};
     float padding;
     float padding1;
     float padding2;

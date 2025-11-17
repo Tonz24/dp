@@ -28,6 +28,7 @@ public:
     enum class MaterialType : uint32_t {
         diffuse = 0,
         mirror = 1,
+        pbr = 2,
     };
 
     Material() : ManagedResource(){}
