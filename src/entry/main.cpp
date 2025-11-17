@@ -7,7 +7,7 @@
 int main() {
     Engine::getInstance().init();
 
-    auto cam = std::make_shared<Camera>(glm::vec3{0,2,7},glm::vec3{0,0,0});
+    auto cam = std::make_shared<Camera>(glm::vec3{0,0,5},glm::vec3{0,0,0});
     auto sky = TextureManager::getInstance()->registerResource("sky", "../assets/envmaps/test.jpg", true, false);
 
     auto scene = std::make_shared<Scene>(ModelLoader::loadModel("sphere/sphere.obj", false),cam,std::move(sky));

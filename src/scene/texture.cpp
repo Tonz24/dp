@@ -294,7 +294,7 @@ void Texture::initializeEnvMap(FIBITMAP* bitmap) {
             uint32_t pixelOffset = y * scanWidth_ + x * pixelSize_;
 
             // convert pixel data to float16 manually
-            // IMPORTANT: clamp them to a safe max so that they don't get turned to inf or nan
+            // IMPORTANT: clamp them to a safe max so that they don't turn into inf or nan
             short pixelData[4] = {
                 glm::detail::toFloat16(glm::clamp(srcScan[x].red,0.0f,65500.0f)),
                 glm::detail::toFloat16(glm::clamp(srcScan[x].green,0.0f,65500.0f)),
