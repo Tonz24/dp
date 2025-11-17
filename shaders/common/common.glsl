@@ -1,22 +1,6 @@
 
 #include "math_constants.glsl"
-
-
-struct Material{
-    vec4 albedoRoughness;
-    vec4 emissionMetallic;
-    vec4 attenuationIor;
-
-    uint albedoMapHandle;
-    uint roughnessMapHandle;
-    uint metallicMapHandle;
-    uint normalMapHandle;
-
-    uint materialType;
-    float padding;
-    float padding1;
-    float padding2;
-};
+#include "material.glsl"
 
 
 struct ShadeParams{
