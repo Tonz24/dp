@@ -1,26 +1,6 @@
 
 #include "math_constants.glsl"
 
-//====================MATERIAL====================
-/*
-struct Material{
-    vec3 diffuseAlbedo;
-    float shininess;
-
-    vec3 specularAlbedo;
-    float ior;
-
-    vec3 emission;
-    uint diffuseAlbedoMapHandle;
-
-    vec3 attenuation;
-    uint specularALbedoMapHandle;
-
-    uint shininessMapHandle;
-    uint normalMapHandle;
-    uint materialType;
-    float padding2;
-};*/
 
 struct Material{
     vec4 albedoRoughness;
