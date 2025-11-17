@@ -167,13 +167,24 @@ void main() {
     vec3 weight = vec3(1.0);
 
     if (mat.materialType == 2){
-        sampled = sampleMaterial(rayDir, params,mat.materialType, seed);
+        vec3 F = vec3(0.0);
+
+        sampled = samplePbr(rayDir, params, seed, F);
         direction = sampled.xyz;
         pdf = sampled.w;
-        cosThetaI = mat.materialType == 1 ? 1.0 : max(dot(direction,normal),0.0);
         brdf = evalBrdfPbr(rayDir, direction, params, seed);
         weightFactor = brdf * cosThetaI / pdf;
 
+
+        radiance = abs(F - brdf);
+
+        if (pcs.accumulate == 1){
+            vec3 oldRadiance = imageLoad(outputImage, ivec2(gl_LaunchIDEXT.xy)).xyz;
+            radiance = mix(oldRadiance,radiance, 1.0f / float(pcs.frameCtr + 1));
+        }
+
+        imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(radiance, 1.0));
+        return;
 
         //weightFactor = getWeightFactorPbr(rayDir, normal, albedo, roughness,metallic, seed, direction);
     }
