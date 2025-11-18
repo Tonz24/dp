@@ -95,6 +95,27 @@ vec4 samplePbr(vec3 rayDir, ShadeParams shadeParams, inout uint seed){
 	return nextSample;
 }
 
+float getPdfPbr(vec3 rayDir, vec3 omega_i, ShadeParams shadeParams){
+	float alpha = shadeParams.roughness * shadeParams.roughness;
+
+	vec3 omega_o = -rayDir;
+
+	vec3 omega_h = normalize(omega_o + omega_i); // microfacet normal
+	float cos_theta_h = max(dot(omega_h, omega_o), 0.0f); // angle between microfacet normal and view direction
+
+	vec3 F0 = mix(vec3(0.04), shadeParams.albedo, shadeParams.metallic);
+    vec3 F = fresnelSchlick(F0, cos_theta_h);
+    float FMax = max(F.x,max(F.y,F.z));
+
+    float specProb = FMax;
+
+	float pdf_diff = getPdfHemisphereCosineWeighted(omega_i, shadeParams.normal);
+	float pdf_spec = pdf_vndf_isotropic(omega_i, omega_o, alpha, shadeParams.normal);
+
+	float pdf = pdf_diff * (1.0 - specProb) + pdf_spec * specProb;
+	return pdf;
+}
+
 
 vec4 sampleMaterial(vec3 rayDir, ShadeParams shadeParams, uint matType, inout uint seed){
 	vec4 sampled = vec4(0.0);
@@ -107,6 +128,20 @@ vec4 sampleMaterial(vec3 rayDir, ShadeParams shadeParams, uint matType, inout ui
 		return samplePbr(rayDir,shadeParams,seed);
 
 	return sampled;
+}
+
+
+float getPdfMaterial(vec3 rayDir, vec3 omega_i, ShadeParams shadeParams, uint matType){
+	float pdf = 0.0f;
+
+	if (matType == MAT_DIFFUSE)
+		return getPdfHemisphereCosineWeighted(omega_i, shadeParams.normal);
+	if (matType == MAT_MIRROR)
+		return 1.0f;
+	if (matType == MAT_PBR)
+		return getPdfPbr(rayDir, omega_i, shadeParams);
+
+	return pdf;
 }
 //=====================================================
 
@@ -122,7 +157,7 @@ vec3 evalBrdfMirror(vec3 albedo){
 	return albedo;
 }
 
-vec3 evalBrdfPbr( vec3 rayDir, vec3 lightDir, ShadeParams shadeParams, inout uint seed){
+vec3 evalBrdfPbr(vec3 rayDir, vec3 lightDir, ShadeParams shadeParams){
 
 	vec3 omega_o = -rayDir;
 	vec3 omega_i = lightDir;
@@ -160,7 +195,7 @@ vec3 evalBrdfPbr( vec3 rayDir, vec3 lightDir, ShadeParams shadeParams, inout uin
    	return brdf;
 }
 
-vec3 evalBrdfMaterial(vec3 rayDir, vec3 lightDir, ShadeParams shadeParams, uint matType, inout uint seed){
+vec3 evalBrdfMaterial(vec3 rayDir, vec3 lightDir, ShadeParams shadeParams, uint matType){
 	vec3 brdf = vec3(0.0);
 
 	if (matType == MAT_DIFFUSE)
@@ -168,7 +203,7 @@ vec3 evalBrdfMaterial(vec3 rayDir, vec3 lightDir, ShadeParams shadeParams, uint 
 	if (matType == MAT_MIRROR)
 		return evalBrdfMirror(shadeParams.albedo);
 	if (matType == MAT_PBR)
-		return evalBrdfPbr(rayDir, lightDir, shadeParams, seed);
+		return evalBrdfPbr(rayDir, lightDir, shadeParams);
 
 	return brdf;
 }

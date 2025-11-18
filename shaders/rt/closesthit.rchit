@@ -5,6 +5,8 @@
 #extension GL_GOOGLE_include_directive : require
 #extension GL_EXT_ray_tracing : require
 
+#define CLOSEST_HIT_DIFFUSE
+
 #include "../common/common.glsl"
 #include "../common/math_constants.glsl"
 #include "pcs/pcs_raygen.glsl"
@@ -68,8 +70,10 @@ void main() {
     payload.weightFactor = hitBrdf * max(dot(nextDir,params.normal),0.0) / pdf;
 
     if(!hitLight(payload))
-        payload.directContribution = calculateDirect(params.albedo,posWS,params.normal,seed);
+        payload.directContribution = calculateDirect(params,posWS,gl_WorldRayDirectionEXT,MAT_DIFFUSE,seed);
 
     payload.seed = seed;
     payload.mirror = false;
 }
+
+#undef CLOSEST_HIT_DIFFUSE

@@ -147,6 +147,9 @@ void main() {
     vec3 posWS = reconstructPositionWS(uv,depth);
     vec3 rayDir = normalize(posWS - cameraUBO.posWS);
 
+    if (dot(-rayDir,params.normal) < 0.0 )
+        params.normal *= -1.0f;
+
     vec3 brdf = vec3(0.0);
     vec4 sampled = sampleMaterial(rayDir, params,mat.materialType, seed, brdf);
     vec3 direction = sampled.xyz;

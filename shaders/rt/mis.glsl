@@ -1,8 +1,8 @@
 #include "structs/payload.glsl"
 #include "raycommon.glsl"
+#include "../common/material.glsl"
 
 layout(location = 1) rayPayloadEXT BRDFSamplePayload payloadBRDF;
-
 
 // trace a ray for BRDF lighting
 // mirror reflections are recursively unfolded
@@ -90,7 +90,7 @@ float powerHeuristic(float pdf, float pdfOther) {
 // area-brdf MIS weighing. environmental map is not taken into consideration, since its the sampling domain is mutually exclusive with the area light domain: 
 //      if an environment sample has non-zero incoming radiance at an shading point, it must not be occluded by any scene geometry, which includes emissive surfaces
 //      equivalently, if the shading point has non-zero radiance coming from an emissive surface, there is zero radiance coming from that specific direction from the env map due to occlusion   
-vec3 evaluateSampleAreaMisBrdf(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
+vec3 evaluateSampleAreaMisBrdf(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint matType, inout uint seed){
     // take CDF sample (pick an emissive triangle with probability proportional to the area of all emissive triangles)
     uint cdfSampleIndex = sampleCDFIndex(rand(seed));
 
@@ -106,7 +106,7 @@ vec3 evaluateSampleAreaMisBrdf(vec3 albedo, vec3 posWS, vec3 normal, inout uint 
     TriangleSample sampledPoint = sampleTriangle(cdfTriangle,seed);
 
     // early exit if occlusion test fails as there wouldn't be any light contribution anyway
-    if (!isVisible(posWS, sampledPoint.position, normal)) return vec3(0.0);
+    if (!isVisible(posWS, sampledPoint.position, shadeParams.normal)) return vec3(0.0);
 
     float pdfCDF = cdfSampleIndex == 0 ? cdfSample.cdfVal : cdfSample.cdfVal - emissiveCDF.cdf[cdfSampleIndex-1].cdfVal;
     float lightPdf = sampledPoint.pdf * pdfCDF;
@@ -118,23 +118,47 @@ vec3 evaluateSampleAreaMisBrdf(vec3 albedo, vec3 posWS, vec3 normal, inout uint 
     // early exit when invalid numbers are present
     if (r_sqr == 0.0 || any(isnan(omega_i)) || any(isinf(omega_i)) || lightPdf <= 0.0) return vec3(0.0);
 
-    float cos_theta_i = max(dot(omega_i, normal), 0.0);
+    float cos_theta_i = max(dot(omega_i, shadeParams.normal), 0.0);
     float cos_theta_y = abs(dot(-omega_i, sampledPoint.normal));
 
     // any of these being zero means that radiance is also zero
     if (cos_theta_i == 0.0 || cos_theta_y == 0.0) return vec3(0.0);
 
     float areaMeasureFactor = cos_theta_y / r_sqr;
+
+    #ifdef CLOSEST_HIT_DIFFUSE
     // get the pdf of this sample as if it came from BRDF sampling
-    float brdfPdf = getPdfHemisphereCosineWeighted(omega_i,normal);
+    float brdfPdf = getPdfHemisphereCosineWeighted(omega_i, shadeParams.normal);
+    #endif
+
+    #ifdef CLOSEST_HIT_PBR
+    // get the pdf of this sample as if it came from BRDF sampling
+    float brdfPdf = getPdfPbr(rayDir, omega_i, shadeParams);
+    #endif
+
+    #ifdef RAYGEN
+    // get the pdf of this sample as if it came from BRDF sampling
+    float brdfPdf = getPdfMaterial(rayDir,omega_i, shadeParams, matType);
+    #endif
+
     // convert to area measure
     brdfPdf *= areaMeasureFactor;
 
     float misWeight = powerHeuristic(lightPdf, brdfPdf);
     if (misWeight <= 0.0) return vec3(0.0);
 
-    vec3 brdf = albedo / PI;
+    // evaluate brdf
+    #ifdef CLOSEST_HIT_DIFFUSE
+    vec3 brdf = evalBrdfDiffuse(shadeParams.albedo);
+    #endif
 
+    #ifdef CLOSEST_HIT_PBR
+    vec3 brdf = evalBrdfPbr(rayDir, omega_i, shadeParams);
+    #endif
+
+    #ifdef RAYGEN
+    vec3 brdf = evalBrdfMaterial(rayDir,omega_i, shadeParams, matType);
+    #endif
 
     float G = areaMeasureFactor;
     vec3 L_direct = misWeight * L_i * brdf * G * cos_theta_i / lightPdf;
@@ -145,43 +169,86 @@ vec3 evaluateSampleAreaMisBrdf(vec3 albedo, vec3 posWS, vec3 normal, inout uint 
 // TODO: retrieve the texure value immediately after sampling to get rid of double cartesian -> polar -> uv transformation
 // samples the environment map and evaluates incoming radiance
 // env-brdf MIS weighing. Area lights (emissive triangles) are not taken into consideration since their sampling domain is not overlapping with the env map domain  
-vec3 evaluateSampleEnvMisBrdf(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
+vec3 evaluateSampleEnvMisBrdf(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint matType, inout uint seed){
     vec4 envSample = sampleEnvironment(textures[pcs.skyCdfHandle], seed);
     vec3 omega_i = envSample.xyz;
     float envPdf = envSample.w;
 
     //  if the ray hits anything (env map is occluded), early exit
     //  occlusion of the env map means that zero radiance would come from this direction anyway
-    if (!isVisible(posWS, omega_i * 1000.f, normal)) return vec3(0.0);
+    if (!isVisible(posWS, omega_i * 1000.f, shadeParams.normal)) return vec3(0.0);
 
     // retrieve radiance coming from the env map
     vec3 L_i = sampleSphericalMap(omega_i, pcs.skyHandle);
 
-    // get the pdf of the env map sample as if it came from sampling the BRDF
-    float brdfPdf = getPdfHemisphereCosineWeighted(omega_i, normal);
+
+    #ifdef CLOSEST_HIT_DIFFUSE
+    // get the pdf of this sample as if it came from BRDF sampling
+    float brdfPdf = getPdfHemisphereCosineWeighted(omega_i, shadeParams.normal);
+    #endif
+
+    #ifdef CLOSEST_HIT_PBR
+    // get the pdf of this sample as if it came from BRDF sampling
+    float brdfPdf = getPdfPbr(rayDir, omega_i, shadeParams);
+    #endif
+
+    #ifdef RAYGEN
+    // get the pdf of this sample as if it came from BRDF sampling
+    float brdfPdf = getPdfMaterial(rayDir,omega_i, shadeParams, matType);
+    #endif
 
     float misWeight = powerHeuristic(envPdf, brdfPdf);
 
     if (misWeight <= 0.0) return vec3(0.0);
 
-    float cos_theta_i = max(dot(omega_i, normal), 0.0f);
+    float cos_theta_i = max(dot(omega_i, shadeParams.normal), 0.0f);
 
-    vec3 brdf = albedo * INVPI;
+    // evaluate brdf
+    #ifdef CLOSEST_HIT_DIFFUSE
+    vec3 brdf = evalBrdfDiffuse(shadeParams.albedo);
+    #endif
+
+    #ifdef CLOSEST_HIT_PBR
+    vec3 brdf = evalBrdfPbr(rayDir, omega_i, shadeParams);
+    #endif
+
+    #ifdef RAYGEN
+    vec3 brdf = evalBrdfMaterial(rayDir,omega_i, shadeParams, matType);
+    #endif
+
+
     vec3 L_direct = misWeight * L_i * brdf * cos_theta_i / envPdf; 
     return L_direct;
 
 }
 
-vec3 evaluateSampleBrdfMisEnvArea(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
+vec3 evaluateSampleBrdfMisEnvArea(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint matType, inout uint seed){
+
+    vec3 brdfValue = vec3(0.0);
 
     // sample the BRDF
-    vec4 brdfSample = sampleHemisphereCosineWeighted(normal, seed);
+    #ifdef CLOSEST_HIT_DIFFUSE
+    vec4 brdfSample = sampleHemisphereCosineWeighted(shadeParams.normal, seed);
+    brdfValue = evalBrdfDiffuse(shadeParams.albedo);
+    #endif
+
+    #ifdef CLOSEST_HIT_PBR
+    vec4 brdfSample = sampleHemisphereCosineWeighted(shadeParams.normal, seed, brdfValue);
+    #endif
+
+    #ifdef RAYGEN
+    vec4 brdfSample = sampleMaterial(rayDir, shadeParams, matType, seed, brdfValue);
+    #endif
+    
     vec3 omega_i = brdfSample.xyz;
     float brdfPdf = brdfSample.w;
 
+    if (isnan(brdfPdf) || isinf(brdfPdf) || brdfPdf <= 0.0f)
+        return vec3(0.0);
+
     bool unfolded = false;
     // check what the BRDF sample hits 
-    TracedSample brdfHit = traceBRDFLighting(posWS, omega_i, normal);
+    TracedSample brdfHit = traceBRDFLighting(posWS, omega_i, shadeParams.normal);
     vec3 L_i = brdfHit.hitEmission;
 
     // if the sample can't contribute any radiance (it hit a non-emissive scene surface) do an early exit
@@ -214,31 +281,33 @@ vec3 evaluateSampleBrdfMisEnvArea(vec3 albedo, vec3 posWS, vec3 normal, inout ui
    // }
     float misWeight = powerHeuristic(brdfPdf, pdfOther);
 
-    float cos_theta_i = max(dot(omega_i, normal), 0.0f);
-    vec3 brdf = albedo * INVPI;
+    float cos_theta_i = max(dot(omega_i, shadeParams.normal), 0.0f);
 
-    vec3 L_direct = misWeight * L_i * brdf * cos_theta_i / brdfPdf; 
+    vec3 L_direct = misWeight * L_i * brdfValue * cos_theta_i / brdfPdf; 
     return L_direct;
 }
 
 
-vec3 calculateDirect(vec3 albedo, vec3 posWS, vec3 normal, inout uint seed){
+vec3 calculateDirect(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint matType, inout uint seed){
     vec3 directContribution = vec3(0.0);
 
-    vec3 contribArea = evaluateSampleAreaMisBrdf(albedo, posWS, normal, seed);
+    vec3 contribArea = evaluateSampleAreaMisBrdf(shadeParams, posWS, rayDir, matType, seed);
 
     if (any(isinf(contribArea)) || any(isnan(contribArea)) || any(lessThan(contribArea,vec3(0.0))))
         return vec3(10,0,0);
+        //contribArea = vec3(0.0);
 
-    vec3 contribEnv = evaluateSampleEnvMisBrdf(albedo, posWS, normal, seed);
+    vec3 contribEnv = evaluateSampleEnvMisBrdf(shadeParams, posWS, rayDir, matType, seed);
 
     if (any(isinf(contribEnv)) || any(isnan(contribEnv)) || any(lessThan(contribEnv,vec3(0.0))))
         return vec3(0,10,0);
+        //contribEnv = vec3(0.0);
 
-    vec3 contribBrdf = evaluateSampleBrdfMisEnvArea(albedo, posWS, normal, seed);
+    vec3 contribBrdf = evaluateSampleBrdfMisEnvArea(shadeParams, posWS, rayDir, matType, seed);
 
     if (any(isinf(contribBrdf)) || any(isnan(contribBrdf)) || any(lessThan(contribBrdf,vec3(0.0))))
        return vec3(0,0,10);
+       //contribBrdf = vec3(0.0);
 
     directContribution = contribArea + contribEnv + contribBrdf;
 
