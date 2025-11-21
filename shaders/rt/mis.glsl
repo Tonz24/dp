@@ -82,6 +82,7 @@ float powerHeuristic(float pdf, float pdfOther) {
 	const float pdf_sqr = pdf * pdf;
 	const float pdfOther_sqr = pdfOther * pdfOther;
 	const float result = pdf_sqr / (pdfOther_sqr + pdf_sqr);
+	//const float result = pdf / (pdf + pdfOther);
 	return result;
 }
 
@@ -108,8 +109,8 @@ vec3 evaluateSampleAreaMisBrdf(ShadeParams shadeParams, vec3 posWS, vec3 rayDir,
     // early exit if occlusion test fails as there wouldn't be any light contribution anyway
     if (!isVisible(posWS, sampledPoint.position, shadeParams.normal)) return vec3(0.0);
 
-    float pdfCDF = cdfSampleIndex == 0 ? cdfSample.cdfVal : cdfSample.cdfVal - emissiveCDF.cdf[cdfSampleIndex-1].cdfVal;
-    float lightPdf = sampledPoint.pdf * pdfCDF;
+    // (1 / triangleArea) * (triangleArea / totalArea) -- triangleArea cancels out
+    float lightPdf = 1.0 / emissiveCDF.area;
 
     vec3 omega_i = sampledPoint.position - posWS;
     float r_sqr = dot(omega_i, omega_i);
@@ -216,10 +217,8 @@ vec3 evaluateSampleEnvMisBrdf(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, 
     vec3 brdf = evalBrdfMaterial(rayDir,omega_i, shadeParams, matType);
     #endif
 
-
     vec3 L_direct = misWeight * L_i * brdf * cos_theta_i / envPdf; 
     return L_direct;
-
 }
 
 vec3 evaluateSampleBrdfMisEnvArea(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint matType, inout uint seed){
@@ -271,7 +270,7 @@ vec3 evaluateSampleBrdfMisEnvArea(ShadeParams shadeParams, vec3 posWS, vec3 rayD
             if (r_sqr <= 0.0 || cos_theta_y <= 0.0) return vec3(0.0);
 
             float areaToSolidMeasureFactor =  r_sqr / cos_theta_y;
-            pdfOther = (1/ emissiveCDF.area) * areaToSolidMeasureFactor;
+            pdfOther = (1.0 / emissiveCDF.area) * areaToSolidMeasureFactor;
         }
         // evaluating the env pdf only makes sense when the sample is unoccluded by scene geometry
         else {
