@@ -22,11 +22,18 @@ protected:
 private:
 
     static inline const std::vector<RasterPipeline::ShaderStageInfo> rtStages = {
+            // raygen region
             {"shaders/raygen_rgen.spv",vk::ShaderStageFlagBits::eRaygenKHR},
+            // miss region
             {"shaders/miss_rmiss.spv",vk::ShaderStageFlagBits::eMissKHR},
             {"shaders/miss_brdf_sample_rmiss.spv",vk::ShaderStageFlagBits::eMissKHR},
+            // per material closest hit shaders
             {"shaders/closesthit_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
             {"shaders/closesthit_mirror_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
+            {"shaders/closesthit_pbr_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
+            // brdf ray helper closest hit shaders
+            {"shaders/closesthit_brdf_sample_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
+            {"shaders/closesthit_brdf_sample_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
             {"shaders/closesthit_brdf_sample_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
     };
 };

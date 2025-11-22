@@ -46,7 +46,7 @@ void Mesh::updateBLASInstance() {
         .mask = 0xFF,
         .instanceShaderBindingTableRecordOffset = static_cast<uint32_t>(material_->getMaterialType()),
         .flags = static_cast<VkGeometryInstanceFlagsKHR>(vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable),
-        .accelerationStructureReference = blas_.getStorageBuffer().deviceAddress,
+        .accelerationStructureReference = blas_.getStorageBuffer().deviceAddress
     };
 }
 
@@ -190,7 +190,8 @@ void Mesh::initBLAS() {
     vk::AccelerationStructureGeometryKHR geometryData{};
     geometryData.setGeometryType(vk::GeometryTypeKHR::eTriangles);
     geometryData.setGeometry(triangleData);
-    geometryData.setFlags(vk::GeometryFlagBitsKHR::eOpaque); //TODO: change to no opaque if transparent materials are present
+    geometryData.setFlags(vk::GeometryFlagBitsKHR::eOpaque);
+
 
     blas_ = AccelerationStructure( vk::AccelerationStructureTypeKHR::eBottomLevel,geometryData,maxPrimitiveCount);
 

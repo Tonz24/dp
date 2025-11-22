@@ -54,13 +54,11 @@ vec4 samplePbr(vec3 rayDir, ShadeParams shadeParams, inout uint seed){
 	float ksi1 = rand(seed);
     float ksi2 = rand(seed);
 
-    vec3 omega_h = normalize(SampleVndf_GGX(vec2(ksi1,ksi2), omega_o, alpha, shadeParams.normal)); // microfacet normal, halfway vector between omega_o (viewDir) and omega_i (next bounce dir for specular)
-
 	// evaluate Fresnel term first and use it to choose between a diffuse or specular sample
-	float cos_theta_h = max(dot(omega_h, omega_o), 0.0f); // angle between microfacet normal and view direction
+	float cos_theta_o = max(dot(shadeParams.normal, omega_o), 0.0f); // angle between microfacet normal and view direction
 
 	vec3 F0 = mix(vec3(0.04), shadeParams.albedo, shadeParams.metallic);
-    vec3 F = fresnelSchlick(F0, cos_theta_h);
+    vec3 F = fresnelSchlick(F0, cos_theta_o);
     float FMax = max(F.x,max(F.y,F.z));
 
     float specProb = FMax;
@@ -74,6 +72,9 @@ vec4 samplePbr(vec3 rayDir, ShadeParams shadeParams, inout uint seed){
 	vec4 nextSample = vec4(0.0);
 	if (isSpecularBounce) {
         // evaluate omega_i (bounce direction): reflect view direction (omega_o) around the microfacet normal (omega_h)
+		// microfacet normal, halfway vector between omega_o (viewDir) and omega_i (next bounce dir for specular)
+		vec3 omega_h = normalize(SampleVndf_GGX(vec2(ksi1,ksi2), omega_o, alpha, shadeParams.normal)); 
+
         vec3 omega_i = reflect(-omega_o, omega_h);
         nextSample.xyz = omega_i;
 		// figure out what the pdf of the omega_i would be if it came from cosine weighted sampling
@@ -99,11 +100,10 @@ float getPdfPbr(vec3 rayDir, vec3 omega_i, ShadeParams shadeParams){
 
 	vec3 omega_o = -rayDir;
 
-	vec3 omega_h = normalize(omega_o + omega_i); // microfacet normal
-	float cos_theta_h = max(dot(omega_h, omega_o), 0.0f); // angle between microfacet normal and view direction
+	float cos_theta_o = max(dot(shadeParams.normal, omega_o), 0.0f); // angle between microfacet normal and view direction
 
 	vec3 F0 = mix(vec3(0.04), shadeParams.albedo, shadeParams.metallic);
-    vec3 F = fresnelSchlick(F0, cos_theta_h);
+    vec3 F = fresnelSchlick(F0, cos_theta_o);
     float FMax = max(F.x,max(F.y,F.z));
 
     float specProb = FMax;
@@ -218,19 +218,14 @@ vec4 samplePbr(vec3 rayDir, ShadeParams shadeParams, inout uint seed, inout vec3
 	float alpha = shadeParams.roughness * shadeParams.roughness;
 	vec3 omega_o = -rayDir;
 
-	// sample GGX VNDF to obtain omega_h -- microfacet normal
-	float ksi1 = rand(seed);
-    float ksi2 = rand(seed);
-	// microfacet normal, halfway vector between omega_o (viewDir) and omega_i (next bounce dir for specular)
-    vec3 omega_h = normalize(SampleVndf_GGX(vec2(ksi1,ksi2), omega_o, alpha, shadeParams.normal)); 
+	// evaluate Fresnel term first and use it to choose between diffuse or specular sample 
 
-	// evaluate Fresnel term first and use it to choose between diffuse or specular sample
-	// angle between microfacet normal and view direction
-	float cos_theta_h = max(dot(omega_h, omega_o), 0.0f); 
+	// angle between view direction and surface normal
+	float cos_theta_o = max(dot(omega_o, shadeParams.normal), 0.0); 
 
 	vec3 F0 = mix(vec3(0.04), shadeParams.albedo, shadeParams.metallic);
-    vec3 F = fresnelSchlick(F0, cos_theta_h);
-    float FMax = max(F.x,max(F.y,F.z));
+    vec3 F_view = fresnelSchlick(F0, cos_theta_o);
+    float FMax = max(F_view.x, max(F_view.y, F_view.z));
 
 	// sanity check
     float specProb = clamp(FMax, 0.0f, 1.0f);
@@ -247,38 +242,28 @@ vec4 samplePbr(vec3 rayDir, ShadeParams shadeParams, inout uint seed, inout vec3
 	brdf = vec3(0.0);
 	if (isSpecularBounce) {
 
-        // evaluate omega_i (bounce direction): reflect view direction (omega_o) around the microfacet normal (omega_h)
-        vec3 omega_i = reflect(-omega_o, omega_h);
+		// sample GGX VNDF to obtain omega_h -- microfacet normal
+		float ksi1 = rand(seed);
+		float ksi2 = rand(seed);
+		// microfacet normal, halfway vector between omega_o (viewDir) and omega_i (next bounce dir for specular)
+		vec3 omega_h = normalize(SampleVndf_GGX(vec2(ksi1,ksi2), omega_o, alpha, shadeParams.normal)); 
 
-		 if (dot(omega_i, shadeParams.normal) <= 0.0)
+        // evaluate omega_i (bounce direction): reflect view direction (omega_o) around the microfacet normal (omega_h)
+        nextSample.xyz = reflect(-omega_o, omega_h);
+
+	 	if (dot(nextSample.xyz, shadeParams.normal) <= 0.0)
             return vec4(0.0);
 
-		float cos_theta_m = max(dot(omega_h, shadeParams.normal), 0.0); // angle between microfacet normal and surface normal
-        float cos_theta_o = max(dot(omega_o, shadeParams.normal), 0.0); // angle between view direction and surface normal
-        float cos_theta_i = max(dot(omega_i, shadeParams.normal), 0.0); // angle between light direction and surface normal
-
-        float NDF = distrGGX(alpha, cos_theta_m);
-        float G = G_Smith(cos_theta_o, cos_theta_i, alpha); 
-
-        brdf = NDF * G * F / (4.0f * cos_theta_o * cos_theta_i);
-
-        pdf_diff = getPdfHemisphereCosineWeighted(omega_i, shadeParams.normal);
-        pdf_spec = pdf_vndf_isotropic(omega_i, omega_o, alpha, shadeParams.normal);
-
-        nextSample.xyz = omega_i;
+        pdf_diff = getPdfHemisphereCosineWeighted(nextSample.xyz, shadeParams.normal);
+        pdf_spec = pdf_vndf_isotropic(nextSample.xyz, omega_o, alpha, shadeParams.normal);
     } 
     else {
         vec4 sampled = sampleHemisphereCosineWeighted(shadeParams.normal, seed);
-
-		vec3 kD = (1.0f - F) * (1.0f - shadeParams.metallic);
-        brdf = kD * evalBrdfDiffuse(shadeParams.albedo);
+        nextSample.xyz = sampled.xyz; 
 
         pdf_diff = sampled.w; 
-        pdf_spec = pdf_vndf_isotropic(sampled.xyz, omega_o, alpha, shadeParams.normal);
-
-        nextSample.xyz = sampled.xyz; 
+        pdf_spec = pdf_vndf_isotropic(nextSample.xyz, omega_o, alpha, shadeParams.normal);
     }
-
 
 	brdf = evalBrdfPbr(rayDir,nextSample.xyz,shadeParams);
 

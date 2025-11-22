@@ -15,7 +15,7 @@ TracedSample traceBRDFLightingMirrors(vec3 posWS, vec3 direction, vec3 normal, i
             topLevelAS,
             gl_RayFlagsOpaqueEXT,
             0xff, // cullMask
-            2,    // start at brdf sample region
+            3,    // start at brdf sample region
             0,    // sbtRecordStride
             1,    // missIndex
             posWS + normal * tMin,
@@ -37,7 +37,7 @@ TracedSample traceBRDFLightingMirrors(vec3 posWS, vec3 direction, vec3 normal, i
             topLevelAS,
             gl_RayFlagsOpaqueEXT,
             0xff, // cullMask
-            2,    // start at brdf sample region
+            3,    // start at brdf sample region
             0,    // sbtRecordStride
             1,    // missIndex
             result.hitPosition + result.hitNormal * tMin,
@@ -65,7 +65,7 @@ TracedSample traceBRDFLighting(vec3 posWS, vec3 direction, vec3 normal){
             topLevelAS,
             gl_RayFlagsOpaqueEXT,
             0xff, // cullMask
-            2,    // start at brdf sample region
+            3,    // start at brdf sample region
             0,    // sbtRecordStride
             1,    // missIndex
             posWS + normal * tMin,
@@ -232,7 +232,7 @@ vec3 evaluateSampleBrdfMisEnvArea(ShadeParams shadeParams, vec3 posWS, vec3 rayD
     #endif
 
     #ifdef CLOSEST_HIT_PBR
-    vec4 brdfSample = sampleHemisphereCosineWeighted(shadeParams.normal, seed, brdfValue);
+    vec4 brdfSample = samplePbr(rayDir,shadeParams,seed,brdfValue);
     #endif
 
     #ifdef RAYGEN
