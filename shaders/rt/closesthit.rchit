@@ -10,7 +10,7 @@
 #include "../common/common.glsl"
 #include "../common/math_constants.glsl"
 #include "pcs/pcs_raygen.glsl"
-#include "mis.glsl"
+#include "ris.glsl"
 
 layout(location = 0) rayPayloadInEXT HitPayload payload;
 
@@ -69,8 +69,11 @@ void main() {
 
     payload.weightFactor = hitBrdf * max(dot(nextDir,params.normal),0.0) / pdf;
 
-    if(!hitLight(payload))
-        payload.directContribution = calculateDirect(params,posWS,gl_WorldRayDirectionEXT,MAT_DIFFUSE,seed);
+   if(!hitLight(payload)){
+         payload.directContribution = pcs.doRIS == 1  
+            ? calculateDirectRIS(params,posWS,gl_WorldRayDirectionEXT,MAT_DIFFUSE,seed)  
+            : calculateDirect(params,posWS,gl_WorldRayDirectionEXT,MAT_DIFFUSE,seed);
+    }
 
     payload.seed = seed;
     payload.mirror = false;

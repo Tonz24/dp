@@ -1,12 +1,22 @@
+#ifndef MIS_GLSL
+#define MIS_GLSL
+
 #include "structs/payload.glsl"
 #include "raycommon.glsl"
 #include "../common/material.glsl"
 
+#ifndef PAYLOAD_BRDF
+#define PAYLOAD_BRDF
+
 layout(location = 1) rayPayloadEXT BRDFSamplePayload payloadBRDF;
+
+#endif // PAYLOAD_BRDF
+
+
 
 // trace a ray for BRDF lighting
 // mirror reflections are recursively unfolded
-TracedSample traceBRDFLightingMirrors(vec3 posWS, vec3 direction, vec3 normal, inout bool unfolded){
+/*TracedSample traceBRDFLightingMirrors(vec3 posWS, vec3 direction, vec3 normal, inout bool unfolded){
     float tMin = 0.001f;
     float tMax = 10000.0f;
 
@@ -53,7 +63,7 @@ TracedSample traceBRDFLightingMirrors(vec3 posWS, vec3 direction, vec3 normal, i
     result.hitEmission = payloadBRDF.hitEmission * throughput;
     return result;
 }
-
+*/
 
 // trace a ray for BRDF lighting
 TracedSample traceBRDFLighting(vec3 posWS, vec3 direction, vec3 normal){
@@ -175,6 +185,9 @@ vec3 evaluateSampleEnvMisBrdf(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, 
     vec3 omega_i = envSample.xyz;
     float envPdf = envSample.w;
 
+    if (isinf(envPdf) || isnan(envPdf) || envPdf <= 0.0)
+        return vec3(0.0);
+
     //  if the ray hits anything (env map is occluded), early exit
     //  occlusion of the env map means that zero radiance would come from this direction anyway
     if (!isVisible(posWS, omega_i * 1000.f, shadeParams.normal)) return vec3(0.0);
@@ -293,22 +306,21 @@ vec3 calculateDirect(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint matT
     vec3 contribArea = evaluateSampleAreaMisBrdf(shadeParams, posWS, rayDir, matType, seed);
 
     if (any(isinf(contribArea)) || any(isnan(contribArea)) || any(lessThan(contribArea,vec3(0.0))))
-        return vec3(10,0,0);
-        //contribArea = vec3(0.0);
+        contribArea = vec3(0.0);
 
     vec3 contribEnv = evaluateSampleEnvMisBrdf(shadeParams, posWS, rayDir, matType, seed);
 
     if (any(isinf(contribEnv)) || any(isnan(contribEnv)) || any(lessThan(contribEnv,vec3(0.0))))
-        return vec3(0,10,0);
-        //contribEnv = vec3(0.0);
+        contribEnv = vec3(0.0);
 
     vec3 contribBrdf = evaluateSampleBrdfMisEnvArea(shadeParams, posWS, rayDir, matType, seed);
 
     if (any(isinf(contribBrdf)) || any(isnan(contribBrdf)) || any(lessThan(contribBrdf,vec3(0.0))))
-       return vec3(0,0,10);
-       //contribBrdf = vec3(0.0);
+       contribBrdf = vec3(0.0);
 
     directContribution = contribArea + contribEnv + contribBrdf;
 
     return directContribution;
 }
+
+#endif //MIS_GLSL

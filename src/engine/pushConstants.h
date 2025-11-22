@@ -108,6 +108,11 @@ struct PcsRaygen{
         uint32_t frameCtr{0};
 
         uint32_t maxRecursionDepth;
+
+        uint32_t doRIS{0};
+        uint32_t M_brdf{1};
+        uint32_t M_area{1};
+        uint32_t M_env{1};
     };
     Data data;
 

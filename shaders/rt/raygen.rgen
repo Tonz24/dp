@@ -11,7 +11,7 @@
 #include "../common/common.glsl"
 #include "../common/math_constants.glsl"
 #include "pcs/pcs_raygen.glsl"
-#include "mis.glsl"
+#include "ris.glsl"
 
 layout(set = 0, binding = 4, rgba32f) uniform image2D outputImage;
 
@@ -95,7 +95,13 @@ void main() {
     vec3 radiance = vec3(0.0);
     vec3 weight = vec3(1.0);
 
-    vec3 directContribution = mat.materialType == 1 ? vec3(0.0) : calculateDirect(params,posWS,rayDir,mat.materialType,seed);
+    vec3 directContribution = vec3(0.0);
+
+    if (mat.materialType != MAT_MIRROR){
+        directContribution = pcs.doRIS == 1  
+            ? calculateDirectRIS(params,posWS,rayDir,mat.materialType,seed)  
+            : calculateDirect(params,posWS,rayDir,mat.materialType,seed);
+    }
 
     bool lastWasMirror = mat.materialType == 1;
     for (uint depth = 0; depth < pcs.maxRecursionDepth; depth++){

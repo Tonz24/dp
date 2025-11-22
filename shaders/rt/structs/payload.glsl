@@ -40,7 +40,6 @@ struct BRDFSamplePayload{
     vec3 hitEmission;
     vec3 hitNormal;
     vec3 throughput;
-    float hitArea;
     bool didHit;
     bool mirror;
 };
@@ -49,7 +48,6 @@ struct TracedSample{
     vec3 hitPosition;
     vec3 hitEmission;
     vec3 hitNormal;
-    float hitArea;
     bool didHit;
     bool mirror;
 };
@@ -60,7 +58,6 @@ TracedSample makeTraced(BRDFSamplePayload payload){
     s.hitPosition = payload.hitPosition;
     s.hitEmission = payload.hitEmission;
     s.hitNormal = payload.hitNormal;
-    s.hitArea = payload.hitArea;
     s.didHit = payload.didHit;
     s.mirror = payload.mirror;
 
@@ -71,7 +68,6 @@ void resetBRDFSamplePayload(inout BRDFSamplePayload payload){
     payload.hitPosition = vec3(0.0);
     payload.hitEmission = vec3(0.0);
     payload.hitNormal = vec3(0.0);
-    payload.hitArea = 0.0;
     payload.didHit = false;
     payload.mirror = false;
 }
