@@ -109,10 +109,22 @@ struct PcsRaygen{
 
         uint32_t maxRecursionDepth;
 
+
+         /**
+         * RIS information packed into 32 bits \n
+         * MSB (1 << 31) -- do ris? \n
+         * first 5 bits (63 << 0) -- brdf sample count [0, 63] \n
+         * next 5 bits (63 << 6)  -- area sample count [0, 63] \n
+         * next 5 bits (63 << 12) -- env sample count [0, 63] \n
+         * 63 dec = 0x3F
+         */
+        uint32_t ris{0};
+
+        /*
         uint32_t doRIS{0};
         uint32_t M_brdf{1};
         uint32_t M_area{1};
-        uint32_t M_env{1};
+        uint32_t M_env{1};*/
     };
     Data data;
 
@@ -123,5 +135,33 @@ struct PcsRaygen{
             .offset = 0,
             .size = sizeof(data)
         };
+    }
+
+    static constexpr uint32_t risShift = 31;
+    static constexpr uint32_t maxSampleCount = 63;
+
+    static constexpr uint32_t brdfShift = 0 * 6;
+    static constexpr uint32_t areaShift = 1 * 6;
+    static constexpr uint32_t envShift =  2 * 6;
+
+    static constexpr uint32_t brdfMask = 0x3F << brdfShift;
+    static constexpr uint32_t areaMask = 0x3F << areaShift;
+    static constexpr uint32_t envMask = 0x3F << envShift;
+
+
+    struct UnpackedData {
+        uint32_t doRIS{0};
+        uint32_t M_brdf{1};
+        uint32_t M_area{1};
+        uint32_t M_env{1};
+    };
+
+    static void packData(const UnpackedData& unpacked, Data& data) {
+        data.ris = 0;
+
+        data.ris |= unpacked.doRIS << risShift;
+        data.ris |= unpacked.M_brdf << brdfShift;
+        data.ris |= unpacked.M_area << areaShift;
+        data.ris |= unpacked.M_env << envShift;
     }
 };

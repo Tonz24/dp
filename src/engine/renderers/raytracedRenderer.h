@@ -48,6 +48,8 @@ protected:
     std::uniform_int_distribution<uint32_t> distr_;
 
     PcsRaygen::Data pcs_{};
+    PcsRaygen::UnpackedData pcsUnpacked_;
+
 
 
     uint32_t tonemap_{1};

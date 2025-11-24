@@ -18,11 +18,40 @@ layout(push_constant, std140) uniform PushConstants {
 
     uint maxRecursionDepth;
 
+    uint ris;
+
+    /*
     uint doRIS;
     uint M_brdf;
     uint M_area;
-    uint M_env;
+    uint M_env;*/
 } pcs;
 
+
+const uint risShift = 31;
+
+const uint brdfShift = 0 * 6;
+const uint areaShift = 1 * 6;
+const uint envShift =  2 * 6;
+
+const uint brdfMask = 0x3F << brdfShift;
+const uint areaMask = 0x3F << areaShift;
+const uint envMask = 0x3F << envShift;
+
+bool doRIS(){
+    return bool(pcs.ris & (1 << risShift));
+}
+
+uint getBrdfSampleCount(){
+    return (pcs.ris & brdfMask) >> brdfShift;
+}
+
+uint getAreaSampleCount(){
+    return (pcs.ris & areaMask) >> areaShift;
+}
+
+uint getEnvSampleCount(){
+    return (pcs.ris & envMask) >> envShift;
+}
 
 #endif // PCS_RAYGEN_GLSL

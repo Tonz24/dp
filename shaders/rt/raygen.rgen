@@ -98,7 +98,7 @@ void main() {
     vec3 directContribution = vec3(0.0);
 
     if (mat.materialType != MAT_MIRROR){
-        directContribution = pcs.doRIS == 1  
+        directContribution = bool(pcs.ris & (1 << 31))
             ? calculateDirectRIS(params,posWS,rayDir,mat.materialType,seed)  
             : calculateDirect(params,posWS,rayDir,mat.materialType,seed);
     }

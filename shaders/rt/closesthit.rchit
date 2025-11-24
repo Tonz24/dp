@@ -70,7 +70,7 @@ void main() {
     payload.weightFactor = hitBrdf * max(dot(nextDir,params.normal),0.0) / pdf;
 
    if(!hitLight(payload)){
-         payload.directContribution = pcs.doRIS == 1  
+         payload.directContribution = bool(pcs.ris & (1 << 31))
             ? calculateDirectRIS(params,posWS,gl_WorldRayDirectionEXT,MAT_DIFFUSE,seed)  
             : calculateDirect(params,posWS,gl_WorldRayDirectionEXT,MAT_DIFFUSE,seed);
     }

@@ -4,6 +4,10 @@
 #include "mis.glsl"
 #include "pcs/pcs_raygen.glsl"
 
+uint M_brdf;
+uint M_area;
+uint M_env;
+
 struct CandidateSample{
 	vec3 omega_i;
     vec3 L_i;
@@ -54,7 +58,7 @@ bool addSample(inout Reservoir reservoir, CandidateSample candidate, float w, in
 }
 
 float balanceHeuristicArea(float pdfArea, float pdfBrdf){
-    float denom = pdfArea * pcs.M_area + pdfBrdf * pcs.M_brdf;
+    float denom = pdfArea * M_area + pdfBrdf * M_brdf;
 
     if (denom <= 0.0)
         return 0.0f;
@@ -64,7 +68,7 @@ float balanceHeuristicArea(float pdfArea, float pdfBrdf){
 
 
 float balanceHeursticEnv(float pdfEnv, float pdfBrdf){
-    float denom = pdfEnv * pcs.M_env + pdfBrdf * pcs.M_brdf;
+    float denom = pdfEnv * M_env + pdfBrdf * M_brdf;
 
     if (denom <= 0.0)
         return 0.0f;
@@ -73,7 +77,7 @@ float balanceHeursticEnv(float pdfEnv, float pdfBrdf){
 }
 
 float balanceHeuristicBrdf(float pdfBrdf, float pdfArea, float pdfEnv){
-    float denom = pdfBrdf * pcs.M_brdf + pdfArea * pcs.M_area + pdfEnv * pcs.M_env;
+    float denom = pdfBrdf * M_brdf + pdfArea * M_area + pdfEnv * M_env;
 
     if (denom <= 0.0)
         return 0.0f;
@@ -286,15 +290,11 @@ vec3 calculateDirectRIS(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint m
 
     Reservoir r = makeEmptyReservoir();
 
-    for (int i = 0; i < pcs.M_area; ++i) {
-        CandidateSample candidate = areaSampleLight(shadeParams, posWS, rayDir, matType, seed);
+    M_brdf = getBrdfSampleCount(); 
+    M_area = getAreaSampleCount(); 
+    M_env = getEnvSampleCount(); 
 
-        float p_hat = evalPhat(candidate, shadeParams, posWS, rayDir, matType);
-        float w = candidate.misWeight * p_hat * candidate.W;
-        addSample(r, candidate, w, seed);
-    }
-
-	for (int i = 0; i < pcs.M_brdf; ++i) {
+    for (int i = 0; i < M_brdf; ++i) {
 		CandidateSample candidate = brdfSampleLight(shadeParams, posWS, rayDir, matType, seed);
 
 		float p_hat = evalPhat(candidate, shadeParams, posWS, rayDir, matType);
@@ -302,7 +302,15 @@ vec3 calculateDirectRIS(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint m
         addSample(r, candidate, w, seed);
 	}
 
-    for (int i = 0; i < pcs.M_env; ++i) {
+    for (int i = 0; i < M_area; ++i) {
+        CandidateSample candidate = areaSampleLight(shadeParams, posWS, rayDir, matType, seed);
+
+        float p_hat = evalPhat(candidate, shadeParams, posWS, rayDir, matType);
+        float w = candidate.misWeight * p_hat * candidate.W;
+        addSample(r, candidate, w, seed);
+    }
+
+    for (int i = 0; i < M_env; ++i) {
 		CandidateSample candidate = envSampleLight(shadeParams, posWS, rayDir, matType, seed);
 
 		float p_hat = evalPhat(candidate, shadeParams, posWS, rayDir, matType);

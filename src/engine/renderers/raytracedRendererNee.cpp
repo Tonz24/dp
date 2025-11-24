@@ -13,13 +13,16 @@ bool RaytracedRendererNEE::drawGUI() {
         ImGui::Checkbox("Tonemap",reinterpret_cast<bool*>(&tonemap_));
         ImGui::Checkbox("Accumulate",reinterpret_cast<bool*>(&pcs_.accumulate));
         ImGui::DragInt("Max bounce count",reinterpret_cast<int*>(&pcs_.maxRecursionDepth),0.25,1,16);
-        ImGui::Checkbox("Resampled NEE",reinterpret_cast<bool*>(&pcs_.doRIS));
 
-        if (pcs_.doRIS == 1) {
-            ImGui::DragInt("BRDF sample count",reinterpret_cast<int*>(&pcs_.M_brdf),0.25,0,16);
-            ImGui::DragInt("Area sample count",reinterpret_cast<int*>(&pcs_.M_area),0.25,0,16);
-            ImGui::DragInt("Env sample count",reinterpret_cast<int*>(&pcs_.M_env),0.25,0,16);
+        ImGui::Checkbox("Resampled NEE",reinterpret_cast<bool*>(&pcsUnpacked_.doRIS));
+
+        if (pcsUnpacked_.doRIS == 1) {
+            ImGui::DragInt("BRDF sample count",reinterpret_cast<int*>(&pcsUnpacked_.M_brdf),0.25,0,PcsRaygen::maxSampleCount);
+            ImGui::DragInt("Area sample count",reinterpret_cast<int*>(&pcsUnpacked_.M_area),0.25,0,PcsRaygen::maxSampleCount);
+            ImGui::DragInt("Env sample count",reinterpret_cast<int*>(&pcsUnpacked_.M_env),0.25,0,PcsRaygen::maxSampleCount);
         }
+
+        PcsRaygen::packData(pcsUnpacked_,pcs_);
 
         ImGui::Unindent();
     }

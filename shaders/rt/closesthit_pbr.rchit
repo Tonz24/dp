@@ -73,7 +73,7 @@ void main() {
         payload.weightFactor = brdf * cos_theta_i / nextSample.w;
 
     if(!hitLight(payload)){
-         payload.directContribution = pcs.doRIS == 1  
+         payload.directContribution = bool(pcs.ris & (1 << 31))
             ? calculateDirectRIS(params,posWS,gl_WorldRayDirectionEXT,MAT_PBR,seed)  
             : calculateDirect(params,posWS,gl_WorldRayDirectionEXT,MAT_PBR,seed);
     }
