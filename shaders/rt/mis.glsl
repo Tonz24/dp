@@ -221,11 +221,11 @@ vec3 evaluateSampleBrdfMisEnvArea(ShadeParams shadeParams, vec3 posWS, vec3 rayD
 vec3 calculateDirect(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint matType, inout uint seed){
     vec3 directContribution = vec3(0.0);
 
-    //vec3 contribArea = evaluateSampleAreaMisBrdf(shadeParams, posWS, rayDir, matType, seed);
-    //vec3 contribEnv = evaluateSampleEnvMisBrdf(shadeParams, posWS, rayDir, matType, seed);
+    vec3 contribArea = evaluateSampleAreaMisBrdf(shadeParams, posWS, rayDir, matType, seed);
+    vec3 contribEnv = evaluateSampleEnvMisBrdf(shadeParams, posWS, rayDir, matType, seed);
     vec3 contribBrdf = evaluateSampleBrdfMisEnvArea(shadeParams, posWS, rayDir, matType, seed);
 
-    directContribution = /*contribArea /*+ contribEnv*/ + contribBrdf;
+    directContribution = contribArea + contribEnv + contribBrdf;
     float validSample = float(!(any(isinf(directContribution)) || any(isnan(directContribution)) || any(lessThan(directContribution,vec3(0.0)))));
 
     return directContribution + (1.0 - validSample) * vec3(0,10,0);

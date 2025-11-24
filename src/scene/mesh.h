@@ -66,6 +66,7 @@ public:
         vk::DeviceAddress vertexBufferAddress;
         vk::DeviceAddress indexBufferAddress;
         uint32_t materialId;
+        glm::mat3 normalMat;
     };
 
     [[nodiscard]] const ObjDescription& getDescription() const { return description_; }

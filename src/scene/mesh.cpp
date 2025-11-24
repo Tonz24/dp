@@ -17,7 +17,8 @@ Mesh::Mesh(std::vector<Vertex3D>&& vertexList, std::vector<uint32_t>&& indexList
     description_ = ObjDescription{
         .vertexBufferAddress = vertexBuffer_.deviceAddress,
         .indexBufferAddress = indexBuffer_.deviceAddress,
-        .materialId = material_->getCID()
+        .materialId = material_->getCID(),
+        .normalMat = transform_.getNormalMat()
     };
 }
 

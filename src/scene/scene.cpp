@@ -85,7 +85,6 @@ void Scene::initTLAS() {
     VkUtils::copyBuffer(stagingBuffer,instanceBuffer,instanceBufferSize);
     VkUtils::destroyBufferVMA(std::move(stagingBuffer));
 
-
     vk::AccelerationStructureGeometryInstancesDataKHR instanceData;
     instanceData.setArrayOfPointers(false);
     instanceData.setData(instanceBuffer.deviceAddress);
