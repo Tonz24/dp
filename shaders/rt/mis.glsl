@@ -222,13 +222,17 @@ vec3 calculateDirect(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint matT
     vec3 directContribution = vec3(0.0);
 
     vec3 contribArea = evaluateSampleAreaMisBrdf(shadeParams, posWS, rayDir, matType, seed);
+    contribArea = sanitize(contribArea);
+
     vec3 contribEnv = evaluateSampleEnvMisBrdf(shadeParams, posWS, rayDir, matType, seed);
+    contribEnv = sanitize(contribEnv);
+
     vec3 contribBrdf = evaluateSampleBrdfMisEnvArea(shadeParams, posWS, rayDir, matType, seed);
+    contribBrdf = sanitize(contribBrdf);
 
     directContribution = contribArea + contribEnv + contribBrdf;
-    float validSample = float(!(any(isinf(directContribution)) || any(isnan(directContribution)) || any(lessThan(directContribution,vec3(0.0)))));
 
-    return directContribution + (1.0 - validSample) * vec3(0,10,0);
+    return directContribution;
 }
 
 #endif //MIS_GLSL

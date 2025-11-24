@@ -16,7 +16,7 @@ hitAttributeEXT vec2 attribs;
 
 
 void main() {
-     vec3 posWS;
+    vec3 posWS;
     vec3 emission;
     ShadeParams params = resolveHit(gl_InstanceCustomIndexEXT, gl_PrimitiveID, attribs, gl_WorldRayDirectionEXT, gl_ObjectToWorldEXT, posWS, emission);
 

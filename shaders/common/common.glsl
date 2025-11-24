@@ -58,4 +58,25 @@ vec3 sampleSphericalMap(vec3 dir, uint skyTextureIndex){
     return texture(textures[skyTextureIndex],uv).xyz;
 }
 
+vec3 sanitize(vec3 val){
+
+    bool isValid = !(any(isinf(val)) || any(isnan(val)) || any(lessThan(val, vec3(0.0))));
+    
+    uvec3 valUnsigned = floatBitsToUint(val) & (uint(isValid) * uint(0xFFFFFFFF));
+    vec3 valSanitized = uintBitsToFloat(valUnsigned);
+
+    return valSanitized;
+}
+
+float sanitize(float val){
+
+    bool isValid = !(isinf(val) || isnan(val) || val < 0.0f);
+
+    uint valUnsigned = floatBitsToUint(val) & (uint(isValid) * uint(0xFFFFFFFF));
+    float valSanitized = uintBitsToFloat(valUnsigned);
+
+    return valSanitized;
+}
+
+
 #endif // COMMON_GLSL
