@@ -3,28 +3,9 @@
 
 #include "math_constants.glsl"
 #include "material.glsl"
-
+#include "descriptor.glsl"
 
 //=============GLOBAL DESCRIPTOR SET==============
-layout (set=0, binding=0, std140) uniform CameraUBO {
-    mat4 matV;
-    mat4 matP;
-    mat4 matVP;
-    mat4 matInvVP;
-    vec3 posWS;
-    float zNear;
-    float zFar;
-} cameraUBO;
-
-layout (set=0,binding=1, std140) uniform MaterialUBO {
-   Material materials[100];
-} materialUBO;
-
-layout(set = 0, binding = 2) uniform sampler2D textures[1024];
-layout(set = 0, binding = 6) uniform usampler2D utextures[1024];
-
-#extension GL_EXT_ray_query : require
-layout(set = 0, binding = 3) uniform accelerationStructureEXT topLevelAS;
 //================================================
 
 //====================MATERIAL====================
@@ -63,7 +44,6 @@ ShadeParams unpackMaterial(Material mat, vec3 normal, mat3 tbn, vec2 texCoord){
     return params;
 }
 //================================================
-
 
 // calibrated so that test image (https://naver.github.io/egjs-view360/docs/projections/equirect) faces the camera when its view vector looks down (0, 0, -1) in world space
 vec2 dirToEquirect(vec3 dir){

@@ -1,7 +1,6 @@
 #ifndef PAYLOAD_GLSL
 #define PAYLOAD_GLSL
 
-
 struct HitPayload{
     vec3 hitPosition;
     vec3 hitEmission;

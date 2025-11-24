@@ -16,7 +16,6 @@ layout(location = 0) rayPayloadInEXT HitPayload payload;
 
 hitAttributeEXT vec2 attribs;
 
-
 void main() {
     ObjDesc object = objDesc.i[gl_InstanceCustomIndexEXT];
 
@@ -48,7 +47,6 @@ void main() {
 
     ShadeParams params = unpackMaterial(material, hitNormal, TBN, texCoord);
 
-
     // flip normal if backside is hit
     if (dot(-gl_WorldRayDirectionEXT,params.normal) < 0.0)
         params.normal *= -1.0;
@@ -69,8 +67,8 @@ void main() {
 
     payload.weightFactor = hitBrdf * max(dot(nextDir,params.normal),0.0) / pdf;
 
-   if(!hitLight(payload)){
-         payload.directContribution = bool(pcs.ris & (1 << 31))
+    if(!hitLight(payload)){
+         payload.directContribution = doRIS()
             ? calculateDirectRIS(params,posWS,gl_WorldRayDirectionEXT,MAT_DIFFUSE,seed)  
             : calculateDirect(params,posWS,gl_WorldRayDirectionEXT,MAT_DIFFUSE,seed);
     }

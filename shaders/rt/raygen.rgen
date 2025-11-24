@@ -7,7 +7,6 @@
 
 #define RAYGEN
 
-
 #include "../common/common.glsl"
 #include "../common/math_constants.glsl"
 #include "pcs/pcs_raygen.glsl"
@@ -16,7 +15,6 @@
 layout(set = 0, binding = 4, rgba32f) uniform image2D outputImage;
 
 layout(location = 0) rayPayloadEXT HitPayload payload;
-
 
 //  all zero normals are invalid
 bool isGeometryValid(vec3 normal){
@@ -98,7 +96,7 @@ void main() {
     vec3 directContribution = vec3(0.0);
 
     if (mat.materialType != MAT_MIRROR){
-        directContribution = bool(pcs.ris & (1 << 31))
+        directContribution = doRIS()
             ? calculateDirectRIS(params,posWS,rayDir,mat.materialType,seed)  
             : calculateDirect(params,posWS,rayDir,mat.materialType,seed);
     }
@@ -123,7 +121,6 @@ void main() {
         );
 
         radiance += weight * directContribution;
-
 
         // hitting a light from a material that was not a mirror previously ends the path (emissive surfaces handled in direct lighting calculation)
         // break before integrating radiance (that would result in double counting)

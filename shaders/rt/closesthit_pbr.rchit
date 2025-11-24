@@ -16,7 +16,6 @@ layout(location = 0) rayPayloadInEXT HitPayload payload;
 
 hitAttributeEXT vec2 attribs;
 
-
 void main() {
     ObjDesc object = objDesc.i[gl_InstanceCustomIndexEXT];
 
@@ -38,10 +37,8 @@ void main() {
     vec3 posWS = getPositionWS(modelMat, uv, v0, v1, v2);
     vec3 hitTangent = getTangentWS(normalMat, uv, v0, v1, v2);
 
-
     if (dot(-gl_WorldRayDirectionEXT,hitNormal) < 0.0)
         hitNormal *= -1.0;
-
 
     vec3 T = hitTangent - dot(hitTangent, hitNormal) * hitNormal;
     T = normalize(T);
@@ -56,7 +53,6 @@ void main() {
 
     // passed from raygen shader, put into a separate variable, otherwise there's VK_DEVICE_LOST if used directly as an inout parameter
     uint seed = payload.seed;
-
 
     vec3 brdf = vec3(0.0);
     vec4 nextSample = samplePbr(gl_WorldRayDirectionEXT,params,seed,brdf);
@@ -73,7 +69,7 @@ void main() {
         payload.weightFactor = brdf * cos_theta_i / nextSample.w;
 
     if(!hitLight(payload)){
-         payload.directContribution = bool(pcs.ris & (1 << 31))
+         payload.directContribution = doRIS()
             ? calculateDirectRIS(params,posWS,gl_WorldRayDirectionEXT,MAT_PBR,seed)  
             : calculateDirect(params,posWS,gl_WorldRayDirectionEXT,MAT_PBR,seed);
     }

@@ -12,59 +12,6 @@ layout(location = 1) rayPayloadEXT BRDFSamplePayload payloadBRDF;
 
 #endif // PAYLOAD_BRDF
 
-
-
-// trace a ray for BRDF lighting
-// mirror reflections are recursively unfolded
-/*TracedSample traceBRDFLightingMirrors(vec3 posWS, vec3 direction, vec3 normal, inout bool unfolded){
-    float tMin = 0.001f;
-    float tMax = 10000.0f;
-
-    resetBRDFSamplePayload(payloadBRDF);
-    traceRayEXT(
-            topLevelAS,
-            gl_RayFlagsOpaqueEXT,
-            0xff, // cullMask
-            3,    // start at brdf sample region
-            0,    // sbtRecordStride
-            1,    // missIndex
-            posWS + normal * tMin,
-            tMin,
-            direction,
-            tMax,
-            1     // brdf sample always has payload location 1
-    );
-    vec3 throughput = payloadBRDF.throughput;
-    TracedSample result = makeTraced(payloadBRDF);
-
-    while (payloadBRDF.didHit && payloadBRDF.mirror){
-        unfolded = true;
-
-        vec3 reflectedDir = reflect(direction, result.hitNormal);
-
-        resetBRDFSamplePayload(payloadBRDF);
-        traceRayEXT(
-            topLevelAS,
-            gl_RayFlagsOpaqueEXT,
-            0xff, // cullMask
-            3,    // start at brdf sample region
-            0,    // sbtRecordStride
-            1,    // missIndex
-            result.hitPosition + result.hitNormal * tMin,
-            tMin,
-            reflectedDir,
-            tMax,
-            1     // brdf sample always has payload location 1
-        );
-        throughput *= payloadBRDF.throughput;
-    }
-
-    // emission is returned from the first non-mirror hit (or miss -- envmap is returned in this case) modulated by the accumulated throughput of hit mirrors
-    result.hitEmission = payloadBRDF.hitEmission * throughput;
-    return result;
-}
-*/
-
 // trace a ray for BRDF lighting
 TracedSample traceBRDFLighting(vec3 posWS, vec3 direction, vec3 normal){
     float tMin = 0.001f;
@@ -92,10 +39,8 @@ float powerHeuristic(float pdf, float pdfOther) {
 	const float pdf_sqr = pdf * pdf;
 	const float pdfOther_sqr = pdfOther * pdfOther;
 	const float result = pdf_sqr / (pdfOther_sqr + pdf_sqr);
-	//const float result = pdf / (pdf + pdfOther);
 	return result;
 }
-
 
 // samples an area light (emissive triangle) and returns incoming radiance
 // area-brdf MIS weighing. environmental map is not taken into consideration, since its the sampling domain is mutually exclusive with the area light domain: 
@@ -116,8 +61,7 @@ vec3 evaluateSampleAreaMisBrdf(ShadeParams shadeParams, vec3 posWS, vec3 rayDir,
     // sample the triangle identified by CDF sample (pick a random point on the triangle with uniform probability)
     TriangleSample sampledPoint = sampleTriangle(cdfTriangle,seed);
 
-    // early exit if occlusion test fails as there wouldn't be any light contribution anyway
-    if (!isVisible(posWS, sampledPoint.position, shadeParams.normal)) return vec3(0.0);
+    float visibility = float(isVisible(posWS, sampledPoint.position, shadeParams.normal));
 
     // (1 / triangleArea) * (triangleArea / totalArea) -- triangleArea cancels out
     float lightPdf = 1.0 / emissiveCDF.area;
@@ -126,14 +70,8 @@ vec3 evaluateSampleAreaMisBrdf(ShadeParams shadeParams, vec3 posWS, vec3 rayDir,
     float r_sqr = dot(omega_i, omega_i);
     omega_i = normalize(omega_i);
 
-    // early exit when invalid numbers are present
-    if (r_sqr == 0.0 || any(isnan(omega_i)) || any(isinf(omega_i)) || lightPdf <= 0.0) return vec3(0.0);
-
     float cos_theta_i = max(dot(omega_i, shadeParams.normal), 0.0);
     float cos_theta_y = abs(dot(-omega_i, sampledPoint.normal));
-
-    // any of these being zero means that radiance is also zero
-    if (cos_theta_i == 0.0 || cos_theta_y == 0.0) return vec3(0.0);
 
     float areaMeasureFactor = cos_theta_y / r_sqr;
 
@@ -156,7 +94,6 @@ vec3 evaluateSampleAreaMisBrdf(ShadeParams shadeParams, vec3 posWS, vec3 rayDir,
     brdfPdf *= areaMeasureFactor;
 
     float misWeight = powerHeuristic(lightPdf, brdfPdf);
-    if (misWeight <= 0.0) return vec3(0.0);
 
     // evaluate brdf
     #ifdef CLOSEST_HIT_DIFFUSE
@@ -172,7 +109,7 @@ vec3 evaluateSampleAreaMisBrdf(ShadeParams shadeParams, vec3 posWS, vec3 rayDir,
     #endif
 
     float G = areaMeasureFactor;
-    vec3 L_direct = misWeight * L_i * brdf * G * cos_theta_i / lightPdf;
+    vec3 L_direct = misWeight * visibility * L_i * brdf * G * cos_theta_i / lightPdf;
 
     return L_direct;
 }
@@ -185,16 +122,10 @@ vec3 evaluateSampleEnvMisBrdf(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, 
     vec3 omega_i = envSample.xyz;
     float envPdf = envSample.w;
 
-    if (isinf(envPdf) || isnan(envPdf) || envPdf <= 0.0)
-        return vec3(0.0);
-
-    //  if the ray hits anything (env map is occluded), early exit
-    //  occlusion of the env map means that zero radiance would come from this direction anyway
-    if (!isVisible(posWS, omega_i * 1000.f, shadeParams.normal)) return vec3(0.0);
+    float visibility = float(isVisible(posWS, omega_i * 1000.f, shadeParams.normal));
 
     // retrieve radiance coming from the env map
     vec3 L_i = sampleSphericalMap(omega_i, pcs.skyHandle);
-
 
     #ifdef CLOSEST_HIT_DIFFUSE
     // get the pdf of this sample as if it came from BRDF sampling
@@ -213,8 +144,6 @@ vec3 evaluateSampleEnvMisBrdf(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, 
 
     float misWeight = powerHeuristic(envPdf, brdfPdf);
 
-    if (misWeight <= 0.0) return vec3(0.0);
-
     float cos_theta_i = max(dot(omega_i, shadeParams.normal), 0.0f);
 
     // evaluate brdf
@@ -230,12 +159,11 @@ vec3 evaluateSampleEnvMisBrdf(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, 
     vec3 brdf = evalBrdfMaterial(rayDir,omega_i, shadeParams, matType);
     #endif
 
-    vec3 L_direct = misWeight * L_i * brdf * cos_theta_i / envPdf; 
+    vec3 L_direct = misWeight * visibility * L_i * brdf * cos_theta_i / envPdf; 
     return L_direct;
 }
 
 vec3 evaluateSampleBrdfMisEnvArea(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint matType, inout uint seed){
-
     vec3 brdfValue = vec3(0.0);
 
     // sample the BRDF
@@ -255,9 +183,6 @@ vec3 evaluateSampleBrdfMisEnvArea(ShadeParams shadeParams, vec3 posWS, vec3 rayD
     vec3 omega_i = brdfSample.xyz;
     float brdfPdf = brdfSample.w;
 
-    if (isnan(brdfPdf) || isinf(brdfPdf) || brdfPdf <= 0.0f)
-        return vec3(0.0);
-
     bool unfolded = false;
     // check what the BRDF sample hits 
     TracedSample brdfHit = traceBRDFLighting(posWS, omega_i, shadeParams.normal);
@@ -271,26 +196,20 @@ vec3 evaluateSampleBrdfMisEnvArea(ShadeParams shadeParams, vec3 posWS, vec3 rayD
     float pdfOther = 0.0;
 
     // emissive surface case -- calculate the pdf of hitting the emissive surface, convert it to solid angle measure
+    if (brdfHit.didHit){
+        L_i = brdfHit.hitEmission;
 
-    //if (!unfolded){
-        if (brdfHit.didHit){
-            L_i = brdfHit.hitEmission;
+        vec3 toHit = brdfHit.hitPosition - posWS;
+        float r_sqr = dot(toHit, toHit);
+        float cos_theta_y = abs(dot(-omega_i, brdfHit.hitNormal));
 
-            vec3 toHit = brdfHit.hitPosition - posWS;
-            float r_sqr = dot(toHit, toHit);
-            float cos_theta_y = abs(dot(-omega_i, brdfHit.hitNormal));
+        float areaToSolidMeasureFactor =  r_sqr / cos_theta_y;
+        pdfOther = (1.0 / emissiveCDF.area) * areaToSolidMeasureFactor;
+    }
+    // evaluating the env pdf only makes sense when the sample is unoccluded by scene geometry
+    else
+        pdfOther = getPdfEnvironment(textures[pcs.skyCdfHandle],omega_i);
 
-            if (r_sqr <= 0.0 || cos_theta_y <= 0.0) return vec3(0.0);
-
-            float areaToSolidMeasureFactor =  r_sqr / cos_theta_y;
-            pdfOther = (1.0 / emissiveCDF.area) * areaToSolidMeasureFactor;
-        }
-        // evaluating the env pdf only makes sense when the sample is unoccluded by scene geometry
-        else {
-            pdfOther = getPdfEnvironment(textures[pcs.skyCdfHandle],omega_i);
-            if (pdfOther <= 0.0) return vec3(0.0);
-        }
-   // }
     float misWeight = powerHeuristic(brdfPdf, pdfOther);
 
     float cos_theta_i = max(dot(omega_i, shadeParams.normal), 0.0f);
@@ -299,28 +218,17 @@ vec3 evaluateSampleBrdfMisEnvArea(ShadeParams shadeParams, vec3 posWS, vec3 rayD
     return L_direct;
 }
 
-
 vec3 calculateDirect(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint matType, inout uint seed){
     vec3 directContribution = vec3(0.0);
 
-    vec3 contribArea = evaluateSampleAreaMisBrdf(shadeParams, posWS, rayDir, matType, seed);
-
-    if (any(isinf(contribArea)) || any(isnan(contribArea)) || any(lessThan(contribArea,vec3(0.0))))
-        contribArea = vec3(0.0);
-
-    vec3 contribEnv = evaluateSampleEnvMisBrdf(shadeParams, posWS, rayDir, matType, seed);
-
-    if (any(isinf(contribEnv)) || any(isnan(contribEnv)) || any(lessThan(contribEnv,vec3(0.0))))
-        contribEnv = vec3(0.0);
-
+    //vec3 contribArea = evaluateSampleAreaMisBrdf(shadeParams, posWS, rayDir, matType, seed);
+    //vec3 contribEnv = evaluateSampleEnvMisBrdf(shadeParams, posWS, rayDir, matType, seed);
     vec3 contribBrdf = evaluateSampleBrdfMisEnvArea(shadeParams, posWS, rayDir, matType, seed);
 
-    if (any(isinf(contribBrdf)) || any(isnan(contribBrdf)) || any(lessThan(contribBrdf,vec3(0.0))))
-       contribBrdf = vec3(0.0);
+    directContribution = /*contribArea /*+ contribEnv*/ + contribBrdf;
+    float validSample = float(!(any(isinf(directContribution)) || any(isnan(directContribution)) || any(lessThan(directContribution,vec3(0.0)))));
 
-    directContribution = contribArea + contribEnv + contribBrdf;
-
-    return directContribution;
+    return directContribution + (1.0 - validSample) * vec3(0,10,0);
 }
 
 #endif //MIS_GLSL

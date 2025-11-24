@@ -192,7 +192,6 @@ void Mesh::initBLAS() {
     geometryData.setGeometry(triangleData);
     geometryData.setFlags(vk::GeometryFlagBitsKHR::eOpaque);
 
-
     blas_ = AccelerationStructure( vk::AccelerationStructureTypeKHR::eBottomLevel,geometryData,maxPrimitiveCount);
 
     // setup instance
