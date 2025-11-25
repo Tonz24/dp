@@ -415,7 +415,6 @@ vec4 sampleEnvironment(sampler2D skyCdf, inout uint seed){
 	return vec4(direction, pdf);
 }
 
-
 float getPdfEnvironment(sampler2D skyCdf, vec3 dir){
     ivec2 envSize = textureSize(skyCdf,0);
 	int width = envSize.x - 1; // do not include the marginal index

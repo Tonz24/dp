@@ -12,9 +12,21 @@ layout(location = 2) out uint outMeshId;
 layout(location = 3) out uint outMaterialId;
 
 #include "../common/common.glsl"
+#include "../common/rng.glsl"
 #include "pcs/pcs_gbuffer_fill.glsl"
 
 void main() {
+
+    vec2 texelSize = vec2(1.0) / vec2((pcs.width), float(pcs.height));
+
+    uvec2 s = pcg2d(uvec2(gl_FragCoord.xy) * pcs.seed);
+    uint seed = s.x + s.y;
+
+    float randomX = (rand(seed)) * texelSize.x;
+    float randomY = (rand(seed)) * texelSize.y;
+
+    vec2 texCoord = inTexCoord + vec2(randomX, randomY);
+
     Material mat = materialUBO.materials[pcs.matIndex];
     ShadeParams params = unpackMaterial(mat, inNormal, inTBN, inTexCoord);
     

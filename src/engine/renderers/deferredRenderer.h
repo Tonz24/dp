@@ -3,10 +3,13 @@
 //
 
 #pragma once
+#include <random>
+
 #include "renderer.h"
 #include "../gBuffer.h"
 #include "../vk/RasterPipeline.h"
 #include "../pushConstants.h"
+
 
 class DeferredRenderer : public Renderer {
 public:
@@ -46,8 +49,11 @@ protected:
 
     std::shared_ptr<GBuffer> gBuffer_{nullptr};
 
-     void setPcsData() override;
+    std::random_device rngDevice_;
+    std::mt19937 generator_;
+    std::uniform_int_distribution<uint32_t> distr_;
 
+     void setPcsData() override;
 
 private:
     void initGraphicsPipelines();

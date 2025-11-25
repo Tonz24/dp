@@ -3,7 +3,7 @@
 //
 
 #pragma once
-#include <random>
+
 
 #include "deferredRenderer.h"
 #include "../vk/raytracingPipeline.h"
@@ -45,9 +45,6 @@ protected:
     RaytracingPipeline rtPipeline_;
     RasterPipeline tonemapPipeline_;
 
-    std::random_device rngDevice_;
-    std::mt19937 generator_;
-    std::uniform_int_distribution<uint32_t> distr_;
 
     PcsRaygen::Data pcs_{};
     PcsRaygen::UnpackedData pcsUnpacked_;

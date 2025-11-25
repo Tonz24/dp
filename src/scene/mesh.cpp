@@ -52,24 +52,32 @@ void Mesh::updateBLASInstance() {
 }
 
 bool Mesh::drawGUI() {
-    bool changed{false};
+    bool resetAccumulator{false};
+    bool updateInstance{false};
+
     glm::vec3 oldEmission = material_->getEmission();
     Material::MaterialType oldMatType = material_->getMaterialType();
 
     if (ImGui::CollapsingHeader("Mesh",ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Indent();
 
-        changed |= transform_.drawGUI();
-        changed |= material_->drawGUI();
+        // reset accumulator and recreate BLAS instance if transform changes
+        resetAccumulator |= transform_.drawGUI();
+        updateInstance |= resetAccumulator;
+
+        resetAccumulator |= material_->drawGUI();
         ImGui::Unindent();
     }
 
+    // if emission changed or material type changed, recreate the BLAS instance
+    updateInstance |= oldEmission != material_->getEmission() || oldMatType != material_->getMaterialType();
+
     // change BLAS instance transformation matrix and SBT offset
-    if (oldEmission != material_->getEmission() || oldMatType != material_->getMaterialType()){
+    if (updateInstance){
         updateBLASInstance();
         extractEmissiveTriangles();
     }
-    return changed;
+    return resetAccumulator;
 }
 
 void Mesh::stage(const VkUtils::BufferAlloc& stagingBuffer) const {
@@ -93,7 +101,7 @@ void Mesh::stage(const VkUtils::BufferAlloc& stagingBuffer) const {
     VkUtils::copyBuffer(stagingBuffer,indexBuffer_,indexBufferSize);
 }
 
-void Mesh::recordDrawCommands(vk::raii::CommandBuffer& cmdBuf, const vk::raii::PipelineLayout& pipelineLayout) const {
+void Mesh::recordDrawCommands(vk::raii::CommandBuffer& cmdBuf, const vk::raii::PipelineLayout& pipelineLayout, uint32_t width, uint32_t height, uint32_t seed) const {
     cmdBuf.bindVertexBuffers(0,vertexBuffer_.buffer,{0});
     cmdBuf.bindIndexBuffer(indexBuffer_.buffer,0,vk::IndexType::eUint32);
 
@@ -101,7 +109,10 @@ void Mesh::recordDrawCommands(vk::raii::CommandBuffer& cmdBuf, const vk::raii::P
         .modelMat = transform_.getModelMat(),
         .normalMat = transform_.getNormalMat(),
         .materialId = material_->getCID(),
-        .meshId = getCID()
+        .meshId = getCID(),
+        .seed = seed,
+        .width = width,
+        .height = height
     };
 
     cmdBuf.pushConstants(pipelineLayout,PcsGBufferFill::stageFlags,0, vk::ArrayProxy<const PcsGBufferFill::Data>{pcs});

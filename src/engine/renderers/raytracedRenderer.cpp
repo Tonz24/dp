@@ -28,7 +28,6 @@ void RaytracedRenderer::render(const Scene& scene, vk::raii::CommandBuffer& cmdB
 
     pcs_.accumulate = !isCameraMoving_ && !overrideAccumulatorIncrement_;
     overrideAccumulatorIncrement_ = false;
-    std::cout << isCameraMoving_ << std::endl << pcs_.accumulate << std::endl << std::endl;
 
     DeferredRenderer::render(scene, cmdBuf, frameInFlightIndex, swapchainImage, swapchainImageView, swapchainExtent);
 }

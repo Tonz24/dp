@@ -19,12 +19,6 @@ layout(push_constant, std140) uniform PushConstants {
     uint maxRecursionDepth;
 
     uint ris;
-
-    /*
-    uint doRIS;
-    uint M_brdf;
-    uint M_area;
-    uint M_env;*/
 } pcs;
 
 

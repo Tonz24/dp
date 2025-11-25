@@ -362,8 +362,12 @@ void DeferredRenderer::recordSceneCommands(const Scene& scene, vk::raii::Command
     cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, gBufferFillPipeline_.getGraphicsPipeline());
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, gBufferFillPipeline_.getPipelineLayout(), 0, *getDescSetFrame(frameInFlightIndex), nullptr);
 
+    uint32_t seed = distr_(generator_);
+    uint32_t width = gBuffer_->getAlbedoMap().getWidth();
+    uint32_t height = gBuffer_->getAlbedoMap().getHeight();
+
     for (const auto &mesh : scene.getMeshes()) {
-        mesh->recordDrawCommands(cmdBuf, gBufferFillPipeline_.getPipelineLayout());
+        mesh->recordDrawCommands(cmdBuf, gBufferFillPipeline_.getPipelineLayout(), width, height, seed);
     }
     cmdBuf.endRendering();
 }

@@ -16,6 +16,10 @@ struct PcsGBufferFill{
         glm::mat4 normalMat{};
         uint32_t materialId{};
         uint32_t meshId{};
+
+        uint32_t seed;
+        uint32_t width;
+        uint32_t height;
     };
     Data data;
 

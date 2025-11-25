@@ -104,6 +104,8 @@ void Engine::init() {
 }
 
 bool Engine::drawGUI() {
+    bool resetAccumulator{false};
+
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -121,19 +123,19 @@ bool Engine::drawGUI() {
             if (newEnvmap == nullptr)
                 newEnvmap = TextureManager::getInstance()->registerResource(name, path, true, false);
 
+            resetAccumulator |= true;
             scene_->setSky(newEnvmap);
         }
 
         if (ImGui::Combo("Load scene", &selectedScene_ ,sceneNamesCstr_.data(), sceneNames_.size())) {
             const auto& name =  sceneNames_[selectedScene_];
 
-
             auto envmap = scene_->getSky();
             auto cam = scene_->getCameraPtr();
 
+            resetAccumulator |= true;
             scene_ = std::make_shared<Scene>(ModelLoader::loadModel(name, false),cam,std::move(envmap));
         }
-
         ImGui::Unindent();
     }
 
@@ -149,9 +151,10 @@ bool Engine::drawGUI() {
                 selectedRenderer_ = rtRendererNaive_.get();
             if (selectedRendererIndex_ == 2)
                 selectedRenderer_ = rtRendererNEE_.get();
+
+            resetAccumulator |= true;
         }
 
-        bool resetAccumulator{false};
         if (selectedRenderer_)
             resetAccumulator |= selectedRenderer_->drawGUI();
         if (scene_)
@@ -234,7 +237,6 @@ void Engine::initImGui() {
         {.type = vk::DescriptorType::eUniformBufferDynamic,.descriptorCount = 1000},
         {.type = vk::DescriptorType::eStorageBufferDynamic,.descriptorCount = 1000},
         {.type = vk::DescriptorType::eInputAttachment,.descriptorCount = 1000},
-
     };
 
     vk::DescriptorPoolCreateInfo poolInfo = {

@@ -93,6 +93,7 @@ CandidateSample areaSampleLight(ShadeParams shadeParams, vec3 posWS, vec3 rayDir
     // early exit if occlusion test fails as there wouldn't be any light contribution anyway
     if (!isVisible(posWS, sampledPoint.position, shadeParams.normal)) 
         return makeEmptyCandidate();
+        
 
     // (1 / triangleArea) * (triangleArea / totalArea) -- triangleArea cancels out
     float lightPdf = 1.0 / emissiveCDF.area;
