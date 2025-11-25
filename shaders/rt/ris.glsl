@@ -24,7 +24,6 @@ CandidateSample makeEmptyCandidate(){
     candidate.W = 0.0;
     candidate.misWeight = 0.0f;
 
-
     return candidate;
 }
 
@@ -59,30 +58,17 @@ bool addSample(inout Reservoir reservoir, CandidateSample candidate, float w, in
 
 float balanceHeuristicArea(float pdfArea, float pdfBrdf){
     float denom = pdfArea * M_area + pdfBrdf * M_brdf;
-
-    if (denom <= 0.0)
-        return 0.0f;
-
-    return pdfArea / denom;
+    return sanitize(pdfArea / denom);
 }
-
 
 float balanceHeursticEnv(float pdfEnv, float pdfBrdf){
     float denom = pdfEnv * M_env + pdfBrdf * M_brdf;
-
-    if (denom <= 0.0)
-        return 0.0f;
-
-    return pdfEnv / denom;
+    return sanitize(pdfEnv / denom);
 }
 
 float balanceHeuristicBrdf(float pdfBrdf, float pdfArea, float pdfEnv){
     float denom = pdfBrdf * M_brdf + pdfArea * M_area + pdfEnv * M_env;
-
-    if (denom <= 0.0)
-        return 0.0f;
-
-    return pdfBrdf / denom;
+    return sanitize(pdfBrdf / denom);
 }
 
 // samples an area light (emissive triangle) and returns incoming radiance

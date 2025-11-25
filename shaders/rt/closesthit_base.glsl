@@ -6,7 +6,7 @@
 #include "../common/common.glsl"
 #include "../common/math_constants.glsl"
 #include "pcs/pcs_raygen.glsl"
-#include "structs/payload.glsl"
+#include "payload.glsl"
 #include "raycommon.glsl"
 #include "../common/material.glsl"
 

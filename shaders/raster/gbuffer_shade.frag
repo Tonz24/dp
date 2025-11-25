@@ -61,8 +61,6 @@ vec2 getShadowFactor(vec3 posWS, vec3 lightPos){
 }
 
 
-
-
 vec3 evalPbr(vec3 albedo, float roughness, float metallic, vec3 normal, vec3 omega_o, vec3 omega_i, vec3 pos){
 
     vec3 omega_h = normalize(omega_i + omega_o); // halfway vector between view direction and light direction (microfacet normal)

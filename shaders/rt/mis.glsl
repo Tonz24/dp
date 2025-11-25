@@ -1,7 +1,7 @@
 #ifndef MIS_GLSL
 #define MIS_GLSL
 
-#include "structs/payload.glsl"
+#include "payload.glsl"
 #include "raycommon.glsl"
 #include "../common/material.glsl"
 
@@ -31,10 +31,9 @@ TracedSample traceBRDFLighting(vec3 posWS, vec3 direction, vec3 normal){
 }
 
 float powerHeuristic(float pdf, float pdfOther) {
-	const float pdf_sqr = pdf * pdf;
-	const float pdfOther_sqr = pdfOther * pdfOther;
-	const float result = pdf_sqr / (pdfOther_sqr + pdf_sqr);
-	return result;
+	float pdf_sqr = pdf * pdf;
+	float pdfOther_sqr = pdfOther * pdfOther;
+	return sanitize(pdf_sqr / (pdfOther_sqr + pdf_sqr));
 }
 
 // samples an area light (emissive triangle) and returns incoming radiance

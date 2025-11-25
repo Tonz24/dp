@@ -9,7 +9,7 @@
 #include "../common/math_constants.glsl"
 #include "raycommon.glsl"
 #include "pcs/pcs_raygen.glsl"
-#include "structs/payload.glsl"
+#include "payload.glsl"
 
 layout(location = 1) rayPayloadInEXT BRDFSamplePayload inPayloadBRDF;
 
