@@ -145,7 +145,6 @@ float getPdfMaterial(vec3 rayDir, vec3 omega_i, ShadeParams shadeParams, uint ma
 //=====================================================
 
 
-
 //======================BRDF EVAL======================
 
 vec3 evalBrdfDiffuse(vec3 albedo){
@@ -206,13 +205,11 @@ vec3 evalBrdfMaterial(vec3 rayDir, vec3 lightDir, ShadeParams shadeParams, uint 
 
 	return brdf;
 }
-
 //=====================================================
 
 
 
 //==================SAMPLE + BRDF EVAL=================
-
 vec4 samplePbr(vec3 rayDir, ShadeParams shadeParams, inout uint seed, inout vec3 brdf){
 
 	float alpha = shadeParams.roughness * shadeParams.roughness;
@@ -277,16 +274,50 @@ vec4 samplePbr(vec3 rayDir, ShadeParams shadeParams, inout uint seed, inout vec3
 	return nextSample;
 }
 
+vec4 sampleHemisphereCosineWeighted(ShadeParams shadeParams, inout uint seed, inout vec3 brdf){
+
+	float r1 = rand(seed);
+	float r2 = rand(seed);
+
+	float x = cos(PI * 2.0f * r1) * sqrt(1.0f - r2);
+	float y = sin(PI * 2.0f * r1) * sqrt(1.0f - r2);
+	float z = sqrt(r2);
+
+	// local reference frame
+	vec3 sampled = normalize(vec3(x,y,z));
+
+	vec3 o2 = normalize(orthogonal(shadeParams.normal));
+	vec3 o1 = normalize(cross(shadeParams.normal, o2));
+	o2 = normalize(cross(o1, shadeParams.normal));
+
+	mat3 toWorld = mat3(o1, o2, shadeParams.normal);
+
+	//transform to world space
+	sampled = toWorld * sampled;
+
+	// division by PI cancels out
+	float pdf = max(dot(shadeParams.normal, sampled), 0.0f);
+	brdf = shadeParams.albedo;
+
+	return vec4(sampled, pdf);
+}
+
+
+vec4 sampleMirror( vec3 rayDir, ShadeParams shadeParams, inout vec3 brdf){
+	brdf = shadeParams.albedo;
+
+	vec3 sampled = reflect(rayDir,shadeParams.normal);
+	return vec4(sampled, 1.0);
+}
+
 vec4 sampleMaterial(vec3 rayDir, ShadeParams shadeParams, uint matType, inout uint seed, inout vec3 brdf){
 	vec4 sampled = vec4(0.0);
 
 	if (matType == MAT_DIFFUSE){
-		brdf = evalBrdfDiffuse(shadeParams.albedo);
-		return sampleHemisphereCosineWeighted(shadeParams.normal, seed);
+		return sampleHemisphereCosineWeighted(shadeParams, seed, brdf);
 	}
 	if (matType == MAT_MIRROR){
-		brdf = evalBrdfMirror(shadeParams.albedo);
-		return sampleMirror(shadeParams.normal, rayDir);
+		return sampleMirror(rayDir, shadeParams, brdf);
 	}
 	if (matType == MAT_PBR)
 		return samplePbr(rayDir,shadeParams,seed, brdf);

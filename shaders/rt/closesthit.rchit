@@ -24,18 +24,18 @@ void main() {
     // passed from raygen shader, put into a separate variable, otherwise there's VK_DEVICE_LOST if used directly as an inout parameter
     uint seed = payload.seed;
 
-    vec4 nextSample = sampleHemisphereCosineWeighted(params.normal,seed);
+    vec3 brdf;
+    vec4 nextSample = sampleHemisphereCosineWeighted(params, seed, brdf);
     vec3 nextDir = nextSample.xyz;
     float pdf = nextSample.w;
 
     payload.hitPosition = posWS;
     payload.hitEmission = emission;
-    vec3 hitBrdf = params.albedo * INVPI;
     payload.hit = true;
     payload.nextSample = nextSample;
     payload.hitNormal =  params.normal;
 
-    payload.weightFactor = hitBrdf * max(dot(nextDir,params.normal),0.0) / pdf;
+    payload.weightFactor = brdf * max(dot(nextDir,params.normal),0.0) / pdf;
 
     if(!hitLight(payload)){
          payload.directContribution = doRIS()

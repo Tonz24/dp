@@ -24,7 +24,7 @@ void main() {
     // passed from raygen shader, put into a separate variable, otherwise there's VK_DEVICE_LOST if used directly as an inout parameter
     uint seed = payload.seed;
 
-    vec4 nextSample = sampleHemisphereCosineWeighted(params.normal,seed);
+    vec4 nextSample = sampleHemisphereCosineWeighted(params.normal, seed);
     vec3 nextDir = nextSample.xyz;
     float pdf = nextSample.w;
 

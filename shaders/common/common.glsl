@@ -78,5 +78,4 @@ float sanitize(float val){
     return valSanitized;
 }
 
-
 #endif // COMMON_GLSL
