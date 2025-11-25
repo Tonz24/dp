@@ -454,6 +454,7 @@ void Engine::initPhysicalDevice() {
 
     physicalDevice = vk::raii::PhysicalDevice(devices[selectedDeviceIndex]);
     deviceLimits = physicalDevice.getProperties().limits;
+    msaaSampleCount = chooseMaxMSAASampleCount();
     std::cout << "Selected device: " << physicalDevice.getProperties().deviceName << std::endl;
 }
 
@@ -646,6 +647,19 @@ uint32_t Engine::chooseSwapImageCount() {
         swapImageCount = surfaceCapabilities.maxImageCount;
 
     return swapImageCount;
+}
+
+// https://vulkan-tutorial.com/Multisampling
+vk::SampleCountFlags Engine::chooseMaxMSAASampleCount() const {
+    auto counts = deviceLimits.framebufferColorSampleCounts & deviceLimits.framebufferDepthSampleCounts;
+    if (counts & vk::SampleCountFlagBits::e64) { return vk::SampleCountFlagBits::e64; }
+    if (counts & vk::SampleCountFlagBits::e32) { return vk::SampleCountFlagBits::e32; }
+    if (counts & vk::SampleCountFlagBits::e16) { return vk::SampleCountFlagBits::e16; }
+    if (counts & vk::SampleCountFlagBits::e8) { return vk::SampleCountFlagBits::e8; }
+    if (counts & vk::SampleCountFlagBits::e4) { return vk::SampleCountFlagBits::e4; }
+    if (counts & vk::SampleCountFlagBits::e2) { return vk::SampleCountFlagBits::e2; }
+
+    return vk::SampleCountFlagBits::e1;
 }
 
 std::vector<const char*> Engine::initRequiredInstanceExtensions() {

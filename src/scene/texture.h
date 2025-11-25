@@ -25,7 +25,6 @@ public:
     explicit Texture(std::string_view fileName, bool isSrgb, bool generateMipmaps);
     Texture(uint32_t width, uint32_t height, vk::Format format, vk::ImageUsageFlags imageUsage, bool populateData = false);
 
-
     ~Texture() override;
 
     [[nodiscard]] std::string getResourceType() const override;

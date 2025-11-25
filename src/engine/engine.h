@@ -44,7 +44,7 @@ public:
 
     [[nodiscard]] const vk::PhysicalDeviceLimits & getDeviceLimits() const { return deviceLimits; }
     [[nodiscard]] const vk::raii::DescriptorPool & getDescriptorPool() const { return descriptorPool_; }
-
+    [[nodiscard]] vk::SampleCountFlags getMSAASampleCount() const { return msaaSampleCount; }
 
     void setCameraUBOStorage(const CameraUBOFormat& data);
     void setMaterialUBOStorage(uint32_t updateIndex, const MaterialUBOFormat& data);
@@ -78,6 +78,7 @@ private:
     vk::PresentModeKHR chooseSwapPresentMode();
     vk::Extent2D chooseSwapExtent();
     uint32_t chooseSwapImageCount();
+    vk::SampleCountFlags chooseMaxMSAASampleCount() const;
     void cleanupSwapchain();
     void recreateSwapchain();
 
@@ -115,8 +116,6 @@ private:
 
     static inline Engine* engineInstance{nullptr};
     std::unique_ptr<Window> window{nullptr};
-
-
 
     static inline const std::vector<const char*> requiredValidationLayers = {
         "VK_LAYER_KHRONOS_validation"
@@ -166,6 +165,7 @@ private:
     vk::raii::DebugUtilsMessengerEXT debugMessenger{nullptr};
 
     vk::PhysicalDeviceLimits deviceLimits{};
+    vk::SampleCountFlags msaaSampleCount{vk::SampleCountFlagBits::e1};
 
     bool isInitialized_{false};
     bool isRunning_{false};
