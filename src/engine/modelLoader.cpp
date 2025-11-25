@@ -176,8 +176,10 @@ void ModelLoader::loadMaterials(const std::string& directory, const aiScene& sce
         if (aiColor3D aiEmissive{}; assimpMaterial->Get(AI_MATKEY_COLOR_EMISSIVE, aiEmissive) == aiReturn_SUCCESS)
             mat->setEmission({ aiEmissive.r,aiEmissive.g,aiEmissive.b });
 
-        if (float aiRoughness{}; assimpMaterial->Get(AI_MATKEY_ROUGHNESS_FACTOR, aiRoughness) == aiReturn_SUCCESS)
+        if (float aiRoughness{}; assimpMaterial->Get(AI_MATKEY_ROUGHNESS_FACTOR, aiRoughness) == aiReturn_SUCCESS) {
+            aiRoughness = glm::clamp(aiRoughness,0.05f, 1.0f);
             mat->setRoughness(aiRoughness);
+        }
 
         if (float aiMetallic{}; assimpMaterial->Get(AI_MATKEY_METALLIC_FACTOR, aiMetallic) == aiReturn_SUCCESS)
                 mat->setMetallic(aiMetallic);

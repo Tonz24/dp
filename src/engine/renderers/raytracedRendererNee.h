@@ -28,7 +28,7 @@ private:
             {"shaders/miss_rmiss.spv",vk::ShaderStageFlagBits::eMissKHR},
             {"shaders/miss_brdf_sample_rmiss.spv",vk::ShaderStageFlagBits::eMissKHR},
             // per material closest hit shaders
-            {"shaders/closesthit_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
+            {"shaders/closesthit_diffuse_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
             {"shaders/closesthit_mirror_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
             {"shaders/closesthit_pbr_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
             // brdf ray helper closest hit shaders

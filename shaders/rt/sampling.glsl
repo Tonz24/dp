@@ -303,7 +303,7 @@ vec4 sampleHemisphereCosineWeighted(ShadeParams shadeParams, inout uint seed, in
 }
 
 
-vec4 sampleMirror( vec3 rayDir, ShadeParams shadeParams, inout vec3 brdf){
+vec4 sampleMirror(vec3 rayDir, ShadeParams shadeParams, inout vec3 brdf){
 	brdf = shadeParams.albedo;
 
 	vec3 sampled = reflect(rayDir,shadeParams.normal);

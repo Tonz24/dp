@@ -5,12 +5,7 @@
 #include "raycommon.glsl"
 #include "../common/material.glsl"
 
-#ifndef PAYLOAD_BRDF
-#define PAYLOAD_BRDF
-
 layout(location = 1) rayPayloadEXT BRDFSamplePayload payloadBRDF;
-
-#endif // PAYLOAD_BRDF
 
 // trace a ray for BRDF lighting
 TracedSample traceBRDFLighting(vec3 posWS, vec3 direction, vec3 normal){
@@ -74,6 +69,7 @@ vec3 evaluateSampleAreaMisBrdf(ShadeParams shadeParams, vec3 posWS, vec3 rayDir,
     float cos_theta_y = abs(dot(-omega_i, sampledPoint.normal));
 
     float areaMeasureFactor = cos_theta_y / r_sqr;
+    
 
     #ifdef CLOSEST_HIT_DIFFUSE
     // get the pdf of this sample as if it came from BRDF sampling

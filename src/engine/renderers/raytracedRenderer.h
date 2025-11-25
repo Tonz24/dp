@@ -65,8 +65,8 @@ private:
     const static inline std::vector<RasterPipeline::ShaderStageInfo>  rtStages = {
         {"shaders/raygen_naive_rgen.spv",vk::ShaderStageFlagBits::eRaygenKHR},
         {"shaders/miss_naive_rmiss.spv",vk::ShaderStageFlagBits::eMissKHR},
-        {"shaders/closesthit_naive_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
-        {"shaders/closesthit_mirror_naive_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
+        {"shaders/closesthit_diffuse_naive_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
+        {"shaders/closesthit_mirror_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
         {"shaders/closesthit_pbr_naive_rchit.spv",vk::ShaderStageFlagBits::eClosestHitKHR},
     };
 
