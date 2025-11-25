@@ -49,31 +49,26 @@ bool Material::drawGUI() {
 
     // changed signals that changes to material variables should be propagated outside (to mesh for BLAS instance recreation)
     // changedUBO tracks whether the material UBO needs to be changed (from this function)
-    bool changed{false}, changedUBO{false};
+    bool changed{false};
     if (ImGui::CollapsingHeader("Material")) {
         ImGui::Indent();
 
         static constexpr std::array materialType{"diffuse","mirror","pbr"};
 
-        if (ImGui::Combo("Material type", reinterpret_cast<int*>(&uboFormat_.materialType), materialType.data(), materialType.size())) {
-            changed = true;
-            changedUBO = true;
-        }
-        changedUBO |= ImGui::ColorEdit3("Albedo",&uboFormat_.albedoRoughness[0]);
-        changedUBO |= ImGui::DragFloat("Roughness",&uboFormat_.albedoRoughness[3],0.001f,0.05f,1.0f);
-        changedUBO |= ImGui::DragFloat("Metallic",&uboFormat_.emissionMetallic[3],0.001f,0.0f,1.0f);
-        changedUBO |= ImGui::DragFloat("Index of refraction",&uboFormat_.attenuationIor[3],0.01,1.0f,5.0f);
-        changedUBO |= ImGui::DragFloat3("Transmission attenuation",&uboFormat_.attenuationIor[0],0.01,0.0f,9999.0f);
+        changed |= ImGui::Combo("Material type", reinterpret_cast<int*>(&uboFormat_.materialType), materialType.data(), materialType.size());
 
-        if (ImGui::ColorEdit3("Emission",&uboFormat_.emissionMetallic[0],ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float)) {
-            changedUBO = true;
-            changed = true;
-        }
+        changed |= ImGui::ColorEdit3("Albedo",&uboFormat_.albedoRoughness[0]);
+        changed |= ImGui::DragFloat("Roughness",&uboFormat_.albedoRoughness[3],0.001f,0.05f,1.0f);
+        changed |= ImGui::DragFloat("Metallic",&uboFormat_.emissionMetallic[3],0.001f,0.0f,1.0f);
+        changed |= ImGui::DragFloat("Index of refraction",&uboFormat_.attenuationIor[3],0.01,1.0f,5.0f);
+        changed |= ImGui::DragFloat3("Transmission attenuation",&uboFormat_.attenuationIor[0],0.01,0.0f,9999.0f);
+
+        changed |= ImGui::ColorEdit3("Emission",&uboFormat_.emissionMetallic[0],ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
 
         ImGui::Unindent();
     }
 
-    if (changedUBO)
+    if (changed)
         updateUBO();
 
     return changed;

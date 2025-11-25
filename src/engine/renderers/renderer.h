@@ -17,6 +17,9 @@ public:
     void setExportSignal(std::string_view fileName);
 
     virtual uint32_t getAccumulatedFrameCount() {return 0;}
+
+    virtual void resetAccumulator() {};
+
     static void initLayouts();
     static void destroy();
 
@@ -60,6 +63,7 @@ protected:
     VkUtils::BufferAlloc exportBuffer_{};
     vk::Extent2D exportExtent_;
     bool pendingExport_{false};
+    bool isCameraMoving_{false};
 
 
     void recordSwapchainImageExport(const vk::Image& swapchainImage, vk::Extent2D extent, std::string_view fileName,

@@ -45,7 +45,7 @@ public:
     [[nodiscard]] float getMetallic() const { return uboFormat_.emissionMetallic.w; }
     [[nodiscard]] float getIor() const { return uboFormat_.attenuationIor.w; }
     [[nodiscard]] const glm::vec3 &getAttenuation() const { return reinterpret_cast<const glm::vec3&>(uboFormat_.attenuationIor); }
-    MaterialType getMaterialType() const {return static_cast<MaterialType>(uboFormat_.materialType);}
+    [[nodiscard]] MaterialType getMaterialType() const {return static_cast<MaterialType>(uboFormat_.materialType);}
 
     [[nodiscard]] std::string getResourceType() const override { return "Material"; }
 

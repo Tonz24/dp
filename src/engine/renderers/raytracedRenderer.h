@@ -24,6 +24,8 @@ public:
 
     uint32_t getAccumulatedFrameCount() override {return pcs_.frameCtr;}
 
+    void resetAccumulator() override;
+
 protected:
 
     explicit RaytracedRenderer(const std::string_view& gBufferName, const std::vector<RasterPipeline::ShaderStageInfo>& rtStages);
@@ -50,9 +52,8 @@ protected:
     PcsRaygen::Data pcs_{};
     PcsRaygen::UnpackedData pcsUnpacked_;
 
-
-
     uint32_t tonemap_{1};
+    bool overrideAccumulatorIncrement_{false};
 
     void initGraphicsPipelines(const std::vector<RasterPipeline::ShaderStageInfo>& rtStages);
     virtual const std::vector<RasterPipeline::ShaderStageInfo>& getShaderStages() {

@@ -151,8 +151,16 @@ bool Engine::drawGUI() {
                 selectedRenderer_ = rtRendererNEE_.get();
         }
 
-        if (selectedRenderer_)  selectedRenderer_->drawGUI();
-        if (scene_)     scene_->drawGUI();
+        bool resetAccumulator{false};
+        if (selectedRenderer_)
+            resetAccumulator |= selectedRenderer_->drawGUI();
+        if (scene_)
+            resetAccumulator |= scene_->drawGUI();
+
+        // if scene or rendering settings changed, reset accumulator
+        if (resetAccumulator)
+            selectedRenderer_->resetAccumulator();
+
         ImGui::Unindent();
     }
 
@@ -191,9 +199,6 @@ bool Engine::drawGUI() {
 
     return false;
 }
-
-
-
 
 void Engine::initGLFW() {
 
@@ -817,7 +822,6 @@ void Engine::drawFrame() {
     device_.waitForFences(*frameFence, vk::True, UINT64_MAX );
     emptyDeletionQueue();
 
-
     selectedRenderer_->flushExportBuffer();
 
     updateUBOs();
@@ -930,6 +934,8 @@ void Engine::mainLoop() {
 
         drawFrametime_ = std::chrono::duration_cast<std::chrono::microseconds>(renderEnd - renderStart).count() / 1000.0f;
         totalFrametime_ = std::chrono::duration_cast<std::chrono::microseconds>(frameEnd - frameStart).count() / 1000.0f;
+
+        scene_->getCamera().resetMovementFlag();
     }
     isRunning_ = false;
     device_.waitIdle();

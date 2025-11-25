@@ -30,6 +30,7 @@ Scene::~Scene() {
 
 bool Scene::drawGUI() {
 
+    bool resetAccumulator{false};
     if (ImGui::CollapsingHeader("Scene")) {
         ImGui::Indent();
         ImGui::Text("Selected mesh: ");
@@ -40,20 +41,21 @@ bool Scene::drawGUI() {
 
             // rebuild the TLAS
             // TODO: just update the instances, do not rebuild the TLAS vk object itself
+
             if (selectedObject_->drawGUI()) {
                 initTLAS();
                 extractEmissiveMeshes();
+                resetAccumulator |= true;
             }
         }
 
-        if (camera_ != nullptr) {
-            camera_->drawGUI();
-        }
+        if (camera_ != nullptr)
+            resetAccumulator |= camera_->drawGUI();
 
         ImGui::Unindent();
     }
 
-    return false;
+    return resetAccumulator;
 }
 
 void Scene::initEnvmap(){

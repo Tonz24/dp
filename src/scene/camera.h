@@ -28,6 +28,9 @@ public:
 
     [[nodiscard]] const glm::vec3 & getPositionWorld() const { return uboFormat_.positionWorld; }
 
+    void resetMovementFlag() {isMoving_ = false;}
+    [[nodiscard]] bool getIsMoving() const { return isMoving_; }
+
     void updateOrientation(double dx, double dy);
     void updatePosition(const glm::vec3& velocity);
 
@@ -53,6 +56,7 @@ private:
 
     float yaw_{0.0f}, pitch_{0.0f};
     float movementSpeed_{0.5f};
+    bool isMoving_{false};
 
     static constexpr glm::vec3 worldUp_{0,1,0};
 

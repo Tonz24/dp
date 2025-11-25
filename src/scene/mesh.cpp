@@ -53,15 +53,19 @@ void Mesh::updateBLASInstance() {
 
 bool Mesh::drawGUI() {
     bool changed{false};
+    glm::vec3 oldEmission = material_->getEmission();
+    Material::MaterialType oldMatType = material_->getMaterialType();
+
     if (ImGui::CollapsingHeader("Mesh",ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Indent();
+
         changed |= transform_.drawGUI();
         changed |= material_->drawGUI();
         ImGui::Unindent();
     }
 
     // change BLAS instance transformation matrix and SBT offset
-    if (changed){
+    if (oldEmission != material_->getEmission() || oldMatType != material_->getMaterialType()){
         updateBLASInstance();
         extractEmissiveTriangles();
     }

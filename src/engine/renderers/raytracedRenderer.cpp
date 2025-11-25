@@ -8,20 +8,28 @@
 #include "imgui/imgui.h"
 
 bool RaytracedRenderer::drawGUI() {
+    bool changed{false};
     if (ImGui::CollapsingHeader("Basic path tracer")) {
         ImGui::Indent();
 
         ImGui::Checkbox("Tonemap",reinterpret_cast<bool*>(&tonemap_));
         ImGui::Checkbox("Accumulate",reinterpret_cast<bool*>(&pcs_.accumulate));
-        ImGui::DragInt("Max bounce count",reinterpret_cast<int*>(&pcs_.maxRecursionDepth),0.33,1,16);
+
+        changed |= ImGui::DragInt("Max bounce count",reinterpret_cast<int*>(&pcs_.maxRecursionDepth),0.33,1,16);
 
         ImGui::Unindent();
     }
-    return false;
+
+    return changed;
 }
 
 void RaytracedRenderer::render(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage,
                                 const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) {
+
+    pcs_.accumulate = !isCameraMoving_ && !overrideAccumulatorIncrement_;
+    overrideAccumulatorIncrement_ = false;
+    std::cout << isCameraMoving_ << std::endl << pcs_.accumulate << std::endl << std::endl;
+
     DeferredRenderer::render(scene, cmdBuf, frameInFlightIndex, swapchainImage, swapchainImageView, swapchainExtent);
 }
 
@@ -37,6 +45,10 @@ RaytracedRenderer::RaytracedRenderer(const std::string_view& gBufferName): Defer
 void RaytracedRenderer::resizeScreen(uint32_t newWidth, uint32_t newHeight) {
     DeferredRenderer::resizeScreen(newWidth, newHeight);
     setPcsData();
+}
+
+void RaytracedRenderer::resetAccumulator() {
+    overrideAccumulatorIncrement_ = true;
 }
 
 RaytracedRenderer::RaytracedRenderer(const std::string_view& gBufferName, const std::vector<RasterPipeline::ShaderStageInfo>& rtStages) : DeferredRenderer(gBufferName) {

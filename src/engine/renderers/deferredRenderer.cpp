@@ -44,6 +44,8 @@ bool DeferredRenderer::drawGUI() {
 
 void DeferredRenderer::render(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage,
                               const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) {
+    isCameraMoving_ = scene.getCamera().getIsMoving();
+
     recordCommandBuffer(scene,cmdBuf,frameInFlightIndex,swapchainImage,swapchainImageView,swapchainExtent);
     recordPresentBuffer(scene,cmdBuf,frameInFlightIndex,swapchainImage,swapchainImageView,swapchainExtent);
 }
