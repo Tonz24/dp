@@ -94,7 +94,7 @@ void main() {
     vec3 weight = vec3(1.0);
 
     resetPayload(payload);
-    bool lastWasMirror = mat.materialType == 1;
+
     for (uint depth = 0; depth < pcs.maxRecursionDepth; depth++){
 
         resetPayload(payload);

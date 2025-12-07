@@ -40,13 +40,11 @@ void main() {
     vec3 brdf;
     #ifdef CLOSEST_HIT_DIFFUSE
     vec4 nextSample = sampleHemisphereCosineWeighted(params, seed, brdf);
-    uint matType = MAT_DIFFUSE;
     #endif
 
     #ifdef CLOSEST_HIT_MIRROR
     vec4 nextSample = sampleMirror(gl_WorldRayDirectionEXT, params, brdf);
     payload.mirror = true;
-    uint matType = MAT_DIFFUSE;
     #endif
 
     #ifdef CLOSEST_HIT_PBR
@@ -58,7 +56,7 @@ void main() {
 
     //set the sample and evaluate weight
     payload.nextSample = nextSample;
-    payload.weightFactor = brdf * cos_theta_i / nextSample.w;
+    payload.weightFactor = sanitize(brdf * cos_theta_i / nextSample.w);
 
     // evaluate direct contribution if its defined in the closest hit shader
     #ifdef EVAL_DIRECT_CONTRIB

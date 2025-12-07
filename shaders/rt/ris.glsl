@@ -8,12 +8,58 @@ uint M_brdf;
 uint M_area;
 uint M_env;
 
+
 struct CandidateSample{
-	vec3 omega_i;
-    vec3 L_i;
-	float W;
-	float misWeight;
+    // sample direction OR sample hit point
+    // for any sample that is not an env map sample, the omega_i variable represents the hit point that the sample hit 
+	vec3 omega_i; 
+
+    // emission of hit surface
+    vec3 L_i; 
+
+    // 1.0 / pdf
+	float W; 
+
+    // mis weight for this sample
+    // if the first bit is positive (the number is negative), the omega_i variable represents hit position
+	float misWeight; 
 };
+
+float unpackMisWeight(float misWeight, inout bool isPosition){
+    // leftmost bit mask (sign is stored there)
+    uint firstBitMask = 1u << 31; 
+
+    // convert float bits to uint
+    uint weightAsUint = floatBitsToUint(misWeight); 
+
+    // if the sign bit is set to 1, the sample's omega_i represents position 
+    isPosition = (weightAsUint & firstBitMask) > 0; 
+
+    // zero the sign bit and return the mis weight
+    return uintBitsToFloat(weightAsUint & (~firstBitMask)); 
+}
+
+float unpackMisWeight(float misWeight){
+    // leftmost bit mask (sign is stored there)
+    uint firstBitMask = 1u << 31; 
+
+    // convert float bits to uint
+    uint weightAsUint = floatBitsToUint(misWeight); 
+
+    // zero the sign bit and return the mis weight
+    return uintBitsToFloat(weightAsUint & (~firstBitMask)); 
+}
+
+float packMisWeight(float misWeight, bool isPosition){
+    // leftmost bit mask (sign is stored there)
+    uint firstBitMask = 1 << 31;
+
+    // convert float bits to uint
+    uint weightAsUint = floatBitsToUint(misWeight);
+
+    // if the sample represents position, make the sign bit 1, otherwise keep it zero
+    return uintBitsToFloat(weightAsUint | (firstBitMask * uint(isPosition)));
+}
 
 
 CandidateSample makeEmptyCandidate(){
@@ -75,6 +121,7 @@ float balanceHeuristicBrdf(float pdfBrdf, float pdfArea, float pdfEnv){
 // area-brdf MIS weighing. environmental map is not taken into consideration, since its the sampling domain is mutually exclusive with the area light domain: 
 //      if an environment sample has non-zero incoming radiance at an shading point, it must not be occluded by any scene geometry, which includes emissive surfaces
 //      equivalently, if the shading point has non-zero radiance coming from an emissive surface, there is zero radiance coming from that specific direction from the env map due to occlusion   
+// Candidate sample has omega_i as the hit point
 CandidateSample areaSampleLight(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint matType, inout uint seed){
     // take CDF sample (pick an emissive triangle with probability proportional to the area of all emissive triangles)
     uint cdfSampleIndex = sampleCDFIndex(rand(seed));
@@ -129,20 +176,22 @@ CandidateSample areaSampleLight(ShadeParams shadeParams, vec3 posWS, vec3 rayDir
     #endif
 
     lightPdf *= solidAngleFactor;
+    float misWeight = balanceHeuristicArea(lightPdf, brdfPdf);
 
     CandidateSample risSample;
 
-    risSample.omega_i = omega_i;
+    risSample.omega_i = sampledPoint.position;
     risSample.L_i = L_i;
     risSample.W = 1.0f / lightPdf;
-    risSample.misWeight = balanceHeuristicArea(lightPdf, brdfPdf);
+    risSample.misWeight =  packMisWeight(misWeight, true);
 
     return risSample;
 }
 
-// TODO: retrieve the texure value immediately after sampling to get rid of double cartesian -> polar -> uv transformation
+// TODO: retrieve the texure value immediately after sampling to get rid of double cartesian -> polar -> uv transformation (possible optimization)
 // samples the environment map and evaluates incoming radiance
-// env-brdf MIS weighing. Area lights (emissive triangles) are not taken into consideration since their sampling domain is not overlapping with the env map domain  
+// env-brdf MIS weighing. Area lights (emissive triangles) are not taken into consideration since their sampling domain does not overlap the env map domain
+// Candidate sample has omega_i as direction since tracing the same omega_i from two different points results in the same incoming radiance  
 CandidateSample envSampleLight(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint matType, inout uint seed){
     vec4 envSample = sampleEnvironment(textures[pcs.skyCdfHandle], seed);
     vec3 omega_i = envSample.xyz;
@@ -172,12 +221,14 @@ CandidateSample envSampleLight(ShadeParams shadeParams, vec3 posWS, vec3 rayDir,
     float brdfPdf = getPdfMaterial(rayDir,omega_i, shadeParams, matType);
     #endif
 
+    float misWeight = balanceHeursticEnv(envPdf, brdfPdf);
+
     CandidateSample risSample;
 
     risSample.omega_i = omega_i;
     risSample.L_i = L_i;
     risSample.W = 1.0f / envPdf;
-    risSample.misWeight = balanceHeursticEnv(envPdf, brdfPdf);
+    risSample.misWeight = packMisWeight(misWeight, false);
 
     return risSample;
 }
@@ -215,6 +266,9 @@ CandidateSample brdfSampleLight(ShadeParams shadeParams, vec3 posWS, vec3 rayDir
     float areaPdf = 0.0;
     float envPdf = 0.0;
 
+    bool isPosition = false;
+    vec3 candidateDir = omega_i;
+
     // emissive surface case -- calculate the pdf of hitting the emissive surface, convert it to solid angle measure
     if (brdfHit.didHit){
         L_i = brdfHit.hitEmission;
@@ -228,37 +282,52 @@ CandidateSample brdfSampleLight(ShadeParams shadeParams, vec3 posWS, vec3 rayDir
 
         float solidAngleFactor =  r_sqr / cos_theta_y;
         areaPdf = (1.0 / emissiveCDF.area) * solidAngleFactor;
+
+        isPosition = true;
+        candidateDir = brdfHit.hitPosition;
     }
     // evaluating the env pdf only makes sense when the sample is unoccluded by scene geometry
     else {
         envPdf = getPdfEnvironment(textures[pcs.skyCdfHandle],omega_i);
     }
+
+    float misWeight = balanceHeuristicBrdf(brdfPdf, areaPdf, envPdf);
    
     CandidateSample risSample;
 
-    risSample.omega_i = omega_i;
+    risSample.omega_i = candidateDir;
     risSample.L_i = L_i;
     risSample.W = 1.0f / brdfPdf;
-    risSample.misWeight = balanceHeuristicBrdf(brdfPdf, areaPdf, envPdf);
+    risSample.misWeight = packMisWeight(misWeight, isPosition);
 
     return risSample;
 }
 
 vec3 evalF(CandidateSample candidate, ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint matType){
+
+    vec3 omega_i = candidate.omega_i;
+
+    bool isPosition = false;
+    float misWeight = unpackMisWeight(candidate.misWeight,isPosition);
+
+    if (isPosition)
+        omega_i = normalize(omega_i - posWS);
+
+
     // evaluate brdf
     #ifdef CLOSEST_HIT_DIFFUSE
     vec3 brdf = evalBrdfDiffuse(shadeParams.albedo);
     #endif
 
     #ifdef CLOSEST_HIT_PBR
-    vec3 brdf = evalBrdfPbr(rayDir, candidate.omega_i, shadeParams);
+    vec3 brdf = evalBrdfPbr(rayDir, omega_i, shadeParams);
     #endif
 
     #ifdef RAYGEN
-    vec3 brdf = evalBrdfMaterial(rayDir, candidate.omega_i, shadeParams, matType);
+    vec3 brdf = evalBrdfMaterial(rayDir, omega_i, shadeParams, matType);
     #endif
 
-    float cos_theta_i = max(dot(candidate.omega_i, shadeParams.normal),0.0f);
+    float cos_theta_i = max(dot(omega_i, shadeParams.normal),0.0f);
 
     vec3 L_direct = brdf * candidate.L_i * cos_theta_i;
     return L_direct;
@@ -285,7 +354,7 @@ vec3 calculateDirectRIS(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint m
 		CandidateSample candidate = brdfSampleLight(shadeParams, posWS, rayDir, matType, seed);
 
 		float p_hat = evalPhat(candidate, shadeParams, posWS, rayDir, matType);
-        float w = candidate.misWeight * p_hat * candidate.W;
+        float w = unpackMisWeight(candidate.misWeight) * p_hat * candidate.W;
         addSample(r, candidate, w, seed);
 	}
 
@@ -293,7 +362,7 @@ vec3 calculateDirectRIS(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint m
         CandidateSample candidate = areaSampleLight(shadeParams, posWS, rayDir, matType, seed);
 
         float p_hat = evalPhat(candidate, shadeParams, posWS, rayDir, matType);
-        float w = candidate.misWeight * p_hat * candidate.W;
+        float w = unpackMisWeight(candidate.misWeight) * p_hat * candidate.W;
         addSample(r, candidate, w, seed);
     }
 
@@ -301,7 +370,7 @@ vec3 calculateDirectRIS(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint m
 		CandidateSample candidate = envSampleLight(shadeParams, posWS, rayDir, matType, seed);
 
 		float p_hat = evalPhat(candidate, shadeParams, posWS, rayDir, matType);
-        float w = candidate.misWeight * p_hat * candidate.W;
+        float w = unpackMisWeight(candidate.misWeight) * p_hat * candidate.W;
         addSample(r, candidate, w, seed);
 	}
 
