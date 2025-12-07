@@ -94,6 +94,8 @@ private:
 
     void initDescriptorPool();
 
+    void initRenderers();
+
     void drawFrame();
 
     void processInput();
@@ -167,7 +169,8 @@ private:
 
     vk::PhysicalDeviceLimits deviceLimits{};
     vk::SampleCountFlagBits maxMSAASampleCount_{vk::SampleCountFlagBits::e1};
-    vk::SampleCountFlagBits msaaSampleCount_{maxMSAASampleCount_};
+    vk::SampleCountFlagBits msaaSampleCount_{vk::SampleCountFlagBits::e1};
+    int msaaSampleCountInt_{0};
 
     bool isInitialized_{false};
     bool isRunning_{false};

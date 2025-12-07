@@ -9,7 +9,7 @@
 
 
 
-GBuffer::GBuffer(std::string_view resourceName, uint32_t width, uint32_t height) {
+GBuffer::GBuffer(std::string_view resourceName, uint32_t width, uint32_t height, vk::SampleCountFlagBits sampleCount) : sampleCount_(sampleCount) {
     std::string textureNamesPrefix{resourceName};
 
     createTextures(textureNamesPrefix,width,height);
@@ -37,44 +37,12 @@ void GBuffer::createTextures(const std::string& prefix, uint32_t width, uint32_t
                                                                  normalMapVkFormat,
                                                                  normalMapUsageFlags);
 
-    albedoMapMS_ = TextureManager::getInstance()->registerResource(prefix + "_albedoMS",
-                                                                width,
-                                                                height,
-                                                                albedoMapVkFormat,
-                                                                defaultMSAttachmentUsageFlags,
-                                                                vk::SampleCountFlagBits::e8);// TODO: change dynamically based on GUI value
-
-    normalMapMS_ = TextureManager::getInstance()->registerResource(prefix + "_normalMS",
-                                                                 width,
-                                                                 height,
-                                                                 normalMapVkFormat,
-                                                                 defaultMSAttachmentUsageFlags,
-                                                                 vk::SampleCountFlagBits::e8);
-
     materialIdMap_ = TextureManager::getInstance()->registerResource(prefix + "_mat_id",
                                                                  width,
                                                                  height,
                                                                  materialMapVkFormat,
                                                                  materialMapUsageFlags);
 
-    target_ = TextureManager::getInstance()->registerResource(prefix + "_shading_target",
-                                                                 width,
-                                                                 height,
-                                                                 getTargetVkFormat(),
-                                                                 targetUsageFlags);
-
-    depthMap_ = TextureManager::getInstance()->registerResource(prefix + "_depth",
-                                                                width,
-                                                                height,
-                                                                depthMapVkFormat,
-                                                                depthMapUsageFlags);
-
-    depthMapMS_ = TextureManager::getInstance()->registerResource(prefix + "_depthMS",
-                                                                width,
-                                                                height,
-                                                                depthMapVkFormat,
-                                                                defaultDepthMSAttachmentUsageFlags,
-                                                                vk::SampleCountFlagBits::e8);
 
     objectIdMap_ = TextureManager::getInstance()->registerResource(prefix + "_obj_id",
                                                                  width,
@@ -82,11 +50,65 @@ void GBuffer::createTextures(const std::string& prefix, uint32_t width, uint32_t
                                                                  idMapVkFormat,
                                                                  idMapUsageFlags);
 
+
+
+    depthMap_ = TextureManager::getInstance()->registerResource(prefix + "_depth",
+                                                                width,
+                                                                height,
+                                                                depthMapVkFormat,
+                                                                depthMapUsageFlags);
+
+    target_ = TextureManager::getInstance()->registerResource(prefix + "_shading_target",
+                                                                width,
+                                                                height,
+                                                                getTargetVkFormat(),
+                                                                targetUsageFlags);
+
     accumulator_ = TextureManager::getInstance()->registerResource(prefix + "accumulator",
                                                                  width,
                                                                  height,
                                                                  accumulatorFormat,
                                                                  accumulatorUsageFlags);
+
+    if (sampleCount_ != vk::SampleCountFlagBits::e1)
+        createMSTextures(prefix, width, height);
+}
+
+void GBuffer::createMSTextures(const std::string& prefix, uint32_t width, uint32_t height) {
+    albedoMapMS_ = TextureManager::getInstance()->registerResource(prefix + "_albedoMS",
+                                                                width,
+                                                                height,
+                                                                albedoMapVkFormat,
+                                                                defaultMSAttachmentUsageFlags,
+                                                                sampleCount_);
+
+    normalMapMS_ = TextureManager::getInstance()->registerResource(prefix + "_normalMS",
+                                                                width,
+                                                                height,
+                                                                normalMapVkFormat,
+                                                                defaultMSAttachmentUsageFlags,
+                                                                sampleCount_);
+
+    materialIdMapMS_ = TextureManager::getInstance()->registerResource(prefix + "_mat_idMS",
+                                                               width,
+                                                               height,
+                                                               materialMapVkFormat,
+                                                               defaultMSAttachmentUsageFlags,
+                                                               sampleCount_);
+
+    objectIdMapMS_ = TextureManager::getInstance()->registerResource(prefix + "_obj_idMS",
+                                                                width,
+                                                                height,
+                                                                idMapVkFormat,
+                                                                defaultMSAttachmentUsageFlags,
+                                                                sampleCount_);
+
+    depthMapMS_ = TextureManager::getInstance()->registerResource(prefix + "_depthMS",
+                                                                width,
+                                                                height,
+                                                                depthMapVkFormat,
+                                                                defaultDepthMSAttachmentUsageFlags,
+                                                                sampleCount_);
 }
 
 vk::Format GBuffer::getTargetVkFormat() {

@@ -28,12 +28,16 @@ public:
 protected:
 
     void recordMultisampledSceneCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex);
-    void recordSinglesampledSceneCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex);
+
+    void recordSingleSampledSceneCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex);
+
+    void recordGBufferFillCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex);
 
     void recordGBufferShadeCommands(const Scene& scene, const vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex);
 
     void recordGUICommands(const Scene& scene, const vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::ImageView& swapchainImageView, const vk::Extent2D&
                            swapchainExtent);
+
 
     void recordCommandBuffer(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const vk::Image& swapchainImage, const vk::ImageView&
                              swapchainImageView, const vk::Extent2D&
@@ -46,7 +50,7 @@ protected:
 
     RasterPipeline skyboxPipeline_;
     RasterPipeline gBufferFillPipeline_;
-    RasterPipeline idFillPipeline_;
+    RasterPipeline gBufferFillPipelineMS_;
     RasterPipeline gBufferShadePipeline_;
 
     std::shared_ptr<GBuffer> gBuffer_{nullptr};
@@ -55,7 +59,7 @@ protected:
     std::mt19937 generator_;
     std::uniform_int_distribution<uint32_t> distr_;
 
-     void setPcsData() override;
+    void setPcsData() override;
 
 private:
     void initGraphicsPipelines();

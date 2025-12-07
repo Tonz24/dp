@@ -29,13 +29,18 @@ public:
     [[nodiscard]] Texture& getNormalMapMS() const { return *normalMapMS_; }
 
     [[nodiscard]] Texture& getMaterialMap() const { return *materialIdMap_; }
-    [[nodiscard]] Texture& getTarget() const { return *target_; }
+    [[nodiscard]] Texture& getMaterialMapMS() const { return *materialIdMapMS_; }
 
     [[nodiscard]] Texture& getDepthMap() const { return *depthMap_; }
     [[nodiscard]] Texture& getDepthMapMS() const { return *depthMapMS_; }
 
     [[nodiscard]] Texture& getObjectIdMap() const { return *objectIdMap_; }
+    [[nodiscard]] Texture& getObjectIdMapMS() const { return *objectIdMapMS_; }
+
+    [[nodiscard]] Texture& getTarget() const { return *target_; }
     [[nodiscard]] Texture& getAccumulator() const { return *accumulator_; }
+
+    [[nodiscard]] vk::SampleCountFlagBits getSampleCount() const { return sampleCount_;}
 
     static constexpr vk::ImageUsageFlags defaultAttachmentUsageFlags{
         vk::ImageUsageFlagBits::eSampled | //  will be sampled in a shader later
@@ -44,12 +49,12 @@ public:
     };
 
     static constexpr vk::ImageUsageFlags defaultMSAttachmentUsageFlags{
-        vk::ImageUsageFlagBits::eColorAttachment | //  render target outputvk
+        vk::ImageUsageFlagBits::eColorAttachment | //  render target output
         vk::ImageUsageFlagBits::eTransientAttachment
     };
 
     static constexpr vk::ImageUsageFlags defaultDepthMSAttachmentUsageFlags{
-        vk::ImageUsageFlagBits::eDepthStencilAttachment | //  render target outputvk
+        vk::ImageUsageFlagBits::eDepthStencilAttachment | //  render target output
         vk::ImageUsageFlagBits::eTransientAttachment
     };
 
@@ -92,7 +97,7 @@ public:
 private:
     friend class GBufferManager;
 
-    GBuffer(std::string_view resourceName, uint32_t width, uint32_t height);
+    GBuffer(std::string_view resourceName, uint32_t width, uint32_t height, vk::SampleCountFlagBits sampleCount);
 
     std::shared_ptr<Texture> albedoMap_{nullptr};
     std::shared_ptr<Texture> albedoMapMS_{nullptr};
@@ -100,19 +105,25 @@ private:
     std::shared_ptr<Texture> normalMap_{nullptr};
     std::shared_ptr<Texture> normalMapMS_{nullptr};
 
-    std::shared_ptr<Texture> materialIdMap_{nullptr};
-    std::shared_ptr<Texture> target_{nullptr};
-
-    std::shared_ptr<Texture> accumulator_{nullptr};
-
     std::shared_ptr<Texture> depthMap_{nullptr};
     std::shared_ptr<Texture> depthMapMS_{nullptr};
 
+    std::shared_ptr<Texture> materialIdMap_{nullptr};
+    std::shared_ptr<Texture> materialIdMapMS_{nullptr};
+
     std::shared_ptr<Texture> objectIdMap_{nullptr};
+    std::shared_ptr<Texture> objectIdMapMS_{nullptr};
+
+
+    std::shared_ptr<Texture> target_{nullptr};
+    std::shared_ptr<Texture> accumulator_{nullptr};
+
 
     vk::SampleCountFlagBits sampleCount_{vk::SampleCountFlagBits::e1};
 
     void createTextures(const std::string& prefix, uint32_t width,uint32_t height);
+
+    void createMSTextures(const std::string& prefix, uint32_t width,uint32_t height);
 
 };
 

@@ -17,7 +17,7 @@ RasterPipeline::RasterPipeline(const std::vector<ShaderStageInfo>& shaderInfos,
     vk::PipelineMultisampleStateCreateInfo multisampling{
         .rasterizationSamples = sampleCount,
         .sampleShadingEnable = sampleCount == vk::SampleCountFlagBits::e1 ? vk::False : vk::True,
-        .minSampleShading =  0.2f
+        .minSampleShading =  1.0f
     };
 
 

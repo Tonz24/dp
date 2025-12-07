@@ -142,8 +142,12 @@ bool Engine::drawGUI() {
     if (ImGui::CollapsingHeader("Engine",ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Indent();
 
-        if (ImGui::DragInt("MSAA samples",reinterpret_cast<int*>(msaaSampleCount_),0.25,1,8))
+        static constexpr std::array itemsMSAA{"1","2","4","8"};
+        if (ImGui::Combo("MSAA sample count", &msaaSampleCountInt_, itemsMSAA.data(), itemsMSAA.size())) {
+            msaaSampleCount_ = static_cast<vk::SampleCountFlagBits>(1 << (msaaSampleCountInt_));
+            initRenderers();
             resetAccumulator_ = true;
+        }
 
         static constexpr std::array items{"G buffer debug","Naive path tracer","NEE path tracer","ReSTIR DI","ReSTIR GI"};
         if (ImGui::Combo("Renderer", &selectedRendererIndex_, items.data(), items.size())) {
@@ -311,11 +315,7 @@ void Engine::initVulkan() {
     VmaAllocationCreateFlags allocationCreateFlags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
     idMapTransferBuffer_ = VkUtils::createBufferVMA(sizeof(uint32_t),vk::BufferUsageFlagBits::eTransferDst, allocationCreateFlags);
 
-    gBuffer_ = GBufferManager::getInstance()->registerResource("gbuffer_test",1280,720);
-    rasterRenderer_ = std::make_shared<DeferredRenderer>(gBuffer_);
-    rtRendererNaive_ = std::make_shared<RaytracedRenderer>(gBuffer_);
-    rtRendererNEE_ = std::make_shared<RaytracedRendererNEE>(gBuffer_);
-    selectedRenderer_ = rtRendererNEE_.get();
+   initRenderers();
 }
 
 void Engine::initVulkanInstance() {
@@ -1031,6 +1031,15 @@ void Engine::initDescriptorPool() {
     };
 
     descriptorPool_ = vk::raii::DescriptorPool(device_,poolInfo);
+}
+
+void Engine::initRenderers() {
+    std::string gBufferName = "gbuffer_" + std::to_string(msaaSampleCountInt_);
+    gBuffer_ = GBufferManager::getInstance()->registerResource(gBufferName,1280,720,msaaSampleCount_);
+    rasterRenderer_ = std::make_shared<DeferredRenderer>(gBuffer_);
+    rtRendererNaive_ = std::make_shared<RaytracedRenderer>(gBuffer_);
+    rtRendererNEE_ = std::make_shared<RaytracedRendererNEE>(gBuffer_);
+    selectedRenderer_ = rtRendererNEE_.get();
 }
 
 void Engine::recreateSwapchain() {

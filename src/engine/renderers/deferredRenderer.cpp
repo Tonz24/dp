@@ -76,11 +76,6 @@ void DeferredRenderer::initGraphicsPipelines() {
         {"shaders/gbuffer_fill_frag.spv",vk::ShaderStageFlagBits::eFragment}
     };
 
-    auto idFillStages = std::vector<RasterPipeline::ShaderStageInfo>{
-            {"shaders/shader_onesample_vert.spv",vk::ShaderStageFlagBits::eVertex},
-            {"shaders/gbuffer_fill_onesample_frag.spv",vk::ShaderStageFlagBits::eFragment}
-    };
-
     RasterPipeline::ShaderStageInfo screenQuadVertexShader{"shaders/skypass_vert.spv",vk::ShaderStageFlagBits::eVertex};
 
     auto skyboxStages = std::vector{
@@ -101,21 +96,21 @@ void DeferredRenderer::initGraphicsPipelines() {
     std::array shadeAttachmentFormat{gBuffer_->getTarget().getVkFormat()};
     std::array fillAttachmentFormats{gBuffer_->getAlbedoMap().getVkFormat(), gBuffer_->getNormalMap().getVkFormat()};
 
+    gBufferFillPipelineMS_ = RasterPipeline{
+        gBufferFillStages,
+        descSetFillLayouts,
+        pcsFillRange,
+        GBuffer::attachmentFormats,
+        true,
+        gBuffer_->getSampleCount(),
+        GBuffer::depthMapVkFormat
+    };
+
     gBufferFillPipeline_ = RasterPipeline{
         gBufferFillStages,
         descSetFillLayouts,
         pcsFillRange,
-        fillAttachmentFormats,
-        true,
-        vk::SampleCountFlagBits::e8,
-        GBuffer::depthMapVkFormat
-    };
-
-    idFillPipeline_ = RasterPipeline{
-        idFillStages,
-        descSetFillLayouts,
-        pcsFillRange,
-        GBuffer::idAttachmentFormats,
+        GBuffer::attachmentFormats,
         true,
         vk::SampleCountFlagBits::e1,
         GBuffer::depthMapVkFormat
@@ -217,9 +212,7 @@ void DeferredRenderer::recordCommandBuffer(const Scene& scene, vk::raii::Command
 
     //  g buffer fill and sky pass
     recordSkyCommands(scene,cmdBuf,frameInFlightIndex);
-    recordMultisampledSceneCommands(scene,cmdBuf,frameInFlightIndex);
-    gBuffer_->getDepthMap().transitionLayout(vk::ImageLayout::eDepthReadOnlyOptimal,vk::PipelineStageFlagBits2::eEarlyFragmentTests,vk::AccessFlagBits2::eDepthStencilAttachmentRead,cmdBuf);
-    recordSinglesampledSceneCommands(scene,cmdBuf,frameInFlightIndex);
+    recordGBufferFillCommands(scene,cmdBuf,frameInFlightIndex);
 
     //  transition to g buffer shade
     gBuffer_->transitionToShade(cmdBuf);
@@ -306,7 +299,7 @@ void DeferredRenderer::recordMultisampledSceneCommands(const Scene& scene, vk::r
             .resolveImageView = gBuffer_->getAlbedoMap().getVkImageView(),
             .resolveImageLayout = vk::ImageLayout::eColorAttachmentOptimal,
             .loadOp = vk::AttachmentLoadOp::eClear,
-            .storeOp = vk::AttachmentStoreOp::eStore,
+            .storeOp = vk::AttachmentStoreOp::eDontCare,
             .clearValue = clearColorFloat
         },
         vk::RenderingAttachmentInfo { // normals
@@ -316,23 +309,29 @@ void DeferredRenderer::recordMultisampledSceneCommands(const Scene& scene, vk::r
             .resolveImageView = gBuffer_->getNormalMap().getVkImageView(),
             .resolveImageLayout = vk::ImageLayout::eColorAttachmentOptimal,
             .loadOp = vk::AttachmentLoadOp::eClear,
-            .storeOp = vk::AttachmentStoreOp::eStore,
+            .storeOp = vk::AttachmentStoreOp::eDontCare,
             .clearValue = clearColorFloat
         },
-        /*vk::RenderingAttachmentInfo { // id map
-            .imageView = gBuffer_->getObjectIdMap().getVkImageView(),
+        vk::RenderingAttachmentInfo { // object (mesh) ID
+            .imageView = gBuffer_->getObjectIdMapMS().getVkImageView(),
             .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+            .resolveMode  = vk::ResolveModeFlagBits::eSampleZero,
+            .resolveImageView = gBuffer_->getObjectIdMap().getVkImageView(),
+            .resolveImageLayout = vk::ImageLayout::eColorAttachmentOptimal,
             .loadOp = vk::AttachmentLoadOp::eClear,
-            .storeOp = vk::AttachmentStoreOp::eStore,
-            .clearValue = clearColorUint
+            .storeOp = vk::AttachmentStoreOp::eDontCare,
+            .clearValue = clearColorFloat
         },
-        vk::RenderingAttachmentInfo { // material map
-            .imageView = gBuffer_->getMaterialMap().getVkImageView(),
+        vk::RenderingAttachmentInfo { // material id
+            .imageView = gBuffer_->getMaterialMapMS().getVkImageView(),
             .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+            .resolveMode  = vk::ResolveModeFlagBits::eSampleZero,
+            .resolveImageView = gBuffer_->getMaterialMap().getVkImageView(),
+            .resolveImageLayout = vk::ImageLayout::eColorAttachmentOptimal,
             .loadOp = vk::AttachmentLoadOp::eClear,
-            .storeOp = vk::AttachmentStoreOp::eStore,
-            .clearValue = clearColorUint
-        }*/
+            .storeOp = vk::AttachmentStoreOp::eDontCare,
+            .clearValue = clearColorFloat
+        },
     };
 
     vk::ClearValue depthClearColor = vk::ClearDepthStencilValue(1.0f,0);
@@ -343,7 +342,7 @@ void DeferredRenderer::recordMultisampledSceneCommands(const Scene& scene, vk::r
         .resolveImageView = gBuffer_->getDepthMap().getVkImageView(),
         .resolveImageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
         .loadOp = vk::AttachmentLoadOp::eClear,
-        .storeOp = vk::AttachmentStoreOp::eStore,
+        .storeOp = vk::AttachmentStoreOp::eDontCare,
         .clearValue = depthClearColor
     };
 
@@ -385,97 +384,15 @@ void DeferredRenderer::recordMultisampledSceneCommands(const Scene& scene, vk::r
     cmdBuf.setScissor(0, scissor);
 
     //  bind graphics pipeline and global descriptor set
-    cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, gBufferFillPipeline_.getGraphicsPipeline());
-    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, gBufferFillPipeline_.getPipelineLayout(), 0, *getDescSetFrame(frameInFlightIndex), nullptr);
+    cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, gBufferFillPipelineMS_.getGraphicsPipeline());
+    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, gBufferFillPipelineMS_.getPipelineLayout(), 0, *getDescSetFrame(frameInFlightIndex), nullptr);
 
     uint32_t seed = distr_(generator_);
     uint32_t width = gBuffer_->getAlbedoMap().getWidth();
     uint32_t height = gBuffer_->getAlbedoMap().getHeight();
 
     for (const auto &mesh : scene.getMeshes()) {
-        mesh->recordDrawCommands(cmdBuf, gBufferFillPipeline_.getPipelineLayout(), width, height, seed);
-    }
-    cmdBuf.endRendering();
-}
-
-void DeferredRenderer::recordSinglesampledSceneCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex) {
-     //set up the color attachment
-    vk::ClearValue clearColorFloat = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
-    vk::ClearValue clearColorUint = vk::ClearColorValue(std::array<uint32_t,4>{0,0,0,0});
-
-    std::array colorAttachmentInfos = {
-        vk::RenderingAttachmentInfo { // id map
-            .imageView = gBuffer_->getObjectIdMap().getVkImageView(),
-            .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-            .loadOp = vk::AttachmentLoadOp::eClear,
-            .storeOp = vk::AttachmentStoreOp::eStore,
-            .clearValue = clearColorUint
-        },
-        vk::RenderingAttachmentInfo { // material map
-            .imageView = gBuffer_->getMaterialMap().getVkImageView(),
-            .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-            .loadOp = vk::AttachmentLoadOp::eClear,
-            .storeOp = vk::AttachmentStoreOp::eStore,
-            .clearValue = clearColorUint
-        }
-    };
-
-    vk::ClearValue depthClearColor = vk::ClearDepthStencilValue(1.0f,0);
-    vk::RenderingAttachmentInfo depthAttachmentInfo = {
-        .imageView = gBuffer_->getDepthMap().getVkImageView(),
-        .imageLayout = vk::ImageLayout::eDepthReadOnlyOptimal,
-        .loadOp = vk::AttachmentLoadOp::eLoad,
-        .storeOp = vk::AttachmentStoreOp::eNone,
-        .clearValue = depthClearColor
-    };
-
-    vk::RenderingInfo renderingInfo{
-        .renderArea = {
-                .offset = {
-                    .x = 0,
-                    .y = 0
-                },
-                .extent = {gBuffer_->getAlbedoMap().getWidth(),gBuffer_->getAlbedoMap().getHeight()}
-        },
-        .layerCount = 1,
-        .colorAttachmentCount = colorAttachmentInfos.size(),
-        .pColorAttachments = colorAttachmentInfos.data(),
-        .pDepthAttachment = &depthAttachmentInfo,
-    };
-    //  set dynamic rendering state values
-    const vk::Viewport viewport{
-        .x = 0,
-        .y = static_cast<float>(gBuffer_->getAlbedoMap().getHeight()),
-        .width = static_cast<float>(gBuffer_->getAlbedoMap().getWidth()),
-        .height = -static_cast<float>(gBuffer_->getAlbedoMap().getHeight()),
-        .minDepth = 0.0f,
-        .maxDepth = 1.0f
-    };
-
-    const vk::Rect2D scissor{
-        .offset = vk::Offset2D{
-            .x = 0,
-            .y = 0
-        },
-        .extent =  {gBuffer_->getAlbedoMap().getWidth(),gBuffer_->getAlbedoMap().getHeight()}
-    };
-
-    //begin rendering with the specified info
-    cmdBuf.beginRendering(renderingInfo);
-
-    cmdBuf.setViewport(0, viewport);
-    cmdBuf.setScissor(0, scissor);
-
-    //  bind graphics pipeline and global descriptor set
-    cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, idFillPipeline_.getGraphicsPipeline());
-    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, idFillPipeline_.getPipelineLayout(), 0, *getDescSetFrame(frameInFlightIndex), nullptr);
-
-    uint32_t seed = distr_(generator_);
-    uint32_t width = gBuffer_->getAlbedoMap().getWidth();
-    uint32_t height = gBuffer_->getAlbedoMap().getHeight();
-
-    for (const auto &mesh : scene.getMeshes()) {
-        mesh->recordDrawCommands(cmdBuf, idFillPipeline_.getPipelineLayout(), width, height, seed);
+        mesh->recordDrawCommands(cmdBuf, gBufferFillPipelineMS_.getPipelineLayout(), width, height, seed);
     }
     cmdBuf.endRendering();
 }
@@ -565,4 +482,107 @@ void DeferredRenderer::recordGUICommands(const Scene& scene, const vk::raii::Com
     cmdBuf.beginRendering(guiRenderingInfo);
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(),*cmdBuf);
     cmdBuf.endRendering();
+}
+
+void DeferredRenderer::recordSingleSampledSceneCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex) {
+    //set up the color attachment
+    vk::ClearValue clearColorFloat = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
+    vk::ClearValue clearColorUint = vk::ClearColorValue(std::array<uint32_t,4>{0,0,0,0});
+
+    std::array colorAttachmentInfos = {
+        vk::RenderingAttachmentInfo { // albedo image
+            .imageView = gBuffer_->getAlbedoMap().getVkImageView(),
+            .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+            .loadOp = vk::AttachmentLoadOp::eClear,
+            .storeOp = vk::AttachmentStoreOp::eStore,
+            .clearValue = clearColorFloat
+        },
+        vk::RenderingAttachmentInfo { // normals
+            .imageView = gBuffer_->getNormalMap().getVkImageView(),
+            .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+            .loadOp = vk::AttachmentLoadOp::eClear,
+            .storeOp = vk::AttachmentStoreOp::eStore,
+            .clearValue = clearColorFloat
+        },
+        vk::RenderingAttachmentInfo { // id map
+            .imageView = gBuffer_->getObjectIdMap().getVkImageView(),
+            .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+            .loadOp = vk::AttachmentLoadOp::eClear,
+            .storeOp = vk::AttachmentStoreOp::eStore,
+            .clearValue = clearColorUint
+        },
+        vk::RenderingAttachmentInfo { // material map
+            .imageView = gBuffer_->getMaterialMap().getVkImageView(),
+            .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+            .loadOp = vk::AttachmentLoadOp::eClear,
+            .storeOp = vk::AttachmentStoreOp::eStore,
+            .clearValue = clearColorUint
+        }
+    };
+
+    vk::ClearValue depthClearColor = vk::ClearDepthStencilValue(1.0f,0);
+    vk::RenderingAttachmentInfo depthAttachmentInfo = {
+        .imageView = gBuffer_->getDepthMap().getVkImageView(),
+        .imageLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
+        .loadOp = vk::AttachmentLoadOp::eClear,
+        .storeOp = vk::AttachmentStoreOp::eStore,
+        .clearValue = depthClearColor
+    };
+
+    vk::RenderingInfo renderingInfo{
+        .renderArea = {
+                .offset = {
+                    .x = 0,
+                    .y = 0
+                },
+                .extent = {gBuffer_->getAlbedoMap().getWidth(),gBuffer_->getAlbedoMap().getHeight()}
+        },
+        .layerCount = 1,
+        .colorAttachmentCount = colorAttachmentInfos.size(),
+        .pColorAttachments = colorAttachmentInfos.data(),
+        .pDepthAttachment = &depthAttachmentInfo,
+    };
+    //  set dynamic rendering state values
+    const vk::Viewport viewport{
+        .x = 0,
+        .y = static_cast<float>(gBuffer_->getAlbedoMap().getHeight()),
+        .width = static_cast<float>(gBuffer_->getAlbedoMap().getWidth()),
+        .height = -static_cast<float>(gBuffer_->getAlbedoMap().getHeight()),
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f
+    };
+
+    const vk::Rect2D scissor{
+        .offset = vk::Offset2D{
+            .x = 0,
+            .y = 0
+        },
+        .extent =  {gBuffer_->getAlbedoMap().getWidth(),gBuffer_->getAlbedoMap().getHeight()}
+    };
+
+    //begin rendering with the specified info
+    cmdBuf.beginRendering(renderingInfo);
+
+    cmdBuf.setViewport(0, viewport);
+    cmdBuf.setScissor(0, scissor);
+
+    //  bind graphics pipeline and global descriptor set
+    cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, gBufferFillPipeline_.getGraphicsPipeline());
+    cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, gBufferFillPipeline_.getPipelineLayout(), 0, *getDescSetFrame(frameInFlightIndex), nullptr);
+
+    uint32_t seed = distr_(generator_);
+    uint32_t width = gBuffer_->getAlbedoMap().getWidth();
+    uint32_t height = gBuffer_->getAlbedoMap().getHeight();
+
+    for (const auto &mesh : scene.getMeshes()) {
+        mesh->recordDrawCommands(cmdBuf, gBufferFillPipeline_.getPipelineLayout(), width, height, seed);
+    }
+    cmdBuf.endRendering();
+}
+
+void DeferredRenderer::recordGBufferFillCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex) {
+    if (gBuffer_->getSampleCount() != vk::SampleCountFlagBits::e1)
+        recordMultisampledSceneCommands(scene,cmdBuf,frameInFlightIndex);
+    else
+        recordSingleSampledSceneCommands(scene,cmdBuf,frameInFlightIndex);
 }
