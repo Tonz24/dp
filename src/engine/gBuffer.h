@@ -19,12 +19,14 @@ public:
     void transitionToBlit(vk::raii::CommandBuffer& cmdBuf) const;
     void transitionToTrace(vk::raii::CommandBuffer& cmdBuf) const;
 
-    ~GBuffer() override;
 
     void resizeContents(uint32_t width, uint32_t height);
 
     [[nodiscard]] Texture& getAlbedoMap() const { return *albedoMap_; }
     [[nodiscard]] Texture& getNormalMap() const { return *normalMap_; }
+    [[nodiscard]] Texture& getAlbedoMapMS() const { return *albedoMapMS_; }
+    [[nodiscard]] Texture& getNormalMapMS() const { return *normalMapMS_; }
+
     [[nodiscard]] Texture& getMaterialMap() const { return *materialIdMap_; }
     [[nodiscard]] Texture& getTarget() const { return *target_; }
     [[nodiscard]] Texture& getDepthMap() const { return *depthMap_; }
@@ -79,11 +81,15 @@ private:
 
     std::shared_ptr<Texture> albedoMap_{nullptr};
     std::shared_ptr<Texture> normalMap_{nullptr};
+
+    std::shared_ptr<Texture> albedoMapMS_{nullptr};
+    std::shared_ptr<Texture> normalMapMS_{nullptr};
+
+
     std::shared_ptr<Texture> materialIdMap_{nullptr};
     std::shared_ptr<Texture> target_{nullptr};
 
     std::shared_ptr<Texture> accumulator_{nullptr};
-
 
     std::shared_ptr<Texture> depthMap_{nullptr};
     std::shared_ptr<Texture> objectIdMap_{nullptr};

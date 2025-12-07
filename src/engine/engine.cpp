@@ -455,7 +455,7 @@ void Engine::initPhysicalDevice() {
 
     physicalDevice = vk::raii::PhysicalDevice(devices[selectedDeviceIndex]);
     deviceLimits = physicalDevice.getProperties().limits;
-    msaaSampleCount = chooseMaxMSAASampleCount();
+    maxMSAASampleCount_ = chooseMaxMSAASampleCount();
     std::cout << "Selected device: " << physicalDevice.getProperties().deviceName << std::endl;
 }
 

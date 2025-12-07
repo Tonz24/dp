@@ -372,6 +372,10 @@ void DeferredRenderer::recordSceneCommands(const Scene& scene, vk::raii::Command
     cmdBuf.endRendering();
 }
 
+void DeferredRenderer::resolveMultisampledAttachments(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex) {
+
+}
+
 void DeferredRenderer::recordGBufferShadeCommands(const Scene& scene, const vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex) {
      //set up the color attachment
     vk::ClearValue clearColor = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);

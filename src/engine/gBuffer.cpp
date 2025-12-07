@@ -37,6 +37,20 @@ void GBuffer::createTextures(const std::string& prefix, uint32_t width, uint32_t
                                                                  normalMapVkFormat,
                                                                  normalMapUsageFlags);
 
+    albedoMapMS_ = TextureManager::getInstance()->registerResource(prefix + "_albedoMS",
+                                                                width,
+                                                                height,
+                                                                albedoMapVkFormat,
+                                                                albedoMapUsageFlags | vk::ImageUsageFlagBits::eTransientAttachment,
+                                                                vk::SampleCountFlagBits::e8);// TODO: change dynamically based on GUI value
+
+    normalMapMS_ = TextureManager::getInstance()->registerResource(prefix + "_normalMS",
+                                                                 width,
+                                                                 height,
+                                                                 normalMapVkFormat,
+                                                                 normalMapUsageFlags |  vk::ImageUsageFlagBits::eTransientAttachment,
+                                                                 vk::SampleCountFlagBits::e8);
+
     materialIdMap_ = TextureManager::getInstance()->registerResource(prefix + "_mat_id",
                                                                  width,
                                                                  height,
@@ -117,11 +131,3 @@ void GBuffer::transitionToTrace(vk::raii::CommandBuffer& cmdBuf) const {
     accumulator_->transitionLayout(vk::ImageLayout::eGeneral,vk::PipelineStageFlagBits2::eRayTracingShaderKHR,vk::AccessFlagBits2::eShaderStorageWrite | vk::AccessFlagBits2::eShaderStorageRead,cmdBuf);
 }
 
-GBuffer::~GBuffer() {
-    target_.reset();
-    albedoMap_.reset();
-    normalMap_.reset();
-    materialIdMap_.reset();
-    depthMap_.reset();
-    accumulator_.reset();
-}
