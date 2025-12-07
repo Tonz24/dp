@@ -27,8 +27,8 @@ public:
 
 protected:
 
-    void recordSceneCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex);
-    void resolveMultisampledAttachments(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex);
+    void recordMultisampledSceneCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex);
+    void recordSinglesampledSceneCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex);
 
     void recordGBufferShadeCommands(const Scene& scene, const vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex);
 
@@ -46,6 +46,7 @@ protected:
 
     RasterPipeline skyboxPipeline_;
     RasterPipeline gBufferFillPipeline_;
+    RasterPipeline idFillPipeline_;
     RasterPipeline gBufferShadePipeline_;
 
     std::shared_ptr<GBuffer> gBuffer_{nullptr};

@@ -142,6 +142,9 @@ bool Engine::drawGUI() {
     if (ImGui::CollapsingHeader("Engine",ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Indent();
 
+        if (ImGui::DragInt("MSAA samples",reinterpret_cast<int*>(msaaSampleCount_),0.25,1,8))
+            resetAccumulator_ = true;
+
         static constexpr std::array items{"G buffer debug","Naive path tracer","NEE path tracer","ReSTIR DI","ReSTIR GI"};
         if (ImGui::Combo("Renderer", &selectedRendererIndex_, items.data(), items.size())) {
             if (selectedRendererIndex_ == 0)
@@ -481,7 +484,8 @@ void Engine::initLogicalDevice() {
 
     vk::PhysicalDeviceFeatures2 physicalDeviceFeatures;
     physicalDeviceFeatures.features = {
-        .samplerAnisotropy = vk::True
+        .sampleRateShading = vk::True,
+        .samplerAnisotropy = vk::True,
     };
 
     vk::PhysicalDeviceVulkan12Features physicalDeviceVulkan12Features;
@@ -799,8 +803,7 @@ Engine::debugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::Deb
     msg.append( "\tType: " + to_string(type) + "\n");
     msg.append( "\tObjects:\n");
 
-    if (severity == vk::DebugUtilsMessageSeverityFlagBitsEXT::eError)
-        int breakpoint = 0;
+
 
     for (uint32_t i = 0; i < pCallbackData->objectCount; ++i){
 
@@ -819,6 +822,9 @@ Engine::debugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::Deb
     msg.append( "==========================================================================\n");
 
     std::cout << msg << std::endl;
+
+    if (severity == vk::DebugUtilsMessageSeverityFlagBitsEXT::eError)
+        int breakpoint = 0;
 
     return vk::False;
 }

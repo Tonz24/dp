@@ -96,7 +96,7 @@ void RaytracedRenderer::recordCommandBuffer(const Scene& scene, vk::raii::Comman
 
     //  g buffer fill and sky pass (same as in the deferred renderer)
     recordSkyCommands(scene,cmdBuf,frameInFlightIndex);
-    recordSceneCommands(scene,cmdBuf,frameInFlightIndex);
+    recordMultisampledSceneCommands(scene,cmdBuf,frameInFlightIndex);
 
     gBuffer_->transitionToTrace(cmdBuf);
 

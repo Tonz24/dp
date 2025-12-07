@@ -9,8 +9,18 @@
 
 RasterPipeline::RasterPipeline(const std::vector<ShaderStageInfo>& shaderInfos,
                                std::span<const vk::DescriptorSetLayout> descriptorSetLayouts,  std::span<const vk::PushConstantRange> pcsRange,
-                               std::span<const vk::Format> colorAttachmentFormats, bool hasVertexLayout, vk::Format depthFormat) : GraphicsPipeline(descriptorSetLayouts, pcsRange)
+                               std::span<const vk::Format> colorAttachmentFormats, bool hasVertexLayout, vk::SampleCountFlagBits sampleCount,
+                               vk::Format depthFormat) : GraphicsPipeline(descriptorSetLayouts, pcsRange)
 {
+
+    //  set multisampling settings (leave be for now)
+    vk::PipelineMultisampleStateCreateInfo multisampling{
+        .rasterizationSamples = sampleCount,
+        .sampleShadingEnable = sampleCount == vk::SampleCountFlagBits::e1 ? vk::False : vk::True,
+        .minSampleShading =  0.2f
+    };
+
+
     initShaderStages(shaderInfos);
 
     vk::Bool32 depthTestEnable = depthFormat == vk::Format::eUndefined ? vk::False : vk::True;
@@ -58,6 +68,8 @@ RasterPipeline::RasterPipeline(const std::vector<ShaderStageInfo>& shaderInfos,
             .pVertexAttributeDescriptions = attributeDescriptions.data()
         };
     }
+
+
 
 
     //  put all the info together and create the pipeline

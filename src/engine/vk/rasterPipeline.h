@@ -11,7 +11,7 @@ public:
 
     RasterPipeline(const std::vector<ShaderStageInfo>& shaderInfos, std::span<const vk::DescriptorSetLayout> descriptorSetLayouts,
                      std::span<const vk::PushConstantRange> pcsRange, std::span<const vk::Format> colorAttachmentFormats, bool hasVertexLayout,
-                     vk::Format depthFormat = vk::Format::eUndefined);
+                     vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1, vk::Format depthFormat = vk::Format::eUndefined);
 
     RasterPipeline() = default;
 
@@ -51,12 +51,6 @@ protected:
         .depthBiasEnable = vk::False,
         .depthBiasSlopeFactor = 1.0f,
         .lineWidth = 1.0f
-    };
-
-    //  set multisampling settings (leave be for now)
-    static constexpr vk::PipelineMultisampleStateCreateInfo multisampling{
-        .rasterizationSamples = vk::SampleCountFlagBits::e1,
-        .sampleShadingEnable = vk::False
     };
 
 };

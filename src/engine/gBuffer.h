@@ -23,13 +23,17 @@ public:
     void resizeContents(uint32_t width, uint32_t height);
 
     [[nodiscard]] Texture& getAlbedoMap() const { return *albedoMap_; }
-    [[nodiscard]] Texture& getNormalMap() const { return *normalMap_; }
     [[nodiscard]] Texture& getAlbedoMapMS() const { return *albedoMapMS_; }
+
+    [[nodiscard]] Texture& getNormalMap() const { return *normalMap_; }
     [[nodiscard]] Texture& getNormalMapMS() const { return *normalMapMS_; }
 
     [[nodiscard]] Texture& getMaterialMap() const { return *materialIdMap_; }
     [[nodiscard]] Texture& getTarget() const { return *target_; }
+
     [[nodiscard]] Texture& getDepthMap() const { return *depthMap_; }
+    [[nodiscard]] Texture& getDepthMapMS() const { return *depthMapMS_; }
+
     [[nodiscard]] Texture& getObjectIdMap() const { return *objectIdMap_; }
     [[nodiscard]] Texture& getAccumulator() const { return *accumulator_; }
 
@@ -37,6 +41,16 @@ public:
         vk::ImageUsageFlagBits::eSampled | //  will be sampled in a shader later
         vk::ImageUsageFlagBits::eColorAttachment | //  render target output
         vk::ImageUsageFlagBits::eTransferSrc // in case of needing to blit into the swapchain
+    };
+
+    static constexpr vk::ImageUsageFlags defaultMSAttachmentUsageFlags{
+        vk::ImageUsageFlagBits::eColorAttachment | //  render target outputvk
+        vk::ImageUsageFlagBits::eTransientAttachment
+    };
+
+    static constexpr vk::ImageUsageFlags defaultDepthMSAttachmentUsageFlags{
+        vk::ImageUsageFlagBits::eDepthStencilAttachment | //  render target outputvk
+        vk::ImageUsageFlagBits::eTransientAttachment
     };
 
     static constexpr vk::Format albedoMapVkFormat{vk::Format::eR8G8B8A8Unorm};
@@ -70,6 +84,7 @@ public:
     static constexpr vk::ImageUsageFlags accumulatorUsageFlags{vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled};
 
     static constexpr std::array attachmentFormats{albedoMapVkFormat, normalMapVkFormat, idMapVkFormat, materialMapVkFormat};
+    static constexpr std::array idAttachmentFormats{ idMapVkFormat, materialMapVkFormat};
 
     static vk::Format getTargetVkFormat();
 
@@ -80,11 +95,10 @@ private:
     GBuffer(std::string_view resourceName, uint32_t width, uint32_t height);
 
     std::shared_ptr<Texture> albedoMap_{nullptr};
-    std::shared_ptr<Texture> normalMap_{nullptr};
-
     std::shared_ptr<Texture> albedoMapMS_{nullptr};
-    std::shared_ptr<Texture> normalMapMS_{nullptr};
 
+    std::shared_ptr<Texture> normalMap_{nullptr};
+    std::shared_ptr<Texture> normalMapMS_{nullptr};
 
     std::shared_ptr<Texture> materialIdMap_{nullptr};
     std::shared_ptr<Texture> target_{nullptr};
@@ -92,7 +106,11 @@ private:
     std::shared_ptr<Texture> accumulator_{nullptr};
 
     std::shared_ptr<Texture> depthMap_{nullptr};
+    std::shared_ptr<Texture> depthMapMS_{nullptr};
+
     std::shared_ptr<Texture> objectIdMap_{nullptr};
+
+    vk::SampleCountFlagBits sampleCount_{vk::SampleCountFlagBits::e1};
 
     void createTextures(const std::string& prefix, uint32_t width,uint32_t height);
 

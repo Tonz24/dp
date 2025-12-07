@@ -41,14 +41,14 @@ void GBuffer::createTextures(const std::string& prefix, uint32_t width, uint32_t
                                                                 width,
                                                                 height,
                                                                 albedoMapVkFormat,
-                                                                albedoMapUsageFlags | vk::ImageUsageFlagBits::eTransientAttachment,
+                                                                defaultMSAttachmentUsageFlags,
                                                                 vk::SampleCountFlagBits::e8);// TODO: change dynamically based on GUI value
 
     normalMapMS_ = TextureManager::getInstance()->registerResource(prefix + "_normalMS",
                                                                  width,
                                                                  height,
                                                                  normalMapVkFormat,
-                                                                 normalMapUsageFlags |  vk::ImageUsageFlagBits::eTransientAttachment,
+                                                                 defaultMSAttachmentUsageFlags,
                                                                  vk::SampleCountFlagBits::e8);
 
     materialIdMap_ = TextureManager::getInstance()->registerResource(prefix + "_mat_id",
@@ -68,6 +68,13 @@ void GBuffer::createTextures(const std::string& prefix, uint32_t width, uint32_t
                                                                 height,
                                                                 depthMapVkFormat,
                                                                 depthMapUsageFlags);
+
+    depthMapMS_ = TextureManager::getInstance()->registerResource(prefix + "_depthMS",
+                                                                width,
+                                                                height,
+                                                                depthMapVkFormat,
+                                                                defaultDepthMSAttachmentUsageFlags,
+                                                                vk::SampleCountFlagBits::e8);
 
     objectIdMap_ = TextureManager::getInstance()->registerResource(prefix + "_obj_id",
                                                                  width,
@@ -107,7 +114,10 @@ void GBuffer::transitionToFill(vk::raii::CommandBuffer& cmdBuf) const {
     normalMap_->transitionLayout(vk::ImageLayout::eColorAttachmentOptimal,vk::PipelineStageFlagBits2::eColorAttachmentOutput,vk::AccessFlagBits2::eColorAttachmentWrite,cmdBuf);
     objectIdMap_->transitionLayout(vk::ImageLayout::eColorAttachmentOptimal,vk::PipelineStageFlagBits2::eColorAttachmentOutput,vk::AccessFlagBits2::eColorAttachmentWrite,cmdBuf);
     materialIdMap_->transitionLayout(vk::ImageLayout::eColorAttachmentOptimal,vk::PipelineStageFlagBits2::eColorAttachmentOutput,vk::AccessFlagBits2::eColorAttachmentWrite,cmdBuf);
-    depthMap_->transitionLayout(vk::ImageLayout::eDepthAttachmentOptimal,vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,vk::AccessFlagBits2::eDepthStencilAttachmentWrite | vk::AccessFlagBits2::eDepthStencilAttachmentRead,cmdBuf);
+    depthMap_->transitionLayout(vk::ImageLayout::eDepthAttachmentOptimal,
+                                 vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests | vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                                 vk::AccessFlagBits2::eDepthStencilAttachmentWrite | vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eColorAttachmentWrite,
+                                 cmdBuf);
 }
 
 void GBuffer::transitionToShade(vk::raii::CommandBuffer& cmdBuf) const {
