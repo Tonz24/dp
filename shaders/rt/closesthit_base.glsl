@@ -14,7 +14,11 @@
 #include "ris.glsl"
 #endif
 
+#ifdef PAYLOAD_NAIVE
+layout(location = 0) rayPayloadInEXT HitPayloadNaive payload;
+#else
 layout(location = 0) rayPayloadInEXT HitPayload payload;
+#endif
 
 hitAttributeEXT vec2 attribs;
 
@@ -32,19 +36,27 @@ void main() {
     payload.hitEmission = emission;
     payload.hitNormal =  params.normal;
     payload.hit = true;
+
+    #ifndef PAYLOAD_NAIVE
     payload.mirror = false;
+    #endif
 
     // sample the material and evaluate its brdf
     // nextSample.xyz -- sample direction (omega_i)
     // nextSample.w -- pdf of the sample
     vec3 brdf;
+
     #ifdef CLOSEST_HIT_DIFFUSE
     vec4 nextSample = sampleHemisphereCosineWeighted(params, seed, brdf);
     #endif
 
     #ifdef CLOSEST_HIT_MIRROR
     vec4 nextSample = sampleMirror(gl_WorldRayDirectionEXT, params, brdf);
+
+    #ifndef PAYLOAD_NAIVE
     payload.mirror = true;
+    #endif
+
     #endif
 
     #ifdef CLOSEST_HIT_PBR

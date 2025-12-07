@@ -3,5 +3,6 @@
 #extension GL_EXT_ray_tracing : require
 
 #define CLOSEST_HIT_DIFFUSE
+#define PAYLOAD_NAIVE
 
 #include "../closesthit_base.glsl"
