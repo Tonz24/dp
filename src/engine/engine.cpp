@@ -104,7 +104,6 @@ void Engine::init() {
 }
 
 bool Engine::drawGUI() {
-    bool resetAccumulator{false};
 
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -123,7 +122,7 @@ bool Engine::drawGUI() {
             if (newEnvmap == nullptr)
                 newEnvmap = TextureManager::getInstance()->registerResource(name, path, true, false);
 
-            resetAccumulator |= true;
+            resetAccumulator_ |= true;
             scene_->setSky(newEnvmap);
         }
 
@@ -133,7 +132,7 @@ bool Engine::drawGUI() {
             auto envmap = scene_->getSky();
             auto cam = scene_->getCameraPtr();
 
-            resetAccumulator |= true;
+            resetAccumulator_ |= true;
             scene_ = std::make_shared<Scene>(ModelLoader::loadModel(name, false),cam,std::move(envmap));
         }
         ImGui::Unindent();
@@ -152,17 +151,19 @@ bool Engine::drawGUI() {
             if (selectedRendererIndex_ == 2)
                 selectedRenderer_ = rtRendererNEE_.get();
 
-            resetAccumulator |= true;
+            resetAccumulator_ |= true;
         }
 
         if (selectedRenderer_)
-            resetAccumulator |= selectedRenderer_->drawGUI();
+            resetAccumulator_ |= selectedRenderer_->drawGUI();
         if (scene_)
-            resetAccumulator |= scene_->drawGUI();
+            resetAccumulator_ |= scene_->drawGUI();
 
         // if scene or rendering settings changed, reset accumulator
-        if (resetAccumulator)
+        if (resetAccumulator_) {
             selectedRenderer_->resetAccumulator();
+            resetAccumulator_ = false;
+        }
 
         ImGui::Unindent();
     }
@@ -650,7 +651,7 @@ uint32_t Engine::chooseSwapImageCount() {
 }
 
 // https://vulkan-tutorial.com/Multisampling
-vk::SampleCountFlags Engine::chooseMaxMSAASampleCount() const {
+vk::SampleCountFlagBits Engine::chooseMaxMSAASampleCount() const {
     auto counts = deviceLimits.framebufferColorSampleCounts & deviceLimits.framebufferDepthSampleCounts;
     if (counts & vk::SampleCountFlagBits::e64) { return vk::SampleCountFlagBits::e64; }
     if (counts & vk::SampleCountFlagBits::e32) { return vk::SampleCountFlagBits::e32; }
@@ -1038,12 +1039,16 @@ void Engine::recreateSwapchain() {
 
     device_.waitIdle();
 
-    rtRendererNaive_->resizeScreen(width,height);
-    rasterRenderer_->resizeScreen(width,height);
+    selectedRenderer_->resizeScreen(width,height);
+
+    float aspect = width / static_cast<float>(height);
+    scene_->getCamera().setAspectRatio(aspect);
 
     cleanupSwapchain();
     initSwapchain();
     initImageViews();
+
+    resetAccumulator_ = true;
 }
 
 void Engine::cleanupSwapchain() {

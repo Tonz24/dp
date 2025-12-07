@@ -36,6 +36,11 @@ public:
 
     bool drawGUI() override;
 
+    void setAspectRatio(float aspectRatio) {
+        aspectRatio_ = aspectRatio;
+        recalculateMatrices();
+    }
+
 private:
 
     void recalculateMatrices();

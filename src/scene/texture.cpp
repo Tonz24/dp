@@ -27,8 +27,8 @@
 //     return dummy;
 // }
 
-Texture::Texture(uint32_t width, uint32_t height, vk::Format format, vk::ImageUsageFlags imageUsage, bool populateData):
-    ManagedResource(), width_(width), height_(height), channelCount_(getChannelCount(format)), vkFormat_(format), imageUsageFlags_(imageUsage), pixelSize_(getFormatPixelSize(format)), scanWidth_(width_ * pixelSize_)
+Texture::Texture(uint32_t width, uint32_t height, vk::Format format, vk::ImageUsageFlags imageUsage,vk::SampleCountFlagBits sampleCount, bool populateData):
+    ManagedResource(), width_(width), height_(height), channelCount_(getChannelCount(format)), vkFormat_(format), sampleCount_(sampleCount), imageUsageFlags_(imageUsage), pixelSize_(getFormatPixelSize(format)), scanWidth_(width_ * pixelSize_)
 {
 
     if (populateData) {
@@ -47,7 +47,7 @@ std::shared_ptr<Texture> Texture::getCdf() {
     if (cdfTexture != nullptr)
         return cdfTexture;
 
-    cdfTexture = TextureManager::getInstance()->registerResource(getCdfName(),width_ + 1, height_,vk::Format::eR32Sfloat, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst, true);
+    cdfTexture = TextureManager::getInstance()->registerResource(getCdfName(),width_ + 1, height_,vk::Format::eR32Sfloat, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst, vk::SampleCountFlagBits::e1, true);
 
     std::vector marginalSum(height_,0.0f);
 
@@ -155,12 +155,11 @@ void Texture::initVkImage() {
         },
         .mipLevels = mipLevelCount_,
         .arrayLayers = 1,
-        .samples = vk::SampleCountFlagBits::e1,
+        .samples = sampleCount_,
         .tiling = vk::ImageTiling::eOptimal,
         .usage = imageUsageFlags_,
         .sharingMode = vk::SharingMode::eExclusive
     };
-
 
     imageAlloc_ = VkUtils::createImageVMA(imageInfo);
 
@@ -216,7 +215,6 @@ void Texture::initVkImage() {
         .unnormalizedCoordinates = vk::False
     };
     vkSampler_ = vk::raii::Sampler(device,samplerInfo);
-
 
     mipLayouts_ = std::vector(mipLevelCount_,vk::ImageLayout::eUndefined);
     mipStageMasks_ = std::vector(mipLevelCount_,vk::PipelineStageFlags2{vk::PipelineStageFlagBits2::eTopOfPipe});

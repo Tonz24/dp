@@ -23,7 +23,7 @@ public:
     Texture& operator=(Texture&&) = delete;
 
     explicit Texture(std::string_view fileName, bool isSrgb, bool generateMipmaps);
-    Texture(uint32_t width, uint32_t height, vk::Format format, vk::ImageUsageFlags imageUsage, bool populateData = false);
+    Texture(uint32_t width, uint32_t height, vk::Format format, vk::ImageUsageFlags imageUsage, vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1, bool populateData = false);
 
     ~Texture() override;
 
@@ -116,6 +116,7 @@ private:
     std::vector<vk::ImageLayout> mipLayouts_{};
     std::vector<vk::PipelineStageFlags2> mipStageMasks_{};
     std::vector<vk::AccessFlags2> mipAccessMasks_{};
+    vk::SampleCountFlagBits sampleCount_{vk::SampleCountFlagBits::e1};
 };
 
 template<typename T>
