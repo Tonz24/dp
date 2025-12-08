@@ -88,6 +88,7 @@ CandidateSample areaSampleLight(ShadeParams shadeParams, vec3 posWS, vec3 rayDir
     CandidateSample risSample;
 
     risSample.omega_i = sampledPoint.position;
+    risSample.normal = sampledPoint.normal;
     risSample.L_i = L_i;
     risSample.W = 1.0f / lightPdf;
     risSample.misWeight =  packMisWeight(misWeight, true);
@@ -133,6 +134,7 @@ CandidateSample envSampleLight(ShadeParams shadeParams, vec3 posWS, vec3 rayDir,
     CandidateSample risSample;
 
     risSample.omega_i = omega_i;
+    risSample.normal = vec3(0.0);
     risSample.L_i = L_i;
     risSample.W = 1.0f / envPdf;
     risSample.misWeight = packMisWeight(misWeight, false);
@@ -203,6 +205,7 @@ CandidateSample brdfSampleLight(ShadeParams shadeParams, vec3 posWS, vec3 rayDir
     CandidateSample risSample;
 
     risSample.omega_i = candidateDir;
+    risSample.normal = isPosition ? brdfHit.hitNormal : vec3(0.0);
     risSample.L_i = L_i;
     risSample.W = 1.0f / brdfPdf;
     risSample.misWeight = packMisWeight(misWeight, isPosition);
@@ -220,6 +223,34 @@ vec3 evalF(CandidateSample candidate, ShadeParams shadeParams, vec3 posWS, vec3 
     if (isPosition)
         omega_i = normalize(omega_i - posWS);
 
+    // evaluate brdf
+    #ifdef CLOSEST_HIT_DIFFUSE
+    vec3 brdf = evalBrdfDiffuse(shadeParams.albedo);
+    #endif
+
+    #ifdef CLOSEST_HIT_PBR
+    vec3 brdf = evalBrdfPbr(rayDir, omega_i, shadeParams);
+    #endif
+
+    #ifdef RAYGEN
+    vec3 brdf = evalBrdfMaterial(rayDir, omega_i, shadeParams, matType);
+    #endif
+
+    float cos_theta_i = max(dot(omega_i, shadeParams.normal),0.0f);
+
+    vec3 L_direct = brdf * candidate.L_i * cos_theta_i;
+    return L_direct;
+}
+
+vec3 evalFVis(CandidateSample candidate, ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint matType){
+
+    vec3 omega_i = candidate.omega_i;
+
+    bool isPosition = false;
+    float misWeight = unpackMisWeight(candidate.misWeight,isPosition);
+
+    if (isPosition)
+        omega_i = normalize(omega_i - posWS);
 
     // evaluate brdf
     #ifdef CLOSEST_HIT_DIFFUSE
@@ -242,6 +273,10 @@ vec3 evalF(CandidateSample candidate, ShadeParams shadeParams, vec3 posWS, vec3 
 
 float evalPhat(CandidateSample candidate, ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint matType){
     return length(evalF(candidate, shadeParams, posWS, rayDir, matType));
+}
+
+float evalPhatVis(CandidateSample candidate, ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint matType){
+    return length(evalFVis(candidate, shadeParams, posWS, rayDir, matType));
 }
 
 float evalPhat(CandidateSample candidate, ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint matType, inout vec3 F){
@@ -339,7 +374,6 @@ vec3 calculateDirectRIS(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint m
     return directContribution;
 }
 
-
 Reservoir resampleInitialCandidates(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint matType, inout uint seed){
 
     Reservoir r = makeEmptyReservoir();
@@ -372,19 +406,12 @@ Reservoir resampleInitialCandidates(ShadeParams shadeParams, vec3 posWS, vec3 ra
         addSample(r, candidate, w, seed);
 	}
 
-    return r;
-    /*
-    if (r.wSum <= 0.0f)
-        return vec3(0.0);
-
-    vec3 F = vec3(0.0);
-    float p_hat = evalPhat(r.bestSample, shadeParams, posWS, rayDir, matType, F);
+    r.wSum = sanitize(r.wSum);
+    float p_hat = evalPhat(r.bestSample, shadeParams, posWS, rayDir, matType);
     r.W = p_hat > 0.0f ? 1.0f / p_hat * r.wSum : 0.0f;
 
-    vec3 directContribution = F * r.W;
+    return r;
 
-    return directContribution;
-    */
 }
 
 #endif // RIS_GLSL

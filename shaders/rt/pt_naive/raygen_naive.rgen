@@ -14,7 +14,6 @@
 #include "../raycommon.glsl"
 #include "../payload.glsl"
 
-layout(set = 0, binding = 4, rgba32f) uniform image2D outputImage;
 layout(location = 0) rayPayloadEXT HitPayloadNaive payload;
 
 void main() { 
@@ -28,41 +27,13 @@ void main() {
     vec2 imageCoord = vec2(gl_LaunchIDEXT.xy) + 0.5; // add half pixel offset (sample pixel centers, not corners)
     vec2 uv = imageCoord / imageSize;
 
-    //  if there's no geometry, draw the sky into the output image and early exit (no rays traced)
-    //  (in this case, the sky texture is already pre-rendered in the G buffer shading target texture) 
-    vec4 normalRoughness = texture(textures[pcs.normalMapHandle], uv);
-    if (!isGeometryValid(normalRoughness.xyz)){
-        vec3 sky = texture(textures[pcs.targetHandle],uv).xyz;
-        imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(sky, 1.0));
-        return;
-    }
-
-    // early exit on emissive materials -- write emission directly into output image
-    Material mat = materialUBO.materials[uint(texture(utextures[pcs.materialMapHandle],uv).r)];
-    if (any(notEqual(mat.emissionMetallic.rgb,vec3(0.0)))){
-        imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(mat.emissionMetallic.rgb, 1.0));
-        return;
-    }
-
     ShadeParams params;
+    vec3 posWS;
+    vec3 rayDir;
+    Material mat;
 
-    //  load the rest of the textures
-    params.normal = normalize(normalRoughness.xyz);
-    params.roughness = normalRoughness.w;
-
-    vec4 albedoMetallic = texture(textures[pcs.albedoMapHandle], uv);
-    params.albedo = albedoMetallic.rgb;
-    params.metallic = albedoMetallic.w;
-
-    float depth = texture(textures[pcs.depthMapHandle], uv).x;
-
-    // initial ray and shading parameters
-    // at first, take them from the G buffer fill step, then reuse them when bouncing rays  
-    vec3 posWS = reconstructPositionWS(uv,depth);
-    vec3 rayDir = normalize(posWS - cameraUBO.posWS);
-
-    if (dot(-rayDir,params.normal) < 0.0 )
-        params.normal *= -1.0f;
+    if (!unpackFirstHit(uv,params,posWS,rayDir, mat))
+        return;
 
     vec3 brdf = vec3(0.0);
     vec4 sampled = sampleMaterial(rayDir, params,mat.materialType, seed, brdf);

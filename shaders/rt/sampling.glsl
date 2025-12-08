@@ -328,6 +328,18 @@ vec4 sampleMaterial(vec3 rayDir, ShadeParams shadeParams, uint matType, inout ui
 //=====================================================
 
 
+vec2 sampleDiskUniform(float radius, inout uint seed) {
+
+	float theta = rand(seed) * 2.0f * PI;
+	float r = sqrt(rand(seed) * radius);
+
+	float x = r * cos(theta);
+	float y = r * sin(theta);
+
+	return vec2(x, y);
+}
+
+
 //=====================ENV SAMPLING====================
 
 uint sampleEnvCdfMarginalIndex(sampler2D skyCdf, float rnd){

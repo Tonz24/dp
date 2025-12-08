@@ -57,6 +57,10 @@ struct alignas(16) CandidateSample{
     // mis weight for this sample
     // if the first bit is positive (the number is negative), the omega_i variable represents hit position
     float misWeight;
+
+    // normal at sample hit point
+    // is valid only when omega_i represents position
+    glm::vec3 normal;
 };
 
 struct alignas(16) Reservoir{

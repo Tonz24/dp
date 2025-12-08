@@ -25,7 +25,7 @@ bool RaytracedRendererRestirDI::drawGUI() {
 
         if (pcsUnpacked_.doSpatialReuse) {
             ImGui::Indent();
-            changed |= ImGui::DragInt("Neighbor count",reinterpret_cast<int*>(&pcsUnpacked_.M_neighbor),0.25,1,PcsRaygen::maxSampleCount);
+            changed |= ImGui::DragInt("Neighbor count",reinterpret_cast<int*>(&pcsUnpacked_.M_neighbor),0.25,0,31);
             changed |= ImGui::DragInt("Search radius",reinterpret_cast<int*>(&pcsUnpacked_.spatialReuseSearchRadius),0.25,1,PcsRaygen::maxSampleCount);
 
             ImGui::Unindent();
@@ -41,7 +41,6 @@ bool RaytracedRendererRestirDI::drawGUI() {
 void RaytracedRendererRestirDI::recordInitialPassCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const glm::vec<2,uint32_t>& renderDims) {
     pcsUnpacked_.bufferIndices = !pcsUnpacked_.bufferIndices;
     PcsRaygen::packData(pcsUnpacked_,pcs_);
-
 
     pcs_.seed = distr_(generator_);
 

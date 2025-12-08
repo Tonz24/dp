@@ -12,10 +12,6 @@
 #include "../pcs/pcs_raygen.glsl"
 #include "../ris.glsl"
 
-layout(set = 0, binding = 4, rgba32f) uniform image2D outputImage;
-
-
-
 void main() { 
     // Calc seed
     uvec2 s = pcg2d(ivec2(gl_LaunchIDEXT.xy) * (pcs.seed));
@@ -26,39 +22,18 @@ void main() {
     vec2 imageCoord = vec2(gl_LaunchIDEXT.xy) + 0.5; // add half pixel offset (sample pixel centers, not corners)
     vec2 uv = imageCoord / imageSize;
 
-    vec4 normalRoughness = texture(textures[pcs.normalMapHandle], uv);
-    Material mat = materialUBO.materials[uint(texture(utextures[pcs.materialMapHandle],uv).r)];
-
-    // early exit on emissive materials or invalid normals
-    if (any(notEqual(mat.emissionMetallic.rgb,vec3(0.0))) || !isGeometryValid(normalRoughness.xyz))
-        return;
-
     ShadeParams params;
+    vec3 posWS;
+    vec3 rayDir;
+    Material mat;
 
-    //  load the rest of the textures
-    params.normal = normalize(normalRoughness.xyz);
-    params.roughness = normalRoughness.w;
-
-    vec4 albedoMetallic = texture(textures[pcs.albedoMapHandle], uv);
-    params.albedo = albedoMetallic.rgb;
-    params.metallic = albedoMetallic.w;
-
-    float depth = texture(textures[pcs.depthMapHandle], uv).x;
-
-    // initial ray and shading parameters
-    // at first, take them from the G buffer fill step, then reuse them when bouncing rays  
-    vec3 posWS = reconstructPositionWS(uv,depth);
-    vec3 rayDir = normalize(posWS - cameraUBO.posWS);
-
-    if (dot(-rayDir,params.normal) < 0.0)
-        params.normal *= -1.0f;
+    if (!unpackFirstHitRestir(uv,params,posWS,rayDir, mat))
+        return;
 
     Reservoir r = makeEmptyReservoir();
 
     if (mat.materialType != MAT_MIRROR)
         r = resampleInitialCandidates(params,posWS,rayDir,mat.materialType, seed);  
-
-
 
     uint bufferWritePosition = flatten2DCoord(gl_LaunchIDEXT.xy, uvec2(imageSize));
     uint bufferWriteIndex = getBufferWriteIndex(); 

@@ -18,10 +18,15 @@ layout (set=0,binding=1, std140) uniform MaterialUBO {
 } materialUBO;
 
 layout(set = 0, binding = 2) uniform sampler2D textures[1024];
-layout(set = 0, binding = 6) uniform usampler2D utextures[1024];
 
 #extension GL_EXT_ray_query : require
 layout(set = 0, binding = 3) uniform accelerationStructureEXT topLevelAS;
+
+layout(set = 0, binding = 4, rgba32f) uniform image2D outputImage;
+
+layout(set = 0, binding = 6) uniform usampler2D utextures[1024];
+
+
 
 
 struct Vertex {

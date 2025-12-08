@@ -16,7 +16,12 @@ struct CandidateSample{
 
     // mis weight for this sample
     // if the first bit is positive (the number is negative), the omega_i variable represents hit position
-	float misWeight; 
+	float misWeight;
+
+
+    // normal at sample hit point
+    // is valid only when omega_i represents position
+    vec3 normal; 
 };
 
 float unpackMisWeight(float misWeight, inout bool isPosition){
@@ -60,6 +65,7 @@ CandidateSample makeEmptyCandidate(){
     CandidateSample candidate;
 
     candidate.omega_i = vec3(0.0);
+    candidate.normal = vec3(0.0);
     candidate.L_i = vec3(0.0);
     candidate.W = 0.0;
     candidate.misWeight = 0.0f;
