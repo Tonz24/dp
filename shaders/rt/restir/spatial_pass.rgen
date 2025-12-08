@@ -86,8 +86,38 @@ void main() {
         Reservoir reservoir_i = reservoirBuffers[bufferReadIndex].reservoirs[bufferReadPosition];
         CandidateSample sample_i = reservoir_i.bestSample;
 
+        bool positionSample = false;
+        float jacobian = 1.0f;
+        float _ = unpackMisWeight(sample_i.misWeight,positionSample);
+
+        // the jacobian determinant needs to be calculated to scale the solid angle weight as if it came from this pixel
+        // GRIS paper
+        // x denotes the current pixel
+        // y denotes the neighbor pixel (and its sample)
+        // https://graphics.cs.utah.edu/research/projects/gris/sig22_GRIS.pdf
+        if (positionSample){
+
+            vec3 x_surf_to_y_hit = sample_i.omega_i - posWS;
+            vec3 x_surf_to_y_hit_dir = normalize(x_surf_to_y_hit);
+            float x_surf_to_y_dist = length(x_surf_to_y_hit);
+            float x_surf_to_y_dist_sqr = x_surf_to_y_dist * x_surf_to_y_dist;
+            
+            vec3 y_surf_to_y_hit = sample_i.omega_i - neighborPosWSs[i];
+            vec3 y_surf_to_y_hit_dir = normalize(y_surf_to_y_hit);
+            float y_surf_to_y_dist = length(y_surf_to_y_hit);
+            float y_surf_to_y_dist_sqr = y_surf_to_y_dist * y_surf_to_y_dist;
+
+            float cos_theta_x = max(dot(-x_surf_to_y_hit_dir, sample_i.normal), 0.0f);
+            float cos_theta_y = max(dot(-y_surf_to_y_hit_dir, sample_i.normal), 0.0f);
+
+            float dist_term = x_surf_to_y_dist_sqr / y_surf_to_y_dist_sqr;
+            float cos_term = cos_theta_y / cos_theta_x ;
+
+            jacobian = sanitize(dist_term * cos_term);
+        }
+
         float p_hat = evalPhat(sample_i, params, posWS, rayDir, mat.materialType);
-        float w = misWeight * p_hat * reservoir_i.W;
+        float w = misWeight * p_hat * reservoir_i.W * jacobian;
         addSample(outReservoir, sample_i, w, seed);
     }
 
