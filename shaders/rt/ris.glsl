@@ -245,12 +245,22 @@ vec3 evalF(CandidateSample candidate, ShadeParams shadeParams, vec3 posWS, vec3 
 vec3 evalFVis(CandidateSample candidate, ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint matType){
 
     vec3 omega_i = candidate.omega_i;
+    // if omega_i represents direction, set the endpoint far along it
+    vec3 visibilityRayEndPoint = omega_i * 10000.0f;
 
     bool isPosition = false;
     float misWeight = unpackMisWeight(candidate.misWeight,isPosition);
 
-    if (isPosition)
+    if (isPosition){
+        // if omega_i represents position, set it directly as the endpoint
+        visibilityRayEndPoint = omega_i; 
+        // convert omega_i to an actual direction
         omega_i = normalize(omega_i - posWS);
+    }
+
+    // no visibility means that it's not needed to continue further, there would be no radiance anyways
+    if (!isVisible(posWS, visibilityRayEndPoint, shadeParams.normal))
+        return vec3(0.0f);
 
     // evaluate brdf
     #ifdef CLOSEST_HIT_DIFFUSE

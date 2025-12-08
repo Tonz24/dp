@@ -53,10 +53,13 @@ void main() {
     // gather neighbor coords
     // start at index 1 since index 0 is occupied by this pixel's sample 
     for (uint i = 0; i < neighborCount; ++i){
-        vec2 sampledDisk = sampleDiskUniform(100.0f, seed);
-        vec2 neighborCoord = clamp(sampledDisk + imageCoord, vec2(0.0f), imageSize - 1);
-        vec2 neighborUv = neighborCoord / imageSize;
-        uvec2 neighborPixelCoord = uvec2(neighborCoord);
+        vec2 sampledDisk = ivec2(sampleDiskUniform(100.0f, seed));
+
+        ivec2 iNeighborCoord = ivec2(floor(sampledDisk + imageCoord));
+        iNeighborCoord = clamp(iNeighborCoord, ivec2(0), ivec2(imageSize) - 1);
+
+        // sample pixel centers
+        vec2 neighborUv = (vec2(iNeighborCoord) + 0.5) / imageSize;
         
         ShadeParams neighborParams;
         vec3 neighborPosWS;
@@ -66,7 +69,7 @@ void main() {
         if (!unpackFirstHitRestir(neighborUv, neighborParams, neighborPosWS, neighborRayDir, neighborMat))
             continue;
 
-        neighborPixelCoords[M] = neighborPixelCoord;
+        neighborPixelCoords[M] = uvec2(iNeighborCoord);
         neighborShadeParams[M] = neighborParams;
         neighborPosWSs[M] = neighborPosWS;
         neighborRayDirs[M] = neighborRayDir;
@@ -110,13 +113,13 @@ void main() {
             float cos_theta_x = max(dot(-x_surf_to_y_hit_dir, sample_i.normal), 0.0f);
             float cos_theta_y = max(dot(-y_surf_to_y_hit_dir, sample_i.normal), 0.0f);
 
-            float dist_term = x_surf_to_y_dist_sqr / y_surf_to_y_dist_sqr;
-            float cos_term = cos_theta_y / cos_theta_x ;
+            float dist_term = y_surf_to_y_dist_sqr / x_surf_to_y_dist_sqr;
+            float cos_term = cos_theta_x / cos_theta_y;
 
             jacobian = sanitize(dist_term * cos_term);
         }
 
-        float p_hat = evalPhat(sample_i, params, posWS, rayDir, mat.materialType);
+        float p_hat = evalPhatVis(sample_i, params, posWS, rayDir, mat.materialType);
         float w = misWeight * p_hat * reservoir_i.W * jacobian;
         addSample(outReservoir, sample_i, w, seed);
     }
