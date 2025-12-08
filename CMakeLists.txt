@@ -79,6 +79,8 @@ add_executable(dp
         src/engine/renderers/raytracedRendererNee.h
         src/engine/pushConstants.h
         src/engine/pushConstants.h
+        src/engine/renderers/raytracedRendererRestirDI.h
+        src/engine/renderers/raytracedRendererRestirDI.cpp
 )
 
 # add shader compilation as a build step

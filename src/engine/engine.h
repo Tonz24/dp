@@ -20,6 +20,7 @@
 #include "renderers/deferredRenderer.h"
 #include "renderers/raytracedRenderer.h"
 #include "renderers/raytracedRendererNee.h"
+#include "renderers/raytracedRendererRestirDI.h"
 
 class Engine : public IDrawGui {
 public:
@@ -237,6 +238,7 @@ private:
     std::shared_ptr<DeferredRenderer> rasterRenderer_{};
     std::shared_ptr<RaytracedRenderer> rtRendererNaive_{};
     std::shared_ptr<RaytracedRendererNEE> rtRendererNEE_{};
+    std::shared_ptr<RaytracedRendererRestirDI> rtRendererRestirDI_{};
     Renderer* selectedRenderer_{nullptr};
 
     float drawFrametime_{};

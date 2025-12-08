@@ -23,10 +23,9 @@ bool RaytracedRendererNEE::drawGUI() {
             changed |= ImGui::DragInt("Area sample count",reinterpret_cast<int*>(&pcsUnpacked_.M_area),0.25,0,PcsRaygen::maxSampleCount);
             changed |= ImGui::DragInt("Env sample count",reinterpret_cast<int*>(&pcsUnpacked_.M_env),0.25,0,PcsRaygen::maxSampleCount);
         }
-
-        PcsRaygen::packData(pcsUnpacked_,pcs_);
-
         ImGui::Unindent();
     }
+    PcsRaygen::packData(pcsUnpacked_,pcs_);
+
     return changed;
 }

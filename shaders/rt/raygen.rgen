@@ -6,6 +6,7 @@
 #extension GL_EXT_ray_query : require
 
 #define RAYGEN
+#define BRDF_HIT_START_OFFSET 3 
 
 #include "../common/common.glsl"
 #include "../common/math_constants.glsl"
@@ -164,4 +165,5 @@ void main() {
     imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(radiance, 1.0));
 }
 
+#undef BRDF_HIT_START_OFFSET 
 #undef RAYGEN

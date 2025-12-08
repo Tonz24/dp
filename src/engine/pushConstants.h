@@ -147,17 +147,20 @@ struct PcsRaygen{
     static constexpr uint32_t brdfShift = 0 * 6;
     static constexpr uint32_t areaShift = 1 * 6;
     static constexpr uint32_t envShift =  2 * 6;
+    static constexpr uint32_t bufferIndexShift =  3 * 6;
 
     static constexpr uint32_t brdfMask = 0x3F << brdfShift;
     static constexpr uint32_t areaMask = 0x3F << areaShift;
     static constexpr uint32_t envMask = 0x3F << envShift;
+    static constexpr uint32_t bufferIndexMask = 0x01 << bufferIndexShift;
 
 
     struct UnpackedData {
         uint32_t doRIS{0};
-        uint32_t M_brdf{1};
+        uint32_t M_brdf{0};
         uint32_t M_area{1};
         uint32_t M_env{1};
+        bool bufferIndices{false};
     };
 
     static void packData(const UnpackedData& unpacked, Data& data) {
@@ -167,5 +170,6 @@ struct PcsRaygen{
         data.ris |= unpacked.M_brdf << brdfShift;
         data.ris |= unpacked.M_area << areaShift;
         data.ris |= unpacked.M_env << envShift;
+        data.ris |= static_cast<uint32_t>(unpacked.bufferIndices) << bufferIndexShift;
     }
 };

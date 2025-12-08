@@ -68,12 +68,12 @@ void RaytracingPipeline::initSBT() {
     uint32_t handleSize = rtProps.shaderGroupHandleSize;
     uint32_t handleSizeAlignment = rtProps.shaderGroupHandleAlignment;
     uint32_t groupCount = shaderGroups_.size();
-    uint32_t handleCount = 1 + missCount_ + hitCount_;
+    uint32_t handleCount = raygenCount_ + missCount_ + hitCount_;
 
     uint32_t handleSizeAligned = alignUp(handleSize, handleSizeAlignment);
 
     uint32_t rgenStride = alignUp(handleSizeAligned,rtProps.shaderGroupBaseAlignment);
-    uint32_t rgenSize = rgenStride; //  size must equal stride
+    uint32_t rgenAllocSize = alignUp(raygenCount_ * rgenStride, rtProps.shaderGroupBaseAlignment);
 
     uint32_t missStride = handleSizeAligned;
     uint32_t missSize = alignUp(missCount_ * handleSizeAligned,rtProps.shaderGroupBaseAlignment);
@@ -88,15 +88,15 @@ void RaytracingPipeline::initSBT() {
     if (static_cast<vk::Result>(d->vkGetRayTracingShaderGroupHandlesKHR(*VkUtils::getDevice(), *pipeline_,0,handleCount,dataSize,handles.data())) != vk::Result::eSuccess)
         throw std::runtime_error("ERROR: couldn't get shader group handles!");
 
-    vk::DeviceSize sbtSize = rgenSize + missSize + hitSize;
+    vk::DeviceSize sbtSize = rgenAllocSize + missSize + hitSize;
 
     sbtBuffer_ = VkUtils::createBufferVMA(sbtSize,VkUtils::sbtFlags | vk::BufferUsageFlagBits::eTransferSrc,VkUtils::stagingAllocFlagsVMA);
 
     vk::DeviceAddress rgenDeviceAddress = sbtBuffer_.deviceAddress;
-    vk::DeviceAddress missDeviceAddress = sbtBuffer_.deviceAddress + rgenSize;
-    vk::DeviceAddress hitDeviceAddress = sbtBuffer_.deviceAddress + rgenSize + missSize;
+    vk::DeviceAddress missDeviceAddress = sbtBuffer_.deviceAddress + rgenAllocSize;
+    vk::DeviceAddress hitDeviceAddress = sbtBuffer_.deviceAddress + rgenAllocSize + missSize;
 
-    raygenRegion_ = vk::StridedDeviceAddressRegionKHR{.deviceAddress = rgenDeviceAddress, .stride = rgenStride, .size = rgenSize};
+    raygenRegion_ = vk::StridedDeviceAddressRegionKHR{.deviceAddress = rgenDeviceAddress, .stride = rgenStride, .size = rgenStride};
     missRegion_ = vk::StridedDeviceAddressRegionKHR{.deviceAddress = missDeviceAddress, .stride = missStride, .size = missSize};
     hitRegion_ = vk::StridedDeviceAddressRegionKHR{.deviceAddress = hitDeviceAddress, .stride = hitStride, .size = hitSize};
 
@@ -107,17 +107,20 @@ void RaytracingPipeline::initSBT() {
     uint32_t handleIndex{0};
 
     pData = pSBTBuffer;
-    memcpy(pData,getHandle(handleIndex++),handleSize);
+    for(uint32_t c = 0; c < raygenCount_; c++){
+        memcpy(pData,getHandle(handleIndex++),handleSize);
+        pData += rgenStride;
+    }
 
     // Miss
-    pData = pSBTBuffer + raygenRegion_.size;
+    pData = pSBTBuffer + rgenAllocSize;
     for(uint32_t c = 0; c < missCount_; c++){
         memcpy(pData, getHandle(handleIndex++), handleSize);
         pData += missRegion_.stride;
     }
 
     // Hit
-    pData = pSBTBuffer + raygenRegion_.size + missRegion_.size;
+    pData = pSBTBuffer + rgenAllocSize + missRegion_.size;
     for(uint32_t c = 0; c < hitCount_; c++) {
         memcpy(pData, getHandle(handleIndex++), handleSize);
         pData += hitRegion_.stride;
@@ -125,7 +128,8 @@ void RaytracingPipeline::initSBT() {
 }
 
 void RaytracingPipeline::extractGroupCounts(const ShaderStageInfo& stageInfo) {
-    //  do not check for ray gen since there can only be one of them
+    if (stageInfo.stage == vk::ShaderStageFlagBits::eRaygenKHR)
+        raygenCount_ += 1;
     if (stageInfo.stage == vk::ShaderStageFlagBits::eMissKHR)
         missCount_ += 1;
     if (stageInfo.stage == vk::ShaderStageFlagBits::eClosestHitKHR || stageInfo.stage == vk::ShaderStageFlagBits::eAnyHitKHR)

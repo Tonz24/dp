@@ -28,7 +28,7 @@ public:
 private:
     std::vector<vk::RayTracingShaderGroupCreateInfoKHR> shaderGroups_{};
 
-    uint32_t hitCount_{0}, missCount_{0};
+    uint32_t hitCount_{0}, missCount_{0}, raygenCount_{0};
     uint32_t maxRecursionDepth_{16};
 
     VkUtils::BufferAlloc sbtBuffer_{};

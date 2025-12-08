@@ -37,7 +37,7 @@ protected:
                              const vk::ImageView& swapchainImageView, const vk::Extent2D& swapchainExtent) override;
 
 
-    void recordTraceCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex);
+    virtual void recordTraceCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex);
     void recordTonemapCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex);
 
     void setPcsData() override;

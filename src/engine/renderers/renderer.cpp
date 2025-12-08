@@ -142,6 +142,18 @@ void Renderer::initDescSetLayout() {
         objDescSSBOs_.emplace_back(std::move(buffer));
     }
 
+
+    // reservoir SSBO
+    for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
+
+        vk::DeviceSize bufferSize = sizeof(Mesh::ObjDescription) * Constants::objDescLimit;
+        VmaAllocationCreateFlags allocationCreateFlags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT ;
+        auto buffer = VkUtils::createBufferVMA(bufferSize,vk::BufferUsageFlagBits::eStorageBuffer, allocationCreateFlags);
+
+        objDescSSBOsMapped_.emplace_back(static_cast<unsigned char*>(buffer.allocationInfo.pMappedData));
+        objDescSSBOs_.emplace_back(std::move(buffer));
+    }
+
     std::vector<vk::DescriptorSetLayout> layouts(Constants::maxFramesInFlight,*descSetLayoutFrame_);
     vk::DescriptorSetAllocateInfo allocInfo{
         .descriptorPool = Engine::getInstance().getDescriptorPool(),
@@ -255,6 +267,30 @@ void Renderer::uploadObjDescription(const Mesh& mesh) {
     for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
         uint8_t* dst = objDescSSBOsMapped_[i] + mesh.getCID() * sizeof(Mesh::ObjDescription);
         memcpy(dst,&mesh.getDescription(), sizeof(Mesh::ObjDescription));
+    }
+}
+
+void Renderer::setReservoirSSBOs(const std::array<VkUtils::BufferAlloc, 2>& reservoirBuffers) {
+
+    for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
+        for (int j = 0; j < reservoirBuffers.size(); ++j) {
+
+            vk::DescriptorBufferInfo reservoirBufferInfo{
+                .buffer = reservoirBuffers[j].buffer,
+                .offset = 0,
+                .range = vk::WholeSize
+            };
+
+            vk::WriteDescriptorSet writeDescriptorSetReservoirBuffer{
+                .dstSet = descSetsFrame_[i], //  which descriptor set to update
+                .dstBinding = 9, // which binding to update
+                .dstArrayElement = static_cast<uint32_t>(j), //  what element the update starts at
+                .descriptorCount = 1, //  how many descriptors are affected
+                .descriptorType = vk::DescriptorType::eStorageBuffer,
+                .pBufferInfo = &reservoirBufferInfo,
+            };
+            VkUtils::getDevice().updateDescriptorSets(writeDescriptorSetReservoirBuffer,{});
+        }
     }
 }
 

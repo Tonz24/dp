@@ -10,6 +10,8 @@
 #include "raycommon.glsl"
 #include "../common/material.glsl"
 
+#define BRDF_HIT_START_OFFSET 3 
+
 #ifdef EVAL_DIRECT_CONTRIB
 #include "ris.glsl"
 #endif
@@ -19,6 +21,7 @@ layout(location = 0) rayPayloadInEXT HitPayloadNaive payload;
 #else
 layout(location = 0) rayPayloadInEXT HitPayload payload;
 #endif
+
 
 hitAttributeEXT vec2 attribs;
 
@@ -83,4 +86,6 @@ void main() {
     payload.seed = seed;
 }
 
+
+#undef BRDF_HIT_START_OFFSET 
 #endif // CLOSEST_HIT_BASE_GLSL

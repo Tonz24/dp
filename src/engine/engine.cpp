@@ -157,6 +157,8 @@ bool Engine::drawGUI() {
                 selectedRenderer_ = rtRendererNaive_.get();
             if (selectedRendererIndex_ == 2)
                 selectedRenderer_ = rtRendererNEE_.get();
+            if (selectedRendererIndex_ == 3)
+                selectedRenderer_ = rtRendererRestirDI_.get();
 
             resetAccumulator_ |= true;
         }
@@ -1039,6 +1041,7 @@ void Engine::initRenderers() {
     rasterRenderer_ = std::make_shared<DeferredRenderer>(gBuffer_);
     rtRendererNaive_ = std::make_shared<RaytracedRenderer>(gBuffer_);
     rtRendererNEE_ = std::make_shared<RaytracedRendererNEE>(gBuffer_);
+    rtRendererRestirDI_ = std::make_shared<RaytracedRendererRestirDI>(gBuffer_);
     selectedRenderer_ = rtRendererNEE_.get();
 }
 

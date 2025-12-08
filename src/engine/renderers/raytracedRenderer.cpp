@@ -64,7 +64,7 @@ void RaytracedRenderer::initGraphicsPipelines(const std::vector<RasterPipeline::
     std::array raygenRange{PcsRaygen::getRange()};
     new (&rtPipeline_) RaytracingPipeline{rtStages, descSetFillLayouts, raygenRange};
 
-   setPcsData();
+    setPcsData();
 
     generator_ = std::mt19937(rngDevice_());
     distr_ = std::uniform_int_distribution(std::numeric_limits<uint32_t>::min(),std::numeric_limits<uint32_t>::max());
@@ -122,7 +122,7 @@ void RaytracedRenderer::recordTraceCommands(const Scene& scene, vk::raii::Comman
 
     auto renderDims = getRenderDimensions();
 
-    cmdBuf.traceRaysKHR(rtPipeline_.getRaygenRegion(),rtPipeline_.getMissRegion(),rtPipeline_.getHitRegion(),rtPipeline_.getHitRegion(),renderDims.x,renderDims.y,1);
+    cmdBuf.traceRaysKHR(rtPipeline_.getRaygenRegion(),rtPipeline_.getMissRegion(),rtPipeline_.getHitRegion(),{},renderDims.x,renderDims.y,1);
 
     pcs_.frameCtr += 1;
 

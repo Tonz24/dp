@@ -6,16 +6,20 @@
 #extension GL_EXT_ray_query : require
 
 #define RAYGEN
-#define BRDF_HIT_START_OFFSET 3 
+#define BRDF_HIT_START_OFFSET 3
 
 #include "../../common/common.glsl"
 #include "../../common/math_constants.glsl"
 #include "../pcs/pcs_raygen.glsl"
-#include "../raycommon.glsl"
-#include "../payload.glsl"
+#include "../ris.glsl"
 
 layout(set = 0, binding = 4, rgba32f) uniform image2D outputImage;
-layout(location = 0) rayPayloadEXT HitPayloadNaive payload;
+
+
+uint flatten2DCoord(uvec2 coord){
+    uvec2 size = imageSize(outputImage);
+    return size.x * coord.y + coord.x;
+}
 
 //  all zero normals are invalid
 bool isGeometryValid(vec3 normal){
@@ -74,78 +78,25 @@ void main() {
     vec3 posWS = reconstructPositionWS(uv,depth);
     vec3 rayDir = normalize(posWS - cameraUBO.posWS);
 
-    if (dot(-rayDir,params.normal) < 0.0 )
+    if (dot(-rayDir,params.normal) < 0.0)
         params.normal *= -1.0f;
 
-    vec3 brdf = vec3(0.0);
-    vec4 sampled = sampleMaterial(rayDir, params,mat.materialType, seed, brdf);
-    vec3 direction = sampled.xyz;
-    float pdf = sampled.w;
-
-    float cosThetaI = mat.materialType == MAT_MIRROR ? 1.0 : max(dot(direction,params.normal),0.0);
-
-    vec3 weightFactor = vec3(0.0);
-    if (pdf > 0.0f)
-        weightFactor = brdf * cosThetaI / pdf;
-
-    float tMin = 0.001f;
-    float tMax = 10000.0f;
-
     vec3 radiance = vec3(0.0);
-    vec3 weight = vec3(1.0);
 
-    resetPayload(payload);
+    vec3 directContribution = vec3(0.0);
 
-    for (uint depth = 0; depth < pcs.maxRecursionDepth; depth++){
+    Reservoir r;
 
-        resetPayload(payload);
-        payload.seed = seed;
-        traceRayEXT(
-            topLevelAS,
-            gl_RayFlagsOpaqueEXT,
-            0xff, // cullMask
-            0,    // sbtRecordOffset
-            0,    // sbtRecordStride
-            0,    // missIndex
-            posWS + tMin * params.normal,
-            tMin,
-            direction,
-            tMax,
-            0     // payloadLocation
-        );
+    if (mat.materialType != MAT_MIRROR)
+        directContribution = calculateDirectRIS(params,posWS,rayDir,mat.materialType, seed, r);  
 
-        weight *= weightFactor;
-        radiance += weight * payload.hitEmission;  
-
-        if(!payload.hit) 
-            break;
-
-        ///////////////////////////////////////////////////////////
-        // russian roulette termination
-        // use troughput as weight to set survival probability
-        // activate only at depth > 4 to avoid premature termination of paths and potential energy loss
-        if (depth > 4) {
-            float survivalProb = max(weight.x,max(weight.y,weight.z));
-            survivalProb = max(survivalProb, 0.15);
-            float rnd = rand(seed);
-            if (rnd > survivalProb) break;
-            weight /= survivalProb;
-        }
-        ///////////////////////////////////////////////////////////
-
-        posWS = payload.hitPosition;
-        direction = payload.nextSample.xyz;
-        pdf = payload.nextSample.w;
-        weightFactor = payload.weightFactor;
-        seed = payload.seed;
-        params.normal = payload.hitNormal;
-    }
-
-    if (pcs.accumulate == 1){
+    radiance = directContribution;
+    
+    if (pcs.accumulate == 1) {
         vec3 oldRadiance = imageLoad(outputImage, ivec2(gl_LaunchIDEXT.xy)).xyz;
         radiance = mix(oldRadiance,radiance, 1.0f / float(pcs.frameCtr + 1));
     }
-
+    reservoirBuffers[0].reservoirs[flatten2DCoord(gl_LaunchIDEXT.xy)] = r;
     imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(radiance, 1.0));
 }
 

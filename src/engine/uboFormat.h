@@ -42,3 +42,25 @@ struct alignas(16) MaterialUBOFormat {
     float padding1;
     float padding2;
 };
+
+struct alignas(16) CandidateSample{
+    // sample direction OR sample hit point
+    // for any sample that is not an env map sample, the omega_i variable represents the hit point that the sample hit
+    glm::vec3 omega_i;
+
+    // 1.0 / pdf
+    float W;
+
+    // emission of hit surface
+    glm::vec3 L_i;
+
+    // mis weight for this sample
+    // if the first bit is positive (the number is negative), the omega_i variable represents hit position
+    float misWeight;
+};
+
+struct alignas(16) Reservoir{
+    CandidateSample bestSample;
+    float wSum;
+    float W;
+};

@@ -1,6 +1,8 @@
 #ifndef DESCRIPTOR_GLSL
 #define DESCRIPTOR_GLSL
 
+#include "reservoir.glsl"
+
 layout (set=0, binding=0, std140) uniform CameraUBO {
     mat4 matV;
     mat4 matP;
@@ -62,10 +64,16 @@ struct CDFElement {
     uint triIndex;
     float cdfVal;
 };
+
 layout(set = 0, binding = 8, std430) readonly buffer EmissiveCDF {
     uint size;
     float area;
     CDFElement cdf[];
 } emissiveCDF;
+
+
+layout(set = 0, binding = 9, std430)  buffer ReservoirBuffer {
+    Reservoir reservoirs[];
+} reservoirBuffers[2];
 
 #endif // DESCRIPTOR_GLSL

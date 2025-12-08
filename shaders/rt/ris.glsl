@@ -9,99 +9,6 @@ uint M_area;
 uint M_env;
 
 
-struct CandidateSample{
-    // sample direction OR sample hit point
-    // for any sample that is not an env map sample, the omega_i variable represents the hit point that the sample hit 
-	vec3 omega_i; 
-
-    // emission of hit surface
-    vec3 L_i; 
-
-    // 1.0 / pdf
-	float W; 
-
-    // mis weight for this sample
-    // if the first bit is positive (the number is negative), the omega_i variable represents hit position
-	float misWeight; 
-};
-
-float unpackMisWeight(float misWeight, inout bool isPosition){
-    // leftmost bit mask (sign is stored there)
-    uint firstBitMask = 1u << 31; 
-
-    // convert float bits to uint
-    uint weightAsUint = floatBitsToUint(misWeight); 
-
-    // if the sign bit is set to 1, the sample's omega_i represents position 
-    isPosition = (weightAsUint & firstBitMask) > 0; 
-
-    // zero the sign bit and return the mis weight
-    return uintBitsToFloat(weightAsUint & (~firstBitMask)); 
-}
-
-float unpackMisWeight(float misWeight){
-    // leftmost bit mask (sign is stored there)
-    uint firstBitMask = 1u << 31; 
-
-    // convert float bits to uint
-    uint weightAsUint = floatBitsToUint(misWeight); 
-
-    // zero the sign bit and return the mis weight
-    return uintBitsToFloat(weightAsUint & (~firstBitMask)); 
-}
-
-float packMisWeight(float misWeight, bool isPosition){
-    // leftmost bit mask (sign is stored there)
-    uint firstBitMask = 1 << 31;
-
-    // convert float bits to uint
-    uint weightAsUint = floatBitsToUint(misWeight);
-
-    // if the sample represents position, make the sign bit 1, otherwise keep it zero
-    return uintBitsToFloat(weightAsUint | (firstBitMask * uint(isPosition)));
-}
-
-
-CandidateSample makeEmptyCandidate(){
-    CandidateSample candidate;
-
-    candidate.omega_i = vec3(0.0);
-    candidate.L_i = vec3(0.0);
-    candidate.W = 0.0;
-    candidate.misWeight = 0.0f;
-
-    return candidate;
-}
-
-struct Reservoir{
-    CandidateSample bestSample;
-    float wSum;
-    float W;
-};
-
-Reservoir makeEmptyReservoir(){
-    Reservoir r;
-    r.bestSample = makeEmptyCandidate();
-    r.wSum = 0.0;
-    r.W = 0.0;
-
-    return r;
-}
-
-bool addSample(inout Reservoir reservoir, CandidateSample candidate, float w, inout uint seed){
-    reservoir.wSum += w;
-
-    // do not divide by zero
-    if (reservoir.wSum <= 0.0)
-        return false;
-
-    if (rand(seed) < w / reservoir.wSum){
-        reservoir.bestSample = candidate;
-        return true;
-    }
-    return false;
-}
-
 float balanceHeuristicArea(float pdfArea, float pdfBrdf){
     float denom = pdfArea * M_area + pdfBrdf * M_brdf;
     return sanitize(pdfArea / denom);
@@ -373,6 +280,52 @@ vec3 calculateDirectRIS(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint m
         float w = unpackMisWeight(candidate.misWeight) * p_hat * candidate.W;
         addSample(r, candidate, w, seed);
 	}
+
+    if (r.wSum <= 0.0f)
+        return vec3(0.0);
+
+    vec3 F = vec3(0.0);
+    float p_hat = evalPhat(r.bestSample, shadeParams, posWS, rayDir, matType, F);
+    r.W = p_hat > 0.0f ? 1.0f / p_hat * r.wSum : 0.0f;
+
+    vec3 directContribution = F * r.W;
+
+    return directContribution;
+}
+
+vec3 calculateDirectRIS(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint matType, inout uint seed, inout Reservoir reservoir){
+
+    Reservoir r = makeEmptyReservoir();
+
+    M_brdf = getBrdfSampleCount(); 
+    M_area = getAreaSampleCount(); 
+    M_env = getEnvSampleCount(); 
+
+    for (int i = 0; i < M_brdf; ++i) {
+		CandidateSample candidate = brdfSampleLight(shadeParams, posWS, rayDir, matType, seed);
+
+		float p_hat = evalPhat(candidate, shadeParams, posWS, rayDir, matType);
+        float w = unpackMisWeight(candidate.misWeight) * p_hat * candidate.W;
+        addSample(r, candidate, w, seed);
+	}
+
+    for (int i = 0; i < M_area; ++i) {
+        CandidateSample candidate = areaSampleLight(shadeParams, posWS, rayDir, matType, seed);
+
+        float p_hat = evalPhat(candidate, shadeParams, posWS, rayDir, matType);
+        float w = unpackMisWeight(candidate.misWeight) * p_hat * candidate.W;
+        addSample(r, candidate, w, seed);
+    }
+
+    for (int i = 0; i < M_env; ++i) {
+		CandidateSample candidate = envSampleLight(shadeParams, posWS, rayDir, matType, seed);
+
+		float p_hat = evalPhat(candidate, shadeParams, posWS, rayDir, matType);
+        float w = unpackMisWeight(candidate.misWeight) * p_hat * candidate.W;
+        addSample(r, candidate, w, seed);
+	}
+
+    reservoir = r;
 
     if (r.wSum <= 0.0f)
         return vec3(0.0);
