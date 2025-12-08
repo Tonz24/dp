@@ -6,7 +6,7 @@
 #extension GL_EXT_ray_query : require
 
 #define RAYGEN
-#define BRDF_HIT_START_OFFSET 3 
+
 
 #include "../common/common.glsl"
 #include "../common/math_constants.glsl"
@@ -17,18 +17,6 @@ layout(set = 0, binding = 4, rgba32f) uniform image2D outputImage;
 
 layout(location = 0) rayPayloadEXT HitPayload payload;
 
-//  all zero normals are invalid
-bool isGeometryValid(vec3 normal){
-    float epsilon = 1e-6;
-    return any(greaterThan(abs(normal),vec3(epsilon)));
-}
-
-vec3 reconstructPositionWS(vec2 uv, float depth){
-    uv.y = 1.0 - uv.y;
-    vec2 ndcXY = uv * 2.0 - 1.0; // move from [0, 1] to [-1, 1] range   
-    vec4 camRay = cameraUBO.matInvVP * vec4(ndcXY,depth,1);
-    return camRay.xyz / camRay.w;
-}
 
 void main() { 
 
@@ -165,5 +153,4 @@ void main() {
     imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(radiance, 1.0));
 }
 
-#undef BRDF_HIT_START_OFFSET 
 #undef RAYGEN

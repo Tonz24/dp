@@ -10,8 +10,6 @@
 #include "raycommon.glsl"
 #include "../common/material.glsl"
 
-#define BRDF_HIT_START_OFFSET 3 
-
 #ifdef EVAL_DIRECT_CONTRIB
 #include "ris.glsl"
 #endif
@@ -87,5 +85,5 @@ void main() {
 }
 
 
-#undef BRDF_HIT_START_OFFSET 
+
 #endif // CLOSEST_HIT_BASE_GLSL

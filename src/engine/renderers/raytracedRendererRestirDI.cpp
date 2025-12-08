@@ -21,6 +21,16 @@ bool RaytracedRendererRestirDI::drawGUI() {
         changed |= ImGui::DragInt("Area sample count",reinterpret_cast<int*>(&pcsUnpacked_.M_area),0.25,0,PcsRaygen::maxSampleCount);
         changed |= ImGui::DragInt("Env sample count",reinterpret_cast<int*>(&pcsUnpacked_.M_env),0.25,0,PcsRaygen::maxSampleCount);
 
+        changed |= ImGui::Checkbox("Spatial reuse",reinterpret_cast<bool*>(&pcsUnpacked_.doSpatialReuse));
+
+        if (pcsUnpacked_.doSpatialReuse) {
+            ImGui::Indent();
+            changed |= ImGui::DragInt("Neighbor count",reinterpret_cast<int*>(&pcsUnpacked_.spatialReuseNeighborCount),0.25,1,PcsRaygen::maxSampleCount);
+            changed |= ImGui::DragInt("Search radius",reinterpret_cast<int*>(&pcsUnpacked_.spatialReuseSearchRadius),0.25,1,PcsRaygen::maxSampleCount);
+
+            ImGui::Unindent();
+        }
+
         ImGui::Unindent();
     }
 
@@ -31,6 +41,7 @@ bool RaytracedRendererRestirDI::drawGUI() {
 void RaytracedRendererRestirDI::recordInitialPassCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const glm::vec<2,uint32_t>& renderDims) {
     pcsUnpacked_.bufferIndices = !pcsUnpacked_.bufferIndices;
     PcsRaygen::packData(pcsUnpacked_,pcs_);
+
 
     pcs_.seed = distr_(generator_);
 
@@ -51,13 +62,23 @@ void RaytracedRendererRestirDI::recordSpatialPassCommands(const Scene& scene, vk
 
     cmdBuf.traceRaysKHR(spatialRaygenOffset,rtPipeline_.getMissRegion(),rtPipeline_.getHitRegion(),{},renderDims.x,renderDims.y,1);
 }
-void RaytracedRendererRestirDI::recordFinalShadePassCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const glm::vec<2,uint32_t>& renderDims) {}
+void RaytracedRendererRestirDI::recordFinalShadePassCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const glm::vec<2,uint32_t>& renderDims) {
+    pcsUnpacked_.bufferIndices = !pcsUnpacked_.bufferIndices;
+    PcsRaygen::packData(pcsUnpacked_,pcs_);
+
+    pcs_.seed = distr_(generator_);
+
+    cmdBuf.pushConstants(rtPipeline_.getPipelineLayout(), PcsRaygen::stageFlags,0, vk::ArrayProxy<const PcsRaygen::Data>{pcs_});
+
+    vk::StridedDeviceAddressRegionKHR raygenRegion = rtPipeline_.getRaygenRegion();
+    auto spatialRaygenOffset =  static_cast<vk::StridedDeviceAddressRegionKHR>(raygenRegion.deviceAddress + raygenRegion.stride * 2);
+
+    cmdBuf.traceRaysKHR(spatialRaygenOffset,rtPipeline_.getMissRegion(),rtPipeline_.getHitRegion(),{},renderDims.x,renderDims.y, 1);
+}
 
 void RaytracedRendererRestirDI::recordTraceCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex) {
 
-    std::cout << "////////////////////////RESTIR FRAME START///////////////////////" << std::endl;
     auto renderDims = getRenderDimensions();
-
 
     // bind the ray tracing pipeline
     cmdBuf.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR,rtPipeline_.getGraphicsPipeline());
@@ -66,12 +87,39 @@ void RaytracedRendererRestirDI::recordTraceCommands(const Scene& scene, vk::raii
     // do initial pass
     recordInitialPassCommands(scene,cmdBuf,frameInFlightIndex,renderDims);
 
+    // do spatial pass if checked
+    if (pcsUnpacked_.doSpatialReuse) {
+        vk::MemoryBarrier2 barrierInitialToSpatial{
+            .srcStageMask =  vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+            .srcAccessMask = vk::AccessFlagBits2::eShaderStorageWrite,
+            .dstStageMask =  vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+            .dstAccessMask = vk::AccessFlagBits2::eShaderStorageRead,
+        };
+        vk::DependencyInfo depInitialToSpatial{
+            .memoryBarrierCount = 1,
+            .pMemoryBarriers = &barrierInitialToSpatial
+        };
+        cmdBuf.pipelineBarrier2(depInitialToSpatial);
+        recordSpatialPassCommands(scene,cmdBuf,frameInFlightIndex,renderDims);
+    }
 
+
+    // do final shading pass
+    vk::MemoryBarrier2 barrierSpatialToFinal{
+        .srcStageMask =  vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+        .srcAccessMask = vk::AccessFlagBits2::eShaderStorageWrite,
+        .dstStageMask =  vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+        .dstAccessMask = vk::AccessFlagBits2::eShaderStorageRead,
+    };
+    vk::DependencyInfo depSpatialToFinal{
+        .memoryBarrierCount = 1,
+        .pMemoryBarriers = &barrierSpatialToFinal
+    };
+    cmdBuf.pipelineBarrier2(depSpatialToFinal);
+    recordFinalShadePassCommands(scene,cmdBuf,frameInFlightIndex,renderDims);
 
     pcs_.frameCtr += 1;
     if (!pcs_.accumulate) pcs_.frameCtr = 0;
-
-    std::cout << "/////////////////////////RESTIR FRAME END////////////////////////" << std::endl;
 }
 
 

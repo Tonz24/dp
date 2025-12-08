@@ -78,4 +78,21 @@ float sanitize(float val){
     return valSanitized;
 }
 
+//  all zero normals are invalid
+bool isGeometryValid(vec3 normal){
+    float epsilon = 1e-6;
+    return any(greaterThan(abs(normal),vec3(epsilon)));
+}
+
+vec3 reconstructPositionWS(vec2 uv, float depth){
+    uv.y = 1.0 - uv.y;
+    vec2 ndcXY = uv * 2.0 - 1.0; // move from [0, 1] to [-1, 1] range   
+    vec4 camRay = cameraUBO.matInvVP * vec4(ndcXY,depth,1);
+    return camRay.xyz / camRay.w;
+}
+
+uint flatten2DCoord(uvec2 coord, uvec2 imgSize){
+    return imgSize.x * coord.y + coord.x;
+}
+
 #endif // COMMON_GLSL

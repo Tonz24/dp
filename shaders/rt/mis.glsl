@@ -17,7 +17,7 @@ TracedSample traceBRDFLighting(vec3 posWS, vec3 direction, vec3 normal){
             topLevelAS,
             gl_RayFlagsOpaqueEXT,
             0xff, // cullMask
-            BRDF_HIT_START_OFFSET,    // start at brdf sample region
+            3,    // start at brdf sample region
             0,    // sbtRecordStride
             1,    // missIndex
             posWS + normal * tMin,

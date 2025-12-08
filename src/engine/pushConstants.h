@@ -120,6 +120,7 @@ struct PcsRaygen{
          * first 5 bits (63 << 0) -- brdf sample count [0, 63] \n
          * next 5 bits (63 << 6)  -- area sample count [0, 63] \n
          * next 5 bits (63 << 12) -- env sample count [0, 63] \n
+         * next bit    (63 << 18) -- reservoir buffer read/write index  [0 or 1] \n
          * 63 dec = 0x3F
          */
         uint32_t ris{0};
@@ -157,9 +158,14 @@ struct PcsRaygen{
 
     struct UnpackedData {
         uint32_t doRIS{0};
-        uint32_t M_brdf{0};
+        uint32_t M_brdf{1};
         uint32_t M_area{1};
         uint32_t M_env{1};
+
+        uint32_t doSpatialReuse{0};
+        uint32_t spatialReuseNeighborCount{0};
+        uint32_t spatialReuseSearchRadius{0};
+
         bool bufferIndices{false};
     };
 

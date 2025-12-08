@@ -6,7 +6,6 @@
 #extension GL_EXT_ray_query : require
 
 #define RAYGEN
-#define BRDF_HIT_START_OFFSET 3
 
 #include "../../common/common.glsl"
 #include "../../common/math_constants.glsl"
@@ -16,23 +15,6 @@
 layout(set = 0, binding = 4, rgba32f) uniform image2D outputImage;
 
 
-uint flatten2DCoord(uvec2 coord){
-    uvec2 size = imageSize(outputImage);
-    return size.x * coord.y + coord.x;
-}
-
-//  all zero normals are invalid
-bool isGeometryValid(vec3 normal){
-    float epsilon = 1e-6;
-    return any(greaterThan(abs(normal),vec3(epsilon)));
-}
-
-vec3 reconstructPositionWS(vec2 uv, float depth){
-    uv.y = 1.0 - uv.y;
-    vec2 ndcXY = uv * 2.0 - 1.0; // move from [0, 1] to [-1, 1] range   
-    vec4 camRay = cameraUBO.matInvVP * vec4(ndcXY,depth,1);
-    return camRay.xyz / camRay.w;
-}
 
 void main() { 
 
@@ -81,24 +63,29 @@ void main() {
     if (dot(-rayDir,params.normal) < 0.0)
         params.normal *= -1.0f;
 
-    vec3 radiance = vec3(0.0);
+    uint bufferWritePosition = flatten2DCoord(gl_LaunchIDEXT.xy, uvec2(imageSize));
+    uint bufferReadIndex = getBufferReadIndex(); 
+    Reservoir r = reservoirBuffers[bufferReadIndex].reservoirs[bufferWritePosition];
 
     vec3 directContribution = vec3(0.0);
 
-    Reservoir r;
+    if (r.wSum > 0.0){
+        vec3 F = vec3(0.0);
+        float p_hat = evalPhat(r.bestSample, params, posWS, rayDir, mat.materialType, F);
+        r.W = p_hat > 0.0f ? 1.0f / p_hat * r.wSum : 0.0f;
 
-    if (mat.materialType != MAT_MIRROR)
-        directContribution = calculateDirectRIS(params,posWS,rayDir,mat.materialType, seed, r);  
+        directContribution = F * r.W;
+    }
 
-    radiance = directContribution;
+    vec3 radiance = directContribution;
     
     if (pcs.accumulate == 1) {
         vec3 oldRadiance = imageLoad(outputImage, ivec2(gl_LaunchIDEXT.xy)).xyz;
         radiance = mix(oldRadiance,radiance, 1.0f / float(pcs.frameCtr + 1));
     }
-    reservoirBuffers[0].reservoirs[flatten2DCoord(gl_LaunchIDEXT.xy)] = r;
+
     imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(radiance, 1.0));
 }
 
-#undef BRDF_HIT_START_OFFSET 
+
 #undef RAYGEN

@@ -339,4 +339,52 @@ vec3 calculateDirectRIS(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint m
     return directContribution;
 }
 
+
+Reservoir resampleInitialCandidates(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, uint matType, inout uint seed){
+
+    Reservoir r = makeEmptyReservoir();
+
+    M_brdf = getBrdfSampleCount(); 
+    M_area = getAreaSampleCount(); 
+    M_env = getEnvSampleCount(); 
+
+    for (int i = 0; i < M_brdf; ++i) {
+		CandidateSample candidate = brdfSampleLight(shadeParams, posWS, rayDir, matType, seed);
+
+		float p_hat = evalPhat(candidate, shadeParams, posWS, rayDir, matType);
+        float w = unpackMisWeight(candidate.misWeight) * p_hat * candidate.W;
+        addSample(r, candidate, w, seed);
+	}
+
+    for (int i = 0; i < M_area; ++i) {
+        CandidateSample candidate = areaSampleLight(shadeParams, posWS, rayDir, matType, seed);
+
+        float p_hat = evalPhat(candidate, shadeParams, posWS, rayDir, matType);
+        float w = unpackMisWeight(candidate.misWeight) * p_hat * candidate.W;
+        addSample(r, candidate, w, seed);
+    }
+
+    for (int i = 0; i < M_env; ++i) {
+		CandidateSample candidate = envSampleLight(shadeParams, posWS, rayDir, matType, seed);
+
+		float p_hat = evalPhat(candidate, shadeParams, posWS, rayDir, matType);
+        float w = unpackMisWeight(candidate.misWeight) * p_hat * candidate.W;
+        addSample(r, candidate, w, seed);
+	}
+
+    return r;
+    /*
+    if (r.wSum <= 0.0f)
+        return vec3(0.0);
+
+    vec3 F = vec3(0.0);
+    float p_hat = evalPhat(r.bestSample, shadeParams, posWS, rayDir, matType, F);
+    r.W = p_hat > 0.0f ? 1.0f / p_hat * r.wSum : 0.0f;
+
+    vec3 directContribution = F * r.W;
+
+    return directContribution;
+    */
+}
+
 #endif // RIS_GLSL
