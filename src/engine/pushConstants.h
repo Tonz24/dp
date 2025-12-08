@@ -117,19 +117,14 @@ struct PcsRaygen{
          /**
          * RIS information packed into 32 bits \n
          * MSB (1 << 31) -- do ris? \n
-         * first 5 bits (63 << 0) -- brdf sample count [0, 63] \n
-         * next 5 bits (63 << 6)  -- area sample count [0, 63] \n
-         * next 5 bits (63 << 12) -- env sample count [0, 63] \n
-         * next bit    (63 << 18) -- reservoir buffer read/write index  [0 or 1] \n
+         * first 6 bits (63 << 0) -- brdf sample count [0, 63] \n
+         * next 6 bits (63 << 6)  -- area sample count [0, 63] \n
+         * next 6 bits (63 << 12) -- env sample count [0, 63] \n
+         * next 6 bits (63 << 18) -- neighbor count [0, 63] \n
+         * next bit    (63 << 24) -- reservoir buffer read/write index  [0 or 1] \n
          * 63 dec = 0x3F
          */
         uint32_t ris{0};
-
-        /*
-        uint32_t doRIS{0};
-        uint32_t M_brdf{1};
-        uint32_t M_area{1};
-        uint32_t M_env{1};*/
     };
     Data data;
 
@@ -148,11 +143,13 @@ struct PcsRaygen{
     static constexpr uint32_t brdfShift = 0 * 6;
     static constexpr uint32_t areaShift = 1 * 6;
     static constexpr uint32_t envShift =  2 * 6;
-    static constexpr uint32_t bufferIndexShift =  3 * 6;
+    static constexpr uint32_t neighborShift =  3 * 6;
+    static constexpr uint32_t bufferIndexShift =  4 * 6;
 
     static constexpr uint32_t brdfMask = 0x3F << brdfShift;
     static constexpr uint32_t areaMask = 0x3F << areaShift;
     static constexpr uint32_t envMask = 0x3F << envShift;
+    static constexpr uint32_t neighborMask = 0x3F << neighborShift;
     static constexpr uint32_t bufferIndexMask = 0x01 << bufferIndexShift;
 
 
@@ -163,7 +160,8 @@ struct PcsRaygen{
         uint32_t M_env{1};
 
         uint32_t doSpatialReuse{0};
-        uint32_t spatialReuseNeighborCount{0};
+        // spatial reuse neighbor count
+        uint32_t M_neighbor{0};
         uint32_t spatialReuseSearchRadius{0};
 
         bool bufferIndices{false};
@@ -176,6 +174,7 @@ struct PcsRaygen{
         data.ris |= unpacked.M_brdf << brdfShift;
         data.ris |= unpacked.M_area << areaShift;
         data.ris |= unpacked.M_env << envShift;
+        data.ris |= unpacked.M_neighbor << neighborShift;
         data.ris |= static_cast<uint32_t>(unpacked.bufferIndices) << bufferIndexShift;
     }
 };

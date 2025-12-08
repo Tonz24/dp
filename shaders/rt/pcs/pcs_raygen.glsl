@@ -27,11 +27,13 @@ const uint risShift = 31;
 const uint brdfShift = 0 * 6;
 const uint areaShift = 1 * 6;
 const uint envShift =  2 * 6;
-const uint bufferIndexShift =  3 * 6;
+const uint neighborShift =  3 * 6;
+const uint bufferIndexShift =  4 * 6;
 
 const uint brdfMask = 0x3F << brdfShift;
 const uint areaMask = 0x3F << areaShift;
 const uint envMask = 0x3F << envShift;
+const uint neighborMask = 0x3F << neighborMask;
 const uint bufferIndexMask = 0x01 << bufferIndexShift;
 
 bool doRIS(){
@@ -49,6 +51,11 @@ uint getAreaSampleCount(){
 uint getEnvSampleCount(){
     return (pcs.ris & envMask) >> envShift;
 }
+
+uint getNeighborCount(){
+    return (pcs.ris & neighborMask) >> neighborShift;
+}
+
 
 uint getBufferReadIndex(){
     return uint(abs(int((pcs.ris & bufferIndexMask) >> bufferIndexShift) - 1));
