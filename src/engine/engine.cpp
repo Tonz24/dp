@@ -805,15 +805,12 @@ Engine::debugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::Deb
     msg.append( "\tType: " + to_string(type) + "\n");
     msg.append( "\tObjects:\n");
 
-
-
     for (uint32_t i = 0; i < pCallbackData->objectCount; ++i){
 
         std::string objectName{"None"};
 
         if (pCallbackData->pObjects[i].pObjectName != nullptr)
             objectName = pCallbackData->pObjects[i].pObjectName;
-
 
         msg.append( "\t\tHandle: " + std::to_string(pCallbackData->pObjects[i].objectHandle) +"\n");
         msg.append( "\t\tName: " + objectName +"\n");

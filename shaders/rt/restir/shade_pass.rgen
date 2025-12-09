@@ -40,11 +40,10 @@ void main() {
     r.wSum = sanitize(r.wSum);
     vec3 F = vec3(0.0);
     float p_hat = evalPhat(r.bestSample, params, posWS, rayDir, mat.materialType, F);
-    r.W = p_hat > 0.0f ? 1.0f / p_hat * r.wSum : 0.0f;
 
     directContribution = F * r.W;
     
-    vec3 radiance = directContribution;
+    vec3 radiance = sanitize(directContribution);
     
     if (pcs.accumulate == 1) {
         vec3 oldRadiance = imageLoad(outputImage, ivec2(gl_LaunchIDEXT.xy)).xyz;

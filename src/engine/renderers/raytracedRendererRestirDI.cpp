@@ -83,6 +83,19 @@ void RaytracedRendererRestirDI::recordTraceCommands(const Scene& scene, vk::raii
     cmdBuf.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR,rtPipeline_.getGraphicsPipeline());
     cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, rtPipeline_.getPipelineLayout(), 0, *getDescSetFrame(frameInFlightIndex), nullptr);
 
+
+    vk::MemoryBarrier2 barrierToInitial{
+        .srcStageMask =  vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+        .srcAccessMask = vk::AccessFlagBits2::eShaderStorageWrite | vk::AccessFlagBits2::eShaderStorageRead,
+        .dstStageMask =  vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+        .dstAccessMask = vk::AccessFlagBits2::eShaderStorageWrite | vk::AccessFlagBits2::eShaderStorageRead,
+    };
+    vk::DependencyInfo depToInitial{
+        .memoryBarrierCount = 1,
+        .pMemoryBarriers = &barrierToInitial
+    };
+    cmdBuf.pipelineBarrier2(depToInitial);
+
     // do initial pass
     recordInitialPassCommands(scene,cmdBuf,frameInFlightIndex,renderDims);
 
@@ -90,9 +103,9 @@ void RaytracedRendererRestirDI::recordTraceCommands(const Scene& scene, vk::raii
     if (pcsUnpacked_.doSpatialReuse) {
         vk::MemoryBarrier2 barrierInitialToSpatial{
             .srcStageMask =  vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
-            .srcAccessMask = vk::AccessFlagBits2::eShaderStorageWrite,
+            .srcAccessMask = vk::AccessFlagBits2::eShaderStorageWrite | vk::AccessFlagBits2::eShaderStorageRead,
             .dstStageMask =  vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
-            .dstAccessMask = vk::AccessFlagBits2::eShaderStorageRead,
+            .dstAccessMask = vk::AccessFlagBits2::eShaderStorageWrite | vk::AccessFlagBits2::eShaderStorageRead,
         };
         vk::DependencyInfo depInitialToSpatial{
             .memoryBarrierCount = 1,
@@ -106,9 +119,9 @@ void RaytracedRendererRestirDI::recordTraceCommands(const Scene& scene, vk::raii
     // do final shading pass
     vk::MemoryBarrier2 barrierSpatialToFinal{
         .srcStageMask =  vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
-        .srcAccessMask = vk::AccessFlagBits2::eShaderStorageWrite,
+        .srcAccessMask = vk::AccessFlagBits2::eShaderStorageWrite | vk::AccessFlagBits2::eShaderStorageRead,
         .dstStageMask =  vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
-        .dstAccessMask = vk::AccessFlagBits2::eShaderStorageRead,
+        .dstAccessMask = vk::AccessFlagBits2::eShaderStorageWrite | vk::AccessFlagBits2::eShaderStorageRead,
     };
     vk::DependencyInfo depSpatialToFinal{
         .memoryBarrierCount = 1,

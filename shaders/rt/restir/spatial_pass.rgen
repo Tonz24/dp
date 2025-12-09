@@ -7,11 +7,36 @@
 
 #define RAYGEN
 
-
 #include "../../common/common.glsl"
 #include "../../common/math_constants.glsl"
 #include "../pcs/pcs_raygen.glsl"
 #include "../ris.glsl"
+
+// GRIS paper (https://graphics.cs.utah.edu/research/projects/gris/sig22_GRIS.pdf)
+// x denotes the current pixel
+// y denotes the neighbor pixel (and its sample sample_i)
+// determinant of the jacobian equals the ratio of geometry terms for sample sample_i calculated for both origin points (world space position of this and neighhbor pixels) 
+float calculateJacobian(CandidateSample sample_i, vec3 posWS, vec3 neighborPos){
+
+    vec3 x_surf_to_y_hit = sample_i.omega_i - posWS;
+    vec3 x_surf_to_y_hit_dir = normalize(x_surf_to_y_hit);
+    float x_surf_to_y_dist = length(x_surf_to_y_hit);
+    float x_surf_to_y_dist_sqr = x_surf_to_y_dist * x_surf_to_y_dist;
+    
+    vec3 y_surf_to_y_hit = sample_i.omega_i - neighborPos;
+    vec3 y_surf_to_y_hit_dir = normalize(y_surf_to_y_hit);
+    float y_surf_to_y_dist = length(y_surf_to_y_hit);
+    float y_surf_to_y_dist_sqr = y_surf_to_y_dist * y_surf_to_y_dist;
+
+    float cos_theta_x = max(dot(-x_surf_to_y_hit_dir, sample_i.normal), 0.0f);
+    float cos_theta_y = max(dot(-y_surf_to_y_hit_dir, sample_i.normal), 0.0f);
+
+    float dist_term = y_surf_to_y_dist_sqr / x_surf_to_y_dist_sqr;
+    float cos_term = cos_theta_x / cos_theta_y;
+
+    float jacobian = sanitize(dist_term * cos_term);
+    return jacobian;
+}
 
 void main() { 
 
@@ -76,11 +101,15 @@ void main() {
         neighborMaterials[M] = neighborMat;
         M += 1;
     }
+    float rcpM = 1.0 / float(M);
 
     uint bufferReadIndex = getBufferReadIndex(); 
     uint bufferWriteIndex = getBufferWriteIndex(); 
 
     Reservoir outReservoir = makeEmptyReservoir();
+
+    uint acceptedSampleIndex = 0;
+    float acceptedPhat = 0.0f;
 
     float misWeight = M > 0 ? 1.0f / float(M) : 0.0f;
     for (uint i = 0; i < M; ++i) {
@@ -90,45 +119,70 @@ void main() {
         CandidateSample sample_i = reservoir_i.bestSample;
 
         bool positionSample = false;
-        float jacobian = 1.0f;
         float _ = unpackMisWeight(sample_i.misWeight,positionSample);
 
         // the jacobian determinant needs to be calculated to scale the solid angle weight as if it came from this pixel
-        // GRIS paper
-        // x denotes the current pixel
-        // y denotes the neighbor pixel (and its sample)
-        // https://graphics.cs.utah.edu/research/projects/gris/sig22_GRIS.pdf
-        if (positionSample){
-
-            vec3 x_surf_to_y_hit = sample_i.omega_i - posWS;
-            vec3 x_surf_to_y_hit_dir = normalize(x_surf_to_y_hit);
-            float x_surf_to_y_dist = length(x_surf_to_y_hit);
-            float x_surf_to_y_dist_sqr = x_surf_to_y_dist * x_surf_to_y_dist;
-            
-            vec3 y_surf_to_y_hit = sample_i.omega_i - neighborPosWSs[i];
-            vec3 y_surf_to_y_hit_dir = normalize(y_surf_to_y_hit);
-            float y_surf_to_y_dist = length(y_surf_to_y_hit);
-            float y_surf_to_y_dist_sqr = y_surf_to_y_dist * y_surf_to_y_dist;
-
-            float cos_theta_x = max(dot(-x_surf_to_y_hit_dir, sample_i.normal), 0.0f);
-            float cos_theta_y = max(dot(-y_surf_to_y_hit_dir, sample_i.normal), 0.0f);
-
-            float dist_term = y_surf_to_y_dist_sqr / x_surf_to_y_dist_sqr;
-            float cos_term = cos_theta_x / cos_theta_y;
-
-            jacobian = sanitize(dist_term * cos_term);
-        }
+        float jacobian = positionSample ? calculateJacobian(sample_i, posWS, neighborPosWSs[i]) : 1.0f;
 
         float p_hat = evalPhatVis(sample_i, params, posWS, rayDir, mat.materialType);
+
         float w = misWeight * p_hat * reservoir_i.W * jacobian;
-        addSample(outReservoir, sample_i, w, seed);
+
+        // update the accepted index if this sample is accepted 
+        if (addSample(outReservoir, sample_i, w, seed)){
+            acceptedSampleIndex = i;
+            acceptedPhat = p_hat;
+        }
+    }
+    
+    /*float correctionFactor = 1.0f;
+    float contribWeight = 1.0f;
+    float misNom = 0.0f;
+    float misDenom = 0.0f;
+
+    for (uint i = 0; i < M; ++i) {
+
+        ShadeParams neighborParams = neighborShadeParams[i];
+        vec3 neighborPosWS = neighborPosWSs[i];
+        vec3 neighborRayDir = neighborRayDirs[i];
+        Material neighborMat = neighborMaterials[i];
+
+        float p_hat = evalPhatVis(outReservoir.bestSample, neighborParams, neighborPosWS, neighborRayDir, neighborMat.materialType);
+
+        misDenom += p_hat;
+        if (i == acceptedSampleIndex)
+            misNom = p_hat;
+    }
+    
+    contribWeight = misNom / misDenom;
+    correctionFactor = contribWeight * rcpM;
+    */
+    
+    vec3 omega_i = outReservoir.bestSample.omega_i;
+    vec3 visibilityRayEndPoint = omega_i * 1000.0f;
+
+    bool isPosition = false;
+    float _ = unpackMisWeight(outReservoir.bestSample.misWeight, isPosition);
+
+    if (isPosition){
+        visibilityRayEndPoint = omega_i; 
     }
 
+    uint Z = 0;
+    for (uint i = 0; i < M; ++i) {
+        if (isVisible(neighborPosWSs[i], visibilityRayEndPoint, neighborShadeParams[i].normal))
+            Z += 1;
+    }
+
+    float correctionFactor = (1.0 / float(Z)) / rcpM; 
+
+    // finalize resampling
     outReservoir.wSum = sanitize(outReservoir.wSum);
+    //float p_hat = evalPhat(outReservoir.bestSample, params, posWS, rayDir, mat.materialType);
+    outReservoir.W = sanitize(correctionFactor / acceptedPhat * outReservoir.wSum);    
+    //outReservoir.W = sanitize(1.0f / acceptedPhat * outReservoir.wSum);    
 
-    float p_hat = evalPhat(outReservoir.bestSample, params, posWS, rayDir, mat.materialType);
-    outReservoir.W = p_hat > 0.0f ? 1.0f / p_hat * outReservoir.wSum : 0.0f;    
-
+    // write output sample to buffer 
     uint bufferWritePosition = flatten2DCoord(gl_LaunchIDEXT.xy, uvec2(imageSize)); 
     reservoirBuffers[bufferWriteIndex].reservoirs[bufferWritePosition] = outReservoir;
 }

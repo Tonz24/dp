@@ -68,3 +68,4 @@ struct alignas(16) Reservoir{
     float wSum;
     float W;
 };
+
