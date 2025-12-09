@@ -134,30 +134,8 @@ void main() {
             acceptedPhat = p_hat;
         }
     }
-    
-    /*float correctionFactor = 1.0f;
-    float contribWeight = 1.0f;
-    float misNom = 0.0f;
-    float misDenom = 0.0f;
 
-    for (uint i = 0; i < M; ++i) {
 
-        ShadeParams neighborParams = neighborShadeParams[i];
-        vec3 neighborPosWS = neighborPosWSs[i];
-        vec3 neighborRayDir = neighborRayDirs[i];
-        Material neighborMat = neighborMaterials[i];
-
-        float p_hat = evalPhatVis(outReservoir.bestSample, neighborParams, neighborPosWS, neighborRayDir, neighborMat.materialType);
-
-        misDenom += p_hat;
-        if (i == acceptedSampleIndex)
-            misNom = p_hat;
-    }
-    
-    contribWeight = misNom / misDenom;
-    correctionFactor = contribWeight * rcpM;
-    */
-    
     vec3 omega_i = outReservoir.bestSample.omega_i;
     vec3 visibilityRayEndPoint = omega_i * 1000.0f;
 

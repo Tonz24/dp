@@ -130,6 +130,18 @@ void RaytracedRendererRestirDI::recordTraceCommands(const Scene& scene, vk::raii
     cmdBuf.pipelineBarrier2(depSpatialToFinal);
     recordFinalShadePassCommands(scene,cmdBuf,frameInFlightIndex,renderDims);
 
+    vk::MemoryBarrier2 barrierAfterFinal{
+        .srcStageMask =  vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+        .srcAccessMask = vk::AccessFlagBits2::eShaderStorageWrite | vk::AccessFlagBits2::eShaderStorageRead,
+        .dstStageMask =  vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+        .dstAccessMask = vk::AccessFlagBits2::eShaderStorageWrite | vk::AccessFlagBits2::eShaderStorageRead,
+    };
+    vk::DependencyInfo depFinal{
+        .memoryBarrierCount = 1,
+        .pMemoryBarriers = &barrierAfterFinal
+    };
+    cmdBuf.pipelineBarrier2(depFinal);
+
     pcs_.frameCtr += 1;
     if (!pcs_.accumulate) pcs_.frameCtr = 0;
 }
