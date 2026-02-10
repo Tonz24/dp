@@ -26,7 +26,7 @@ bool RaytracedRendererRestirDI::drawGUI() {
         if (pcsUnpacked_.doSpatialReuse) {
             ImGui::Indent();
             changed |= ImGui::DragInt("Neighbor count",reinterpret_cast<int*>(&pcsUnpacked_.M_neighbor),0.25,0,31);
-            changed |= ImGui::DragInt("Search radius",reinterpret_cast<int*>(&pcsUnpacked_.spatialReuseSearchRadius),0.25,1,PcsRaygen::maxSampleCount);
+            changed |= ImGui::DragFloat("Search radius",&pcs_.neighborSearchRadius,0.25,1,500);
 
             ImGui::Unindent();
         }

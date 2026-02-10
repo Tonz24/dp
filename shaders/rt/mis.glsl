@@ -10,7 +10,7 @@ layout(location = 1) rayPayloadEXT BRDFSamplePayload payloadBRDF;
 // trace a ray for BRDF lighting
 TracedSample traceBRDFLighting(vec3 posWS, vec3 direction, vec3 normal){
     float tMin = 0.001f;
-    float tMax = 10000.0f;
+    float tMax = MAX_VISIBILITY_DIST;
 
     resetBRDFSamplePayload(payloadBRDF);
     traceRayEXT(
@@ -117,7 +117,7 @@ vec3 evaluateSampleEnvMisBrdf(ShadeParams shadeParams, vec3 posWS, vec3 rayDir, 
     vec3 omega_i = envSample.xyz;
     float envPdf = envSample.w;
 
-    float visibility = float(isVisible(posWS, omega_i * 1000.f, shadeParams.normal));
+    float visibility = float(isVisible(posWS, posWS + omega_i * MAX_VISIBILITY_DIST, shadeParams.normal));
 
     // retrieve radiance coming from the env map
     vec3 L_i = sampleSphericalMap(omega_i, pcs.skyHandle);

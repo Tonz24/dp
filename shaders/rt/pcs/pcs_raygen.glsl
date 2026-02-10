@@ -21,6 +21,7 @@ layout(push_constant, std140) uniform PushConstants {
     uint maxRecursionDepth;
 
     uint ris;
+    float neighborSearchRadius;
 } pcs;
 
 

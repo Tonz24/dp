@@ -15,7 +15,7 @@
 // GRIS paper (https://graphics.cs.utah.edu/research/projects/gris/sig22_GRIS.pdf)
 // x denotes the current pixel
 // y denotes the neighbor pixel (and its sample sample_i)
-// determinant of the jacobian equals the ratio of geometry terms for sample sample_i calculated for both origin points (world space position of this and neighhbor pixels) 
+// determinant of the jacobian equals the ratio of geometry terms for sample sample_i calculated for both origin points (world space position of this and neighbor pixels) 
 float calculateJacobian(CandidateSample sample_i, vec3 posWS, vec3 neighborPos){
 
     vec3 x_surf_to_y_hit = sample_i.omega_i - posWS;
@@ -75,10 +75,11 @@ void main() {
     // accepted neighbor count
     uint M = 1;
 
-    // gather neighbor coords
-    // start at index 1 since index 0 is occupied by this pixel's sample 
+    // gather neighbor coords 
     for (uint i = 0; i < neighborCount; ++i){
-        vec2 sampledDisk = ivec2(sampleDiskUniform(100.0f, seed));
+
+        // sample disk to retrieve neighbor pixel coord
+        vec2 sampledDisk = sampleDiskUniform(pcs.neighborSearchRadius, seed);
 
         ivec2 iNeighborCoord = ivec2(floor(sampledDisk + imageCoord));
         iNeighborCoord = clamp(iNeighborCoord, ivec2(0), ivec2(imageSize) - 1);
@@ -135,30 +136,35 @@ void main() {
         }
     }
 
-
     vec3 omega_i = outReservoir.bestSample.omega_i;
-    vec3 visibilityRayEndPoint = omega_i * 1000.0f;
-
+    
     bool isPosition = false;
     float _ = unpackMisWeight(outReservoir.bestSample.misWeight, isPosition);
 
-    if (isPosition){
-        visibilityRayEndPoint = omega_i; 
-    }
+    uint Z = 1;
 
-    uint Z = 0;
-    for (uint i = 0; i < M; ++i) {
-        if (isVisible(neighborPosWSs[i], visibilityRayEndPoint, neighborShadeParams[i].normal))
+    for (uint i = 1; i < M; ++i) {
+        vec3 targetPoint;
+
+        if (isPosition){
+            targetPoint = omega_i; 
+        } else {
+             // For env maps (isPosition == false), target is relative to the observer
+             targetPoint = neighborPosWSs[i] + omega_i * MAX_VISIBILITY_DIST;
+        }
+
+        if (isVisible(neighborPosWSs[i], targetPoint, neighborShadeParams[i].normal))
             Z += 1;
     }
 
     float correctionFactor = (1.0 / float(Z)) / rcpM; 
+    acceptedPhat = sanitize(acceptedPhat);
 
     // finalize resampling
     outReservoir.wSum = sanitize(outReservoir.wSum);
     //float p_hat = evalPhat(outReservoir.bestSample, params, posWS, rayDir, mat.materialType);
-    outReservoir.W = sanitize(correctionFactor / acceptedPhat * outReservoir.wSum);    
-    //outReservoir.W = sanitize(1.0f / acceptedPhat * outReservoir.wSum);    
+    //outReservoir.W = sanitize(correctionFactor / acceptedPhat * outReservoir.wSum);    
+    outReservoir.W = sanitize(1.0f / acceptedPhat * outReservoir.wSum);    
 
     // write output sample to buffer 
     uint bufferWritePosition = flatten2DCoord(gl_LaunchIDEXT.xy, uvec2(imageSize)); 

@@ -110,7 +110,7 @@ CandidateSample envSampleLight(ShadeParams shadeParams, vec3 posWS, vec3 rayDir,
 
     //  if the ray hits anything (env map is occluded), early exit
     //  occlusion of the env map means that zero radiance would come from this direction anyway
-    if (!isVisible(posWS, omega_i * 1000.f, shadeParams.normal)) 
+    if (!isVisible(posWS, posWS + omega_i * MAX_VISIBILITY_DIST, shadeParams.normal)) 
         return makeEmptyCandidate();
 
     // retrieve radiance coming from the env map
@@ -246,7 +246,7 @@ vec3 evalFVis(CandidateSample candidate, ShadeParams shadeParams, vec3 posWS, ve
 
     vec3 omega_i = candidate.omega_i;
     // if omega_i represents direction, set the endpoint far along it
-    vec3 visibilityRayEndPoint = omega_i * 10000.0f;
+    vec3 visibilityRayEndPoint = posWS + omega_i * MAX_VISIBILITY_DIST;
 
     bool isPosition = false;
     float misWeight = unpackMisWeight(candidate.misWeight,isPosition);

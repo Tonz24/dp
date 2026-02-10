@@ -46,7 +46,7 @@ void main() {
         weightFactor = brdf * cosThetaI / pdf;
 
     float tMin = 0.001f;
-    float tMax = 10000.0f;
+    float tMax = MAX_VISIBILITY_DIST;
 
     vec3 radiance = vec3(0.0);
     vec3 weight = vec3(1.0);

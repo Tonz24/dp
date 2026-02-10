@@ -6,4 +6,6 @@
 #define INVPI 1.0/PI
 #define INV2PI 1.0/(TWOPI)
 
+#define MAX_VISIBILITY_DIST 10000.0f
+
 #endif // MATH_CONSTANTS_GLSL

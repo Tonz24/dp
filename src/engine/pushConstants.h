@@ -125,6 +125,7 @@ struct PcsRaygen{
          * 63 dec = 0x3F
          */
         uint32_t ris{0};
+        float neighborSearchRadius{80.0f};
     };
     Data data;
 
@@ -143,14 +144,14 @@ struct PcsRaygen{
     static constexpr uint32_t brdfShift = 0 * 6;
     static constexpr uint32_t areaShift = 1 * 6;
     static constexpr uint32_t envShift =  2 * 6;
-    static constexpr uint32_t neighborShift =  3 * 6;
+    static constexpr uint32_t neighborCountShift =  3 * 6;
     static constexpr uint32_t bufferIndexShift =  4 * 6;
 
     static constexpr uint32_t brdfMask = 0x3F << brdfShift;
     static constexpr uint32_t areaMask = 0x3F << areaShift;
     static constexpr uint32_t envMask = 0x3F << envShift;
-    static constexpr uint32_t neighborMask = 0x3F << neighborShift;
     static constexpr uint32_t bufferIndexMask = 0x01 << bufferIndexShift;
+    static constexpr uint32_t neighborMask = 0x3F << neighborCountShift;
 
 
     struct UnpackedData {
@@ -162,7 +163,7 @@ struct PcsRaygen{
         uint32_t doSpatialReuse{0};
         // spatial reuse neighbor count
         uint32_t M_neighbor{0};
-        uint32_t spatialReuseSearchRadius{0};
+        uint32_t neighborSearchRadius{0};
 
         bool bufferIndices{false};
     };
@@ -174,7 +175,7 @@ struct PcsRaygen{
         data.ris |= unpacked.M_brdf << brdfShift;
         data.ris |= unpacked.M_area << areaShift;
         data.ris |= unpacked.M_env << envShift;
-        data.ris |= unpacked.M_neighbor << neighborShift;
+        data.ris |= unpacked.M_neighbor << neighborCountShift;
         data.ris |= static_cast<uint32_t>(unpacked.bufferIndices) << bufferIndexShift;
     }
 };
