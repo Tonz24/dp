@@ -12,6 +12,24 @@
 #include "../pcs/pcs_raygen.glsl"
 #include "../ris.glsl"
 
+uvec2 neighborPixelCoords[32];
+ShadeParams neighborShadeParams[32];
+vec3 neighborPosWSs[32];
+vec3 neighborRayDirs[32];
+Material neighborMaterials[32];
+
+// accepted neighbor count; set to 1 as default, since the pixel's reservoir should already contain a valid sample from the candidate selection pass
+uint M = 1;
+float rcpM;
+
+// this pixel's information
+ShadeParams params;
+vec3 posWS;
+vec3 rayDir;
+Material mat;
+
+
+
 // GRIS paper (https://graphics.cs.utah.edu/research/projects/gris/sig22_GRIS.pdf)
 // x denotes the current pixel
 // y denotes the neighbor pixel (and its sample sample_i)
@@ -38,6 +56,33 @@ float calculateJacobian(CandidateSample sample_i, vec3 posWS, vec3 neighborPos){
     return jacobian;
 }
 
+float calculatePairwiseMIS(uint i, CandidateSample sample_i, float p_hat_c){
+
+    float misWeight = 0.0f;
+
+    float p_hat_c_div = p_hat_c / (float(M) - 1);
+
+    // PAIRWISE MIS CALCULATION
+    // index i = 0 always contains the canonical sample (this pixel's sample)
+    if (i == 0){
+        float sum = 0.0f;
+
+        for (uint j = 1; j < M; j++){
+
+            float p_hat_j = evalPhatVis(sample_i, neighborShadeParams[j], neighborPosWSs[j], rayDir, neighborMaterials[j].materialType);
+
+            sum += sanitize(p_hat_c_div / (p_hat_j + p_hat_c_div));
+        }
+        misWeight = rcpM * (1.0f + sum);
+    }
+    else{
+        float p_hat_i = evalPhatVis(sample_i, neighborShadeParams[i], neighborPosWSs[i], rayDir, neighborMaterials[i].materialType);
+        misWeight = rcpM * (p_hat_i) / (p_hat_i + p_hat_c_div); 
+    }
+
+    return sanitize(misWeight);
+}
+
 void main() { 
 
     // Calc seed
@@ -49,21 +94,10 @@ void main() {
     vec2 imageCoord = vec2(gl_LaunchIDEXT.xy) + 0.5; // add half pixel offset (sample pixel centers, not corners)
     vec2 uv = imageCoord / imageSize;
 
-    ShadeParams params;
-    vec3 posWS;
-    vec3 rayDir;
-    Material mat;
-
     if (!unpackFirstHitRestir(uv,params,posWS,rayDir, mat))
         return;
 
     uint neighborCount = getNeighborCount();
-
-    uvec2 neighborPixelCoords[32];
-    ShadeParams neighborShadeParams[32];
-    vec3 neighborPosWSs[32];
-    vec3 neighborRayDirs[32];
-    Material neighborMaterials[32];
     
     // preinitialize current pixel
     neighborPixelCoords[0] = uvec2(imageCoord);
@@ -73,7 +107,7 @@ void main() {
     neighborMaterials[0] = mat;
 
     // accepted neighbor count
-    uint M = 1;
+    M = 1;
 
     // gather neighbor coords 
     for (uint i = 0; i < neighborCount; ++i){
@@ -102,7 +136,7 @@ void main() {
         neighborMaterials[M] = neighborMat;
         M += 1;
     }
-    float rcpM = 1.0 / float(M);
+    rcpM = 1.0 / float(M);
 
     uint bufferReadIndex = getBufferReadIndex(); 
     uint bufferWriteIndex = getBufferWriteIndex(); 
@@ -112,27 +146,33 @@ void main() {
     uint acceptedSampleIndex = 0;
     float acceptedPhat = 0.0f;
 
-    float misWeight = M > 0 ? 1.0f / float(M) : 0.0f;
+    float misWeight = M > 0 ? 1.0f / float(M) : 1.0f;
     for (uint i = 0; i < M; ++i) {
 
+        // get this pixel's reservoir and sample (canonical sample for this pixel) 
         uint bufferReadPosition = flatten2DCoord(neighborPixelCoords[i], uvec2(imageSize));
         Reservoir reservoir_i = reservoirBuffers[bufferReadIndex].reservoirs[bufferReadPosition];
         CandidateSample sample_i = reservoir_i.bestSample;
 
+        // calculate the p_hat of the canonical sample
+        float p_hat_c = evalPhatVis(sample_i, params, posWS, rayDir, mat.materialType);
+
+        // compute the pairwise MIS weight for neighbor resampling
+        misWeight = calculatePairwiseMIS(i, sample_i, p_hat_c);
+
         bool positionSample = false;
         float _ = unpackMisWeight(sample_i.misWeight,positionSample);
 
-        // the jacobian determinant needs to be calculated to scale the solid angle weight as if it came from this pixel
+        // the jacobian determinant needs to be calculated to scale the solid angle weight of sample_i as if it came from this pixel
         float jacobian = positionSample ? calculateJacobian(sample_i, posWS, neighborPosWSs[i]) : 1.0f;
 
-        float p_hat = evalPhatVis(sample_i, params, posWS, rayDir, mat.materialType);
-
-        float w = misWeight * p_hat * reservoir_i.W * jacobian;
+        // calculate final resampling weight
+        float w = misWeight * p_hat_c * reservoir_i.W * jacobian;
 
         // update the accepted index if this sample is accepted 
         if (addSample(outReservoir, sample_i, w, seed)){
             acceptedSampleIndex = i;
-            acceptedPhat = p_hat;
+            acceptedPhat = p_hat_c;
         }
     }
 
@@ -141,32 +181,15 @@ void main() {
     bool isPosition = false;
     float _ = unpackMisWeight(outReservoir.bestSample.misWeight, isPosition);
 
-    uint Z = 1;
-
-    for (uint i = 1; i < M; ++i) {
-        vec3 targetPoint;
-
-        if (isPosition){
-            targetPoint = omega_i; 
-        } else {
-             // For env maps (isPosition == false), target is relative to the observer
-             targetPoint = neighborPosWSs[i] + omega_i * MAX_VISIBILITY_DIST;
-        }
-
-        if (isVisible(neighborPosWSs[i], targetPoint, neighborShadeParams[i].normal))
-            Z += 1;
-    }
-
-    float correctionFactor = (1.0 / float(Z)) / rcpM; 
     acceptedPhat = sanitize(acceptedPhat);
 
     // finalize resampling
     outReservoir.wSum = sanitize(outReservoir.wSum);
-    //float p_hat = evalPhat(outReservoir.bestSample, params, posWS, rayDir, mat.materialType);
-    //outReservoir.W = sanitize(correctionFactor / acceptedPhat * outReservoir.wSum);    
-    outReservoir.W = sanitize(1.0f / acceptedPhat * outReservoir.wSum);    
 
-    // write output sample to buffer 
+    //outReservoir.W = sanitize(correctionFactor / acceptedPhat * outReservoir.wSum);    
+    outReservoir.W = sanitize(outReservoir.wSum / acceptedPhat);    
+
+    // write output reservoir to buffer 
     uint bufferWritePosition = flatten2DCoord(gl_LaunchIDEXT.xy, uvec2(imageSize)); 
     reservoirBuffers[bufferWriteIndex].reservoirs[bufferWritePosition] = outReservoir;
 }
