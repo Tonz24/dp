@@ -18,6 +18,9 @@ vec3 neighborPosWSs[32];
 vec3 neighborRayDirs[32];
 Material neighborMaterials[32];
 
+// total possible neighbor count, set via UI
+uint neighborCount;
+
 // accepted neighbor count; set to 1 as default, since the pixel's reservoir should already contain a valid sample from the candidate selection pass
 uint M = 1;
 float rcpM;
@@ -83,32 +86,7 @@ float calculatePairwiseMIS(uint i, CandidateSample sample_i, float p_hat_c){
     return sanitize(misWeight);
 }
 
-void main() { 
-
-    // Calc seed
-    uvec2 s = pcg2d(ivec2(gl_LaunchIDEXT.xy) * (pcs.seed));
-    uint seed = s.x + s.y;
-
-    //  calculate texture coordinate for sampling
-    vec2 imageSize = vec2(imageSize(outputImage));
-    vec2 imageCoord = vec2(gl_LaunchIDEXT.xy) + 0.5; // add half pixel offset (sample pixel centers, not corners)
-    vec2 uv = imageCoord / imageSize;
-
-    if (!unpackFirstHitRestir(uv,params,posWS,rayDir, mat))
-        return;
-
-    uint neighborCount = getNeighborCount();
-    
-    // preinitialize current pixel
-    neighborPixelCoords[0] = uvec2(imageCoord);
-    neighborShadeParams[0] = params;
-    neighborPosWSs[0] = posWS;
-    neighborRayDirs[0] = rayDir;
-    neighborMaterials[0] = mat;
-
-    // accepted neighbor count
-    M = 1;
-
+void gatherNeighbors(vec2 imageCoord, vec2 imageSize, inout uint seed){
     // gather neighbor coords 
     for (uint i = 0; i < neighborCount; ++i){
 
@@ -137,6 +115,31 @@ void main() {
         M += 1;
     }
     rcpM = 1.0 / float(M);
+}
+
+void main() { 
+
+    // Calc seed
+    uvec2 s = pcg2d(ivec2(gl_LaunchIDEXT.xy) * (pcs.seed));
+    uint seed = s.x + s.y;
+
+    //  calculate texture coordinate for sampling
+    vec2 imageSize = vec2(imageSize(outputImage));
+    vec2 imageCoord = vec2(gl_LaunchIDEXT.xy) + 0.5; // add half pixel offset (sample pixel centers, not corners)
+    vec2 uv = imageCoord / imageSize;
+
+    if (!unpackFirstHitRestir(uv,params,posWS,rayDir, mat))
+        return;
+
+    neighborCount = getNeighborCount();
+    M = 1;
+
+    // preinitialize current pixel
+    neighborPixelCoords[0] = uvec2(imageCoord);
+    neighborShadeParams[0] = params;
+    neighborPosWSs[0] = posWS;
+    neighborRayDirs[0] = rayDir;
+    neighborMaterials[0] = mat;
 
     uint bufferReadIndex = getBufferReadIndex(); 
     uint bufferWriteIndex = getBufferWriteIndex(); 
@@ -145,6 +148,8 @@ void main() {
 
     uint acceptedSampleIndex = 0;
     float acceptedPhat = 0.0f;
+
+    gatherNeighbors(imageCoord, imageSize,seed);
 
     float misWeight = M > 0 ? 1.0f / float(M) : 1.0f;
     for (uint i = 0; i < M; ++i) {
