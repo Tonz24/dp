@@ -8,8 +8,6 @@ layout(push_constant) uniform PushConstants {
     uint meshId;
 
     uint seed;
-    uint width;
-    uint height;
 } pcs;
 
 #endif // PCS_GBUFFER_FILL_GLSL

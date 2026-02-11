@@ -17,9 +17,7 @@ struct PcsGBufferFill{
         uint32_t materialId{};
         uint32_t meshId{};
 
-        uint32_t seed;
-        uint32_t width;
-        uint32_t height;
+        uint32_t seed{};
     };
     Data data;
 
@@ -44,6 +42,7 @@ struct PcsGBufferShade{
         int remapNormals{true};
         uint32_t albedoMapHandle;
         uint32_t normalMapHandle;
+        uint32_t motionMapHandle;
         uint32_t depthMapHandle;
 
         uint32_t materialMapHandle;

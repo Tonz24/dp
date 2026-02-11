@@ -8,6 +8,7 @@ layout(push_constant, std140) uniform PushConstants {
     int remapNormals;
     uint albedoMapHandle;
     uint normalMapHandle;
+    uint motionMapHandle;
     uint depthMapHandle;
 
     uint materialMapHandle;

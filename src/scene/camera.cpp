@@ -91,6 +91,10 @@ bool Camera::drawGUI() {
 }
 
 void Camera::recalculateMatrices() {
+    // copy this frame data into previous frame data fields
+    memcpy(&uboFormat_.matViewPrev, &uboFormat_ , sizeof(glm::mat4) * 4);
+    uboFormat_.positionWorldPrev = uboFormat_.positionWorld;
+
     recalculateViewMat();
     recalculateProjMat();
     recalculateCompoundMatrices();

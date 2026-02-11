@@ -1080,6 +1080,7 @@ void Engine::configureVkUtils() const {
 void Engine::updateUBOs() {
 
     if (dirtyCameraUBO_) {
+        // copy data from RAM to device memory
         memcpy(selectedRenderer_->getCamUBOsMapped(frameInFlightIndex_),&cameraUBOStorage_,sizeof(cameraUBOStorage_));
         dirtyCameraUBO_ = false;
     }
@@ -1090,8 +1091,6 @@ void Engine::updateUBOs() {
         dirtyMaterialUBO_ = false;
     }
 }
-
-
 
 void Engine::setCameraUBOStorage(const CameraUBOFormat& data) {
     dirtyCameraUBO_ = true;

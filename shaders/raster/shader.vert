@@ -8,8 +8,9 @@ layout(location = 3) in vec2 inTexCoord;
 
 layout(location = 0) out vec3 outNormal;
 layout(location = 1) out vec2 outTexCoord;
-layout(location = 2) out mat3 outTBN;
-layout(location = 5) out vec3 outPosWS;
+layout(location = 2) out vec3 outPosWS;
+layout(location = 3) out vec4 outPosCS;
+layout(location = 4) out mat3 outTBN;
 
 #include "../common/common.glsl"
 #include "pcs/pcs_gbuffer_fill.glsl"
@@ -17,7 +18,8 @@ layout(location = 5) out vec3 outPosWS;
 void main() {
     vec4 posWS = pcs.matM * vec4(inPosition,1.0);
     outPosWS = posWS.xyz;
-    gl_Position = cameraUBO.matVP * posWS;
+    outPosCS = cameraUBO.matVP * posWS; // save the clip space position withour perspective divide
+    gl_Position = outPosCS; // perspective divide happens automatically
 
     outNormal = normalize(mat3(pcs.matN) * inNormal);
     vec3 tangent = normalize(mat3(pcs.matN) * inTangent);

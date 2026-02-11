@@ -101,7 +101,7 @@ void Mesh::stage(const VkUtils::BufferAlloc& stagingBuffer) const {
     VkUtils::copyBuffer(stagingBuffer,indexBuffer_,indexBufferSize);
 }
 
-void Mesh::recordDrawCommands(vk::raii::CommandBuffer& cmdBuf, const vk::raii::PipelineLayout& pipelineLayout, uint32_t width, uint32_t height, uint32_t seed) const {
+void Mesh::recordDrawCommands(vk::raii::CommandBuffer& cmdBuf, const vk::raii::PipelineLayout& pipelineLayout, uint32_t seed) const {
     cmdBuf.bindVertexBuffers(0,vertexBuffer_.buffer,{0});
     cmdBuf.bindIndexBuffer(indexBuffer_.buffer,0,vk::IndexType::eUint32);
 
@@ -111,8 +111,6 @@ void Mesh::recordDrawCommands(vk::raii::CommandBuffer& cmdBuf, const vk::raii::P
         .materialId = material_->getCID(),
         .meshId = getCID(),
         .seed = seed,
-        .width = width,
-        .height = height
     };
 
     cmdBuf.pushConstants(pipelineLayout,PcsGBufferFill::stageFlags,0, vk::ArrayProxy<const PcsGBufferFill::Data>{pcs});

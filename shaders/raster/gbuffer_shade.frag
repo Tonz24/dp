@@ -13,14 +13,16 @@ layout(location = 0) out vec4 fragColor;
 #include "../rt/raycommon.glsl"
 #include "../rt/pbr.glsl"
 
-const int OVERLAY_DEBUG_PHONG = 0;
-const int OVERLAY_ALBEDO_MAP = 1;
-const int OVERLAY_ROUGHNESS_MAP = 2;
-const int OVERLAY_METALLIC_MAP = 3;
-const int OVERLAY_NORMAL_MAP = 4;
-const int OVERLAY_DEPTH_MAP = 5;
-const int OVERLAY_WS_POS = 6;
-const int OVERLAY_DEBUG_PBR = 7;
+const int OVERLAY_ALBEDO_MAP = 0;
+const int OVERLAY_ROUGHNESS_MAP = 1;
+const int OVERLAY_METALLIC_MAP = 2;
+const int OVERLAY_NORMAL_MAP = 3;
+const int OVERLAY_DEPTH_MAP = 4;
+const int OVERLAY_WS_POS = 5;
+const int OVERLAY_MOTION_VECTORS = 6;
+const int OVERLAY_DEBUG_PHONG = 7;
+const int OVERLAY_DEBUG_PBR = 8;
+
 
 
 //  https://stackoverflow.com/questions/51108596/linearize-depth
@@ -112,7 +114,7 @@ void main() {
     float roughness = normalRoughness.w;
 
     float depth = texture(textures[pcs.depthMapHandle], screenTexCoord).x;
-
+    vec2 motion = texture(textures[pcs.motionMapHandle], screenTexCoord).xy;
 
     //  this fragment has something to shade only if there's a valid normal underneath it
     bool hasValidGeometry = (bool((normal.x > 0 || normal.x < 0) || (normal.y > 0 || normal.y < 0) || (normal.z > 0 || normal.z < 0)));
@@ -129,25 +131,27 @@ void main() {
 
     if (pcs.overlayIndex == OVERLAY_ALBEDO_MAP)
         fragColor = vec4(albedo,1.0);
-    if (pcs.overlayIndex == OVERLAY_NORMAL_MAP){
+    else if (pcs.overlayIndex == OVERLAY_NORMAL_MAP){
         vec3 normalRemapped = normal * 0.5 + 0.5;
         fragColor = vec4(mix(normal,normalRemapped,float(pcs.remapNormals)),1.0);
     }
-    if (pcs.overlayIndex == OVERLAY_DEPTH_MAP){
+    else if (pcs.overlayIndex == OVERLAY_DEPTH_MAP){
         float linDepth = linearizeDepth(depth, cameraUBO.zNear, cameraUBO.zFar) * 0.125;
         fragColor = vec4(linDepth, linDepth, linDepth,1.0);
     }
-    if (pcs.overlayIndex == OVERLAY_WS_POS){
+    else if (pcs.overlayIndex == OVERLAY_WS_POS){
         fragColor = vec4(posWS,1);
     }
-    if (pcs.overlayIndex == OVERLAY_ROUGHNESS_MAP){
+    else if (pcs.overlayIndex == OVERLAY_MOTION_VECTORS){
+        fragColor = vec4(motion,0,1);
+    }
+    else if (pcs.overlayIndex == OVERLAY_ROUGHNESS_MAP){
         fragColor = vec4(roughness,roughness,roughness,1);
     }
-    if (pcs.overlayIndex == OVERLAY_METALLIC_MAP){
+    else if (pcs.overlayIndex == OVERLAY_METALLIC_MAP){
         fragColor = vec4(metallic,metallic,metallic,1);
     }
-
-    if (pcs.overlayIndex == OVERLAY_DEBUG_PHONG){
+    else if (pcs.overlayIndex == OVERLAY_DEBUG_PHONG){
         vec4 camRay = cameraUBO.matInvVP * vec4(inNDCxy,depth,1);
         float shininess = 2.0f / (roughness * roughness) - 2.0f;
 
@@ -173,12 +177,14 @@ void main() {
 
         fragColor = vec4(aces(L_o),1);
     }
-
-    if (pcs.overlayIndex == OVERLAY_DEBUG_PBR){
+    else if (pcs.overlayIndex == OVERLAY_DEBUG_PBR){
         vec3 omega_o = normalize(cameraUBO.posWS - posWS);
         vec3 omega_i = normalize(pcs.lightPosWS - posWS);
 
         vec3 L_o = evalPbr(albedo, roughness, metallic, normal, omega_o, omega_i, posWS);
         fragColor = vec4(aces(L_o),1.0);
+    }
+    else{
+        fragColor = vec4(1,0,1,0);
     }
 }

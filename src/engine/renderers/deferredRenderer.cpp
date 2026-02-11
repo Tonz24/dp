@@ -15,13 +15,14 @@ bool DeferredRenderer::drawGUI() {
         ImGui::Indent();
 
         static constexpr std::array items{
-            "Debug Phong",
             "Albedo map",
             "Roughness map",
             "Metallic map",
             "Normal map",
             "Depth map",
             "World space position",
+            "Motion vectors",
+            "Debug Phong",
             "Debug Torrance-Sparrow",
         };
         if (ImGui::Combo("Show target", &pcs_.overlayIndex, items.data(), items.size())) {
@@ -94,7 +95,7 @@ void DeferredRenderer::initGraphicsPipelines() {
     std::array pcsSkyRange{PcsSky::getRange()};
 
     std::array shadeAttachmentFormat{gBuffer_->getTarget().getVkFormat()};
-    std::array fillAttachmentFormats{gBuffer_->getAlbedoMap().getVkFormat(), gBuffer_->getNormalMap().getVkFormat()};
+    std::array fillAttachmentFormats{gBuffer_->getAlbedoMap().getVkFormat(), gBuffer_->getMotionMap().getVkFormat(), gBuffer_->getNormalMap().getVkFormat()};
 
     gBufferFillPipelineMS_ = RasterPipeline{
         gBufferFillStages,
@@ -138,6 +139,7 @@ void DeferredRenderer::initGraphicsPipelines() {
 void DeferredRenderer::setPcsData() {
     pcs_.albedoMapHandle = gBuffer_->getAlbedoMap().getCID();
     pcs_.normalMapHandle = gBuffer_->getNormalMap().getCID();
+    pcs_.motionMapHandle = gBuffer_->getMotionMap().getCID();
     pcs_.depthMapHandle = gBuffer_->getDepthMap().getCID();
     pcs_.materialMapHandle = gBuffer_->getMaterialMap().getCID();
 }
@@ -312,6 +314,16 @@ void DeferredRenderer::recordMultisampledSceneCommands(const Scene& scene, vk::r
             .storeOp = vk::AttachmentStoreOp::eDontCare,
             .clearValue = clearColorFloat
         },
+        vk::RenderingAttachmentInfo { // motion vectors
+            .imageView = gBuffer_->getMotionMapMS().getVkImageView(),
+            .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+            .resolveMode  = vk::ResolveModeFlagBits::eAverage,
+            .resolveImageView = gBuffer_->getMotionMap().getVkImageView(),
+            .resolveImageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+            .loadOp = vk::AttachmentLoadOp::eClear,
+            .storeOp = vk::AttachmentStoreOp::eDontCare,
+            .clearValue = clearColorFloat
+        },
         vk::RenderingAttachmentInfo { // object (mesh) ID
             .imageView = gBuffer_->getObjectIdMapMS().getVkImageView(),
             .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
@@ -392,7 +404,7 @@ void DeferredRenderer::recordMultisampledSceneCommands(const Scene& scene, vk::r
     uint32_t height = gBuffer_->getAlbedoMap().getHeight();
 
     for (const auto &mesh : scene.getMeshes()) {
-        mesh->recordDrawCommands(cmdBuf, gBufferFillPipelineMS_.getPipelineLayout(), width, height, seed);
+        mesh->recordDrawCommands(cmdBuf, gBufferFillPipelineMS_.getPipelineLayout(), seed);
     }
     cmdBuf.endRendering();
 }
@@ -504,6 +516,13 @@ void DeferredRenderer::recordSingleSampledSceneCommands(const Scene& scene, vk::
             .storeOp = vk::AttachmentStoreOp::eStore,
             .clearValue = clearColorFloat
         },
+        vk::RenderingAttachmentInfo { // motion vectors
+            .imageView = gBuffer_->getMotionMap().getVkImageView(),
+            .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+            .loadOp = vk::AttachmentLoadOp::eClear,
+            .storeOp = vk::AttachmentStoreOp::eStore,
+            .clearValue = clearColorFloat
+        },
         vk::RenderingAttachmentInfo { // id map
             .imageView = gBuffer_->getObjectIdMap().getVkImageView(),
             .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
@@ -575,7 +594,7 @@ void DeferredRenderer::recordSingleSampledSceneCommands(const Scene& scene, vk::
     uint32_t height = gBuffer_->getAlbedoMap().getHeight();
 
     for (const auto &mesh : scene.getMeshes()) {
-        mesh->recordDrawCommands(cmdBuf, gBufferFillPipeline_.getPipelineLayout(), width, height, seed);
+        mesh->recordDrawCommands(cmdBuf, gBufferFillPipeline_.getPipelineLayout(), seed);
     }
     cmdBuf.endRendering();
 }

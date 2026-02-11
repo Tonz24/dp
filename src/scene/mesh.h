@@ -47,7 +47,7 @@ public:
     void stage(const VkUtils::BufferAlloc& stagingBuffer) const;
     void initBLAS();
 
-    void recordDrawCommands(vk::raii::CommandBuffer& cmdBuf, const vk::raii::PipelineLayout& pipelineLayout, uint32_t width, uint32_t height, uint32_t seed) const;
+    void recordDrawCommands(vk::raii::CommandBuffer& cmdBuf, const vk::raii::PipelineLayout& pipelineLayout, uint32_t seed) const;
 
     [[nodiscard]] const std::vector<Vertex3D>& getVertices() const {return vertices_;}
     [[nodiscard]] const std::vector<uint32_t >& getIndices() const { return indices_; }

@@ -68,6 +68,16 @@ vec3 sanitize(vec3 val){
     return valSanitized;
 }
 
+vec2 sanitize(vec2 val){
+
+    bool isValid = !(any(isinf(val)) || any(isnan(val)) || any(lessThan(val, vec2(0.0))));
+    
+    uvec2 valUnsigned = floatBitsToUint(val) & (uint(isValid) * uint(0xFFFFFFFF));
+    vec2 valSanitized = uintBitsToFloat(valUnsigned);
+
+    return valSanitized;
+}
+
 float sanitize(float val){
 
     bool isValid = !(isinf(val) || isnan(val) || val < 0.0f);

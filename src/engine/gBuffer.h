@@ -28,6 +28,9 @@ public:
     [[nodiscard]] Texture& getNormalMap() const { return *normalMap_; }
     [[nodiscard]] Texture& getNormalMapMS() const { return *normalMapMS_; }
 
+    [[nodiscard]] Texture& getMotionMap() const { return *motionMap_; }
+    [[nodiscard]] Texture& getMotionMapMS() const { return *motionMapMS_; }
+
     [[nodiscard]] Texture& getMaterialMap() const { return *materialIdMap_; }
     [[nodiscard]] Texture& getMaterialMapMS() const { return *materialIdMapMS_; }
 
@@ -64,6 +67,9 @@ public:
     static constexpr vk::Format normalMapVkFormat{vk::Format::eR16G16B16A16Sfloat};
     static constexpr vk::ImageUsageFlags normalMapUsageFlags{defaultAttachmentUsageFlags}; // transfer src for blitting into swapchain
 
+    static constexpr vk::Format motionMapVkFormat{vk::Format::eR16G16Sfloat};
+    static constexpr vk::ImageUsageFlags motionMapUsageFlags{defaultAttachmentUsageFlags}; // transfer src for blitting into swapchain
+
     static constexpr vk::Format materialMapVkFormat{vk::Format::eR32Uint};
     static constexpr vk::ImageUsageFlags materialMapUsageFlags{defaultAttachmentUsageFlags};  // transfer src for retrieving id at cursor position
 
@@ -88,7 +94,7 @@ public:
     static constexpr vk::Format accumulatorFormat{vk::Format::eR32G32B32A32Sfloat};
     static constexpr vk::ImageUsageFlags accumulatorUsageFlags{vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled};
 
-    static constexpr std::array attachmentFormats{albedoMapVkFormat, normalMapVkFormat, idMapVkFormat, materialMapVkFormat};
+    static constexpr std::array attachmentFormats{albedoMapVkFormat, normalMapVkFormat, motionMapVkFormat, idMapVkFormat, materialMapVkFormat};
     static constexpr std::array idAttachmentFormats{ idMapVkFormat, materialMapVkFormat};
 
     static vk::Format getTargetVkFormat();
@@ -105,6 +111,9 @@ private:
     std::shared_ptr<Texture> normalMap_{nullptr};
     std::shared_ptr<Texture> normalMapMS_{nullptr};
 
+    std::shared_ptr<Texture> motionMap_{nullptr};
+    std::shared_ptr<Texture> motionMapMS_{nullptr};
+
     std::shared_ptr<Texture> depthMap_{nullptr};
     std::shared_ptr<Texture> depthMapMS_{nullptr};
 
@@ -117,7 +126,6 @@ private:
 
     std::shared_ptr<Texture> target_{nullptr};
     std::shared_ptr<Texture> accumulator_{nullptr};
-
 
     vk::SampleCountFlagBits sampleCount_{vk::SampleCountFlagBits::e1};
 

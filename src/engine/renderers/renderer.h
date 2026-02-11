@@ -150,8 +150,6 @@ private:
         }
     };
 
-
-    //static constexpr vk::DescriptorBindingFlags bindingFlags{vk::DescriptorBindingFlagBits::eUpdateAfterBind};
     static constexpr std::array<vk::DescriptorBindingFlags, frameDescriptorBindings.size()> bindingFlags{
         vk::DescriptorBindingFlagBits::eUpdateAfterBind,
         vk::DescriptorBindingFlagBits::eUpdateAfterBind,

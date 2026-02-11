@@ -19,6 +19,7 @@ void GBuffer::createTextures(const std::string& prefix, uint32_t width, uint32_t
 
     albedoMap_.reset();
     normalMap_.reset();
+    motionMap_.reset();
     materialIdMap_.reset();
     target_.reset();
     depthMap_.reset();
@@ -36,6 +37,12 @@ void GBuffer::createTextures(const std::string& prefix, uint32_t width, uint32_t
                                                                  height,
                                                                  normalMapVkFormat,
                                                                  normalMapUsageFlags);
+
+    motionMap_ = TextureManager::getInstance()->registerResource(prefix + "_motion",
+                                                                width,
+                                                                height,
+                                                                motionMapVkFormat,
+                                                                motionMapUsageFlags);
 
     materialIdMap_ = TextureManager::getInstance()->registerResource(prefix + "_mat_id",
                                                                  width,
@@ -64,7 +71,7 @@ void GBuffer::createTextures(const std::string& prefix, uint32_t width, uint32_t
                                                                 getTargetVkFormat(),
                                                                 targetUsageFlags);
 
-    accumulator_ = TextureManager::getInstance()->registerResource(prefix + "accumulator",
+    accumulator_ = TextureManager::getInstance()->registerResource(prefix + "_accumulator",
                                                                  width,
                                                                  height,
                                                                  accumulatorFormat,
@@ -86,6 +93,13 @@ void GBuffer::createMSTextures(const std::string& prefix, uint32_t width, uint32
                                                                 width,
                                                                 height,
                                                                 normalMapVkFormat,
+                                                                defaultMSAttachmentUsageFlags,
+                                                                sampleCount_);
+
+    motionMapMS_ = TextureManager::getInstance()->registerResource(prefix + "_motionMS",
+                                                                width,
+                                                                height,
+                                                                motionMapVkFormat,
                                                                 defaultMSAttachmentUsageFlags,
                                                                 sampleCount_);
 
@@ -134,6 +148,7 @@ void GBuffer::transitionToFill(vk::raii::CommandBuffer& cmdBuf) const {
     target_->transitionLayout(vk::ImageLayout::eColorAttachmentOptimal,vk::PipelineStageFlagBits2::eColorAttachmentOutput,vk::AccessFlagBits2::eColorAttachmentWrite,cmdBuf);
     albedoMap_->transitionLayout(vk::ImageLayout::eColorAttachmentOptimal,vk::PipelineStageFlagBits2::eColorAttachmentOutput,vk::AccessFlagBits2::eColorAttachmentWrite,cmdBuf);
     normalMap_->transitionLayout(vk::ImageLayout::eColorAttachmentOptimal,vk::PipelineStageFlagBits2::eColorAttachmentOutput,vk::AccessFlagBits2::eColorAttachmentWrite,cmdBuf);
+    motionMap_->transitionLayout(vk::ImageLayout::eColorAttachmentOptimal,vk::PipelineStageFlagBits2::eColorAttachmentOutput,vk::AccessFlagBits2::eColorAttachmentWrite,cmdBuf);
     objectIdMap_->transitionLayout(vk::ImageLayout::eColorAttachmentOptimal,vk::PipelineStageFlagBits2::eColorAttachmentOutput,vk::AccessFlagBits2::eColorAttachmentWrite,cmdBuf);
     materialIdMap_->transitionLayout(vk::ImageLayout::eColorAttachmentOptimal,vk::PipelineStageFlagBits2::eColorAttachmentOutput,vk::AccessFlagBits2::eColorAttachmentWrite,cmdBuf);
     depthMap_->transitionLayout(vk::ImageLayout::eDepthAttachmentOptimal,
@@ -146,6 +161,7 @@ void GBuffer::transitionToShade(vk::raii::CommandBuffer& cmdBuf) const {
     target_->transitionLayout(vk::ImageLayout::eColorAttachmentOptimal,vk::PipelineStageFlagBits2::eColorAttachmentOutput,vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead,cmdBuf);
     albedoMap_->transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eFragmentShader,vk::AccessFlagBits2::eShaderSampledRead,cmdBuf);
     normalMap_->transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eFragmentShader,vk::AccessFlagBits2::eShaderSampledRead,cmdBuf);
+    motionMap_->transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eFragmentShader,vk::AccessFlagBits2::eShaderSampledRead,cmdBuf);
     materialIdMap_->transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eFragmentShader,vk::AccessFlagBits2::eShaderSampledRead,cmdBuf);
     depthMap_->transitionLayout(vk::ImageLayout::eDepthReadOnlyOptimal,vk::PipelineStageFlagBits2::eFragmentShader,vk::AccessFlagBits2::eShaderSampledRead | vk::AccessFlagBits2::eDepthStencilAttachmentRead,cmdBuf);
 }
@@ -158,6 +174,7 @@ void GBuffer::transitionToTrace(vk::raii::CommandBuffer& cmdBuf) const {
     target_->transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eRayTracingShaderKHR,vk::AccessFlagBits2::eShaderSampledRead,cmdBuf);
     albedoMap_->transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eRayTracingShaderKHR,vk::AccessFlagBits2::eShaderSampledRead,cmdBuf);
     normalMap_->transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eRayTracingShaderKHR,vk::AccessFlagBits2::eShaderSampledRead,cmdBuf);
+    motionMap_->transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eRayTracingShaderKHR,vk::AccessFlagBits2::eShaderSampledRead,cmdBuf);
     materialIdMap_->transitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal,vk::PipelineStageFlagBits2::eRayTracingShaderKHR,vk::AccessFlagBits2::eShaderSampledRead,cmdBuf);
     depthMap_->transitionLayout(vk::ImageLayout::eDepthReadOnlyOptimal,vk::PipelineStageFlagBits2::eRayTracingShaderKHR,vk::AccessFlagBits2::eShaderSampledRead,cmdBuf);
     accumulator_->transitionLayout(vk::ImageLayout::eGeneral,vk::PipelineStageFlagBits2::eRayTracingShaderKHR,vk::AccessFlagBits2::eShaderStorageWrite | vk::AccessFlagBits2::eShaderStorageRead,cmdBuf);

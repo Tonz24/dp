@@ -14,15 +14,21 @@ protected:
     T uboFormat_;
 };
 
-struct CameraUBOFormat {
+struct alignas(16) CameraUBOFormat {
     glm::mat4 matView{};
     glm::mat4 matProj{};
     glm::mat4 matViewProj{};
     glm::mat4 matInvViewProj{};
 
+    glm::mat4 matViewPrev{};
+    glm::mat4 matProjPrev{};
+    glm::mat4 matViewProjPrev{};
+    glm::mat4 matInvViewProjPrev{};
+
     glm::vec3 positionWorld{};
     float zNear{0.1f};
 
+    glm::vec3 positionWorldPrev{};
     float zFar{700.0f};
 };
 

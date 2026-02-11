@@ -8,9 +8,18 @@ layout (set=0, binding=0, std140) uniform CameraUBO {
     mat4 matP;
     mat4 matVP;
     mat4 matInvVP;
+
+    mat4 matVPrev;
+    mat4 matPPrev;
+    mat4 matVPPrev;
+    mat4 matInvVPPrev;
+
     vec3 posWS;
     float zNear;
+
+    vec3 posWSPrev;
     float zFar;
+
 } cameraUBO;
 
 layout (set=0,binding=1, std140) uniform MaterialUBO {
@@ -25,8 +34,6 @@ layout(set = 0, binding = 3) uniform accelerationStructureEXT topLevelAS;
 layout(set = 0, binding = 4, rgba32f) uniform image2D outputImage;
 
 layout(set = 0, binding = 6) uniform usampler2D utextures[1024];
-
-
 
 
 struct Vertex {
