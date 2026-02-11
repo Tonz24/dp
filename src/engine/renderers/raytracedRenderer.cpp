@@ -204,6 +204,8 @@ void RaytracedRenderer::recordTonemapCommands(const Scene& scene, vk::raii::Comm
 void RaytracedRenderer::setPcsData() {
     pcs_.albedoMapHandle = gBuffer_->getAlbedoMap().getCID();
     pcs_.normalMapHandle = gBuffer_->getNormalMap().getCID();
+    pcs_.motionMapHandle = gBuffer_->getMotionMap().getCID();
+    pcs_.objectIdMapHandle = gBuffer_->getObjectIdMap().getCID();
     pcs_.depthMapHandle = gBuffer_->getDepthMap().getCID();
     pcs_.materialMapHandle = gBuffer_->getMaterialMap().getCID();
     pcs_.targetHandle = gBuffer_->getTarget().getCID();

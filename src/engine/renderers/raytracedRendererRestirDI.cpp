@@ -21,15 +21,17 @@ bool RaytracedRendererRestirDI::drawGUI() {
         changed |= ImGui::DragInt("Area sample count",reinterpret_cast<int*>(&pcsUnpacked_.M_area),0.25,0,PcsRaygen::maxSampleCount);
         changed |= ImGui::DragInt("Env sample count",reinterpret_cast<int*>(&pcsUnpacked_.M_env),0.25,0,PcsRaygen::maxSampleCount);
 
-        changed |= ImGui::Checkbox("Spatial reuse",reinterpret_cast<bool*>(&pcsUnpacked_.doSpatialReuse));
+        changed |= ImGui::Checkbox("Spatial reuse",&doSpatialReuse_);
 
-        if (pcsUnpacked_.doSpatialReuse) {
+        if (doSpatialReuse_) {
             ImGui::Indent();
             changed |= ImGui::DragInt("Neighbor count",reinterpret_cast<int*>(&pcsUnpacked_.M_neighbor),0.25,0,31);
             changed |= ImGui::DragFloat("Search radius",&pcs_.neighborSearchRadius,0.25,1,500);
 
             ImGui::Unindent();
         }
+
+        changed |= ImGui::Checkbox("Temporal reuse",&doTemporalReuse_);
 
         ImGui::Unindent();
     }
@@ -61,6 +63,21 @@ void RaytracedRendererRestirDI::recordSpatialPassCommands(const Scene& scene, vk
 
     cmdBuf.traceRaysKHR(spatialRaygenOffset,rtPipeline_.getMissRegion(),rtPipeline_.getHitRegion(),{},renderDims.x,renderDims.y,1);
 }
+
+void RaytracedRendererRestirDI::recordTemporalPassCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const glm::vec<2,uint32_t>& renderDims) {
+    pcsUnpacked_.bufferIndices = !pcsUnpacked_.bufferIndices;
+    PcsRaygen::packData(pcsUnpacked_,pcs_);
+
+    pcs_.seed = distr_(generator_);
+
+    cmdBuf.pushConstants(rtPipeline_.getPipelineLayout(), PcsRaygen::stageFlags,0, vk::ArrayProxy<const PcsRaygen::Data>{pcs_});
+
+    vk::StridedDeviceAddressRegionKHR raygenRegion = rtPipeline_.getRaygenRegion();
+    auto temporalRaygenOffset =  static_cast<vk::StridedDeviceAddressRegionKHR>(raygenRegion.deviceAddress + raygenRegion.stride * 2);
+
+    cmdBuf.traceRaysKHR(temporalRaygenOffset,rtPipeline_.getMissRegion(),rtPipeline_.getHitRegion(),{},renderDims.x,renderDims.y,1);
+}
+
 void RaytracedRendererRestirDI::recordFinalShadePassCommands(const Scene& scene, vk::raii::CommandBuffer& cmdBuf, uint32_t frameInFlightIndex, const glm::vec<2,uint32_t>& renderDims) {
     pcsUnpacked_.bufferIndices = !pcsUnpacked_.bufferIndices;
     PcsRaygen::packData(pcsUnpacked_,pcs_);
@@ -70,7 +87,7 @@ void RaytracedRendererRestirDI::recordFinalShadePassCommands(const Scene& scene,
     cmdBuf.pushConstants(rtPipeline_.getPipelineLayout(), PcsRaygen::stageFlags,0, vk::ArrayProxy<const PcsRaygen::Data>{pcs_});
 
     vk::StridedDeviceAddressRegionKHR raygenRegion = rtPipeline_.getRaygenRegion();
-    auto spatialRaygenOffset =  static_cast<vk::StridedDeviceAddressRegionKHR>(raygenRegion.deviceAddress + raygenRegion.stride * 2);
+    auto spatialRaygenOffset =  static_cast<vk::StridedDeviceAddressRegionKHR>(raygenRegion.deviceAddress + raygenRegion.stride * 3);
 
     cmdBuf.traceRaysKHR(spatialRaygenOffset,rtPipeline_.getMissRegion(),rtPipeline_.getHitRegion(),{},renderDims.x,renderDims.y, 1);
 }
@@ -87,7 +104,7 @@ void RaytracedRendererRestirDI::recordTraceCommands(const Scene& scene, vk::raii
     recordInitialPassCommands(scene,cmdBuf,frameInFlightIndex,renderDims);
 
     // do spatial pass if checked
-    if (pcsUnpacked_.doSpatialReuse) {
+    if (doSpatialReuse_) {
         vk::MemoryBarrier2 barrierInitialToSpatial{
             .srcStageMask =  vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
             .srcAccessMask = vk::AccessFlagBits2::eShaderStorageWrite,
@@ -100,6 +117,21 @@ void RaytracedRendererRestirDI::recordTraceCommands(const Scene& scene, vk::raii
         };
         cmdBuf.pipelineBarrier2(depInitialToSpatial);
         recordSpatialPassCommands(scene,cmdBuf,frameInFlightIndex,renderDims);
+    }
+
+    if (doTemporalReuse_) {
+        vk::MemoryBarrier2 barrierSpatialToTemporal{
+            .srcStageMask =  vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+            .srcAccessMask = vk::AccessFlagBits2::eShaderStorageWrite | vk::AccessFlagBits2::eShaderStorageWrite,
+            .dstStageMask =  vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+            .dstAccessMask = vk::AccessFlagBits2::eShaderStorageRead | vk::AccessFlagBits2::eShaderStorageWrite,
+        };
+        vk::DependencyInfo depSpatialToTemporal{
+            .memoryBarrierCount = 1,
+            .pMemoryBarriers = &barrierSpatialToTemporal
+        };
+        cmdBuf.pipelineBarrier2(depSpatialToTemporal);
+        recordTemporalPassCommands(scene,cmdBuf,frameInFlightIndex,renderDims);
     }
 
 

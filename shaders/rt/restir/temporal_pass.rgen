@@ -1,0 +1,157 @@
+//https://github.com/yknishidate/single-file-vulkan-pathtracing
+//https://nvpro-samples.github.io/vk_raytracing_tutorial_KHR/
+#version 460
+#extension GL_EXT_ray_tracing : require
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_ray_query : require
+
+#define RAYGEN
+
+#include "../../common/common.glsl"
+#include "../../common/math_constants.glsl"
+#include "../pcs/pcs_raygen.glsl"
+#include "../ris.glsl"
+
+// this pixel's information
+ShadeParams params;
+vec3 posWS;
+vec3 rayDir;
+Material mat;
+// neighbors's information
+ShadeParams paramsPrev;
+vec3 posWSPrev;
+vec3 rayDirPrev;
+Material matPrev;
+
+// GRIS paper (https://graphics.cs.utah.edu/research/projects/gris/sig22_GRIS.pdf)
+// x denotes the current pixel
+// y denotes the neighbor pixel (and its sample sample_i)
+// determinant of the jacobian equals the ratio of geometry terms for sample sample_i calculated for both origin points (world space position of this and neighbor pixels) 
+float calculateJacobian(CandidateSample sample_i, vec3 posWS, vec3 neighborPos){
+
+    vec3 x_surf_to_y_hit = sample_i.omega_i - posWS;
+    vec3 x_surf_to_y_hit_dir = normalize(x_surf_to_y_hit);
+    float x_surf_to_y_dist = length(x_surf_to_y_hit);
+    float x_surf_to_y_dist_sqr = x_surf_to_y_dist * x_surf_to_y_dist;
+    
+    vec3 y_surf_to_y_hit = sample_i.omega_i - neighborPos;
+    vec3 y_surf_to_y_hit_dir = normalize(y_surf_to_y_hit);
+    float y_surf_to_y_dist = length(y_surf_to_y_hit);
+    float y_surf_to_y_dist_sqr = y_surf_to_y_dist * y_surf_to_y_dist;
+
+    float cos_theta_x = max(dot(-x_surf_to_y_hit_dir, sample_i.normal), 0.0f);
+    float cos_theta_y = max(dot(-y_surf_to_y_hit_dir, sample_i.normal), 0.0f);
+
+    float dist_term = y_surf_to_y_dist_sqr / x_surf_to_y_dist_sqr;
+    float cos_term = cos_theta_x / cos_theta_y;
+
+    float jacobian = sanitize(dist_term * cos_term);
+    return jacobian;
+}
+
+void main() { 
+
+    // Calc seed
+    uvec2 s = pcg2d(ivec2(gl_LaunchIDEXT.xy) * (pcs.seed));
+    uint seed = s.x + s.y;
+
+    //  calculate texture coordinate for sampling
+    vec2 imageSize = vec2(imageSize(outputImage));
+    vec2 imageCoord = vec2(gl_LaunchIDEXT.xy) + 0.5; // add half pixel offset (sample pixel centers, not corners)
+    vec2 uv = imageCoord / imageSize;
+
+    if (!unpackFirstHitRestir(uv,params,posWS,rayDir, mat))
+        return;
+
+    uint bufferReadIndex = getBufferReadIndex(); 
+    uint bufferWriteIndex = getBufferWriteIndex(); 
+    uint bufferHistoryIndex = HISTORY_RESERVOIR_BUFFER_INDEX; 
+    uint bufferPosition = flatten2DCoord(gl_LaunchIDEXT.xy, uvec2(imageSize)); 
+
+    Reservoir outReservoir = makeEmptyReservoir();
+
+    // add the motion vector to screen uv to get reprojected screen uv coordinates
+    vec2 uvPrev = uv + texture(textures[pcs.motionMapHandle], uv).xy;
+    vec2 imageCoordPrev = uvPrev * imageSize;
+
+    uint bufferPositionPrev = flatten2DCoord(uvec2(imageCoordPrev), uvec2(imageSize)); 
+
+    // if there's no geometry at the reprojected pixel, just pass the reservoir through
+    if (!unpackFirstHitRestir(uvPrev,paramsPrev,posWSPrev,rayDirPrev, matPrev)){
+        reservoirBuffers[bufferWriteIndex].reservoirs[bufferPosition] = reservoirBuffers[bufferReadIndex].reservoirs[bufferPosition];
+        return;
+    }
+
+    vec3 rayDirPrev = normalize(posWSPrev - cameraUBO.posWSPrev);
+        
+    uint objIdCurrent = texelFetch(utextures[pcs.objectIdMapHandle], ivec2(imageCoord), 0).x;
+    uint objIdPrev = texelFetch(utextures[pcs.objectIdMapHandle], ivec2(imageCoordPrev), 0).x;
+    bool idMatch = objIdCurrent == objIdPrev; // detect occlusions and disocclusions -- found when the ids don't match
+
+    // occlusion or disocclusion -- pass through
+    if (!idMatch){
+        reservoirBuffers[bufferWriteIndex].reservoirs[bufferPosition] = reservoirBuffers[bufferReadIndex].reservoirs[bufferPosition];
+        return;
+    }
+
+
+    Reservoir reservoirCurrent = reservoirBuffers[bufferReadIndex].reservoirs[bufferPosition];
+    CandidateSample sampleCurrent = reservoirCurrent.bestSample;
+
+    Reservoir reservoirPrev = reservoirBuffers[bufferHistoryIndex].reservoirs[bufferPositionPrev];
+    CandidateSample samplePrev = reservoirPrev.bestSample;
+
+    Reservoir reservoirOut = makeEmptyReservoir();
+
+
+
+
+
+
+
+    float p_hat_current = sanitize(evalPhatVis(sampleCurrent, params, posWS, rayDir, mat.materialType));
+    float p_hat_prev = sanitize(evalPhatVis(sampleCurrent, paramsPrev, posWSPrev, rayDirPrev, matPrev.materialType));
+
+    float misWeight = p_hat_current / (p_hat_current + p_hat_prev);
+
+    bool positionSample = false;
+    float _ = unpackMisWeight(sampleCurrent.misWeight,positionSample);
+
+    // the jacobian determinant needs to be calculated to scale the solid angle weight of sample_i as if it came from this pixel
+    float jacobian = positionSample ? calculateJacobian(sampleCurrent, posWS, posWSPrev) : 1.0f;
+
+    float w = sanitize(misWeight * p_hat_current * reservoirCurrent.W * jacobian);
+    addSample(reservoirOut, sampleCurrent, w, seed);
+
+
+
+
+
+
+
+
+
+
+    p_hat_current = sanitize(evalPhatVis(samplePrev, params, posWS, rayDir, mat.materialType));
+    p_hat_prev = sanitize(evalPhatVis(samplePrev, paramsPrev, posWSPrev, rayDirPrev, matPrev.materialType));
+
+    misWeight = p_hat_prev / (p_hat_current + p_hat_prev);
+    
+    _ = unpackMisWeight(samplePrev.misWeight,positionSample);
+
+    // the jacobian determinant needs to be calculated to scale the solid angle weight of sample_i as if it came from this pixel
+    jacobian = positionSample ? calculateJacobian(samplePrev, posWSPrev, posWS) : 1.0f;
+
+    w = sanitize(misWeight * p_hat_prev * reservoirPrev.W * jacobian);
+    addSample(reservoirOut, samplePrev, w, seed);
+
+
+
+
+    float p_hat_final = evalPhatVis(reservoirOut.bestSample, params, posWS, rayDir, mat.materialType);
+    reservoirOut.W = sanitize(reservoirOut.wSum / p_hat_final);    
+
+    reservoirBuffers[bufferWriteIndex].reservoirs[bufferPosition] = reservoirOut;
+}
+
+#undef RAYGEN

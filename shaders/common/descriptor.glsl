@@ -22,7 +22,7 @@ layout (set=0, binding=0, std140) uniform CameraUBO {
 
 } cameraUBO;
 
-layout (set=0,binding=1, std140) uniform MaterialUBO {
+layout(set = 0, binding = 1, std140) uniform MaterialUBO {
     Material materials[100];
 } materialUBO;
 
@@ -84,8 +84,9 @@ layout(set = 0, binding = 8, std430) readonly buffer EmissiveCDF {
 } emissiveCDF;
 
 
+// first two indices ping pong between read and write, the last index is for history used in the temporal pass
 layout(set = 0, binding = 9, std430)  buffer ReservoirBuffer {
     Reservoir reservoirs[];
-} reservoirBuffers[2];
+} reservoirBuffers[3];
 
 #endif // DESCRIPTOR_GLSL

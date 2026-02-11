@@ -142,19 +142,7 @@ void Renderer::initDescSetLayout() {
         objDescSSBOs_.emplace_back(std::move(buffer));
     }
 
-
-    // reservoir SSBO
-    for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
-
-        vk::DeviceSize bufferSize = sizeof(Mesh::ObjDescription) * Constants::objDescLimit;
-        VmaAllocationCreateFlags allocationCreateFlags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT ;
-        auto buffer = VkUtils::createBufferVMA(bufferSize,vk::BufferUsageFlagBits::eStorageBuffer, allocationCreateFlags);
-
-        objDescSSBOsMapped_.emplace_back(static_cast<unsigned char*>(buffer.allocationInfo.pMappedData));
-        objDescSSBOs_.emplace_back(std::move(buffer));
-    }
-
-    std::vector<vk::DescriptorSetLayout> layouts(Constants::maxFramesInFlight,*descSetLayoutFrame_);
+    std::vector layouts(Constants::maxFramesInFlight,*descSetLayoutFrame_);
     vk::DescriptorSetAllocateInfo allocInfo{
         .descriptorPool = Engine::getInstance().getDescriptorPool(),
         .descriptorSetCount = static_cast<uint32_t>(layouts.size()),
@@ -168,7 +156,7 @@ void Renderer::initDescSetLayout() {
         vk::DescriptorBufferInfo camBufferInfo{
             .buffer = cameraUBOs_[i].buffer,
             .offset = 0,
-            .range = sizeof(CameraUBOFormat)
+            .range = vk::WholeSize
         };
 
         vk::WriteDescriptorSet writeDescriptorSetCam{
@@ -183,7 +171,7 @@ void Renderer::initDescSetLayout() {
         vk::DescriptorBufferInfo matBufferInfo{
             .buffer = materialUBOs_[i].buffer,
             .offset = 0,
-            .range = sizeof(MaterialUBOFormat) * Constants::materialLimit
+            .range = vk::WholeSize
         };
 
         vk::WriteDescriptorSet writeDescriptorSetMat{
@@ -198,7 +186,7 @@ void Renderer::initDescSetLayout() {
         vk::DescriptorBufferInfo objDescBufferInfo{
             .buffer = objDescSSBOs_[i].buffer,
             .offset = 0,
-            .range = sizeof(Mesh::ObjDescription) * Constants::objDescLimit
+            .range = vk::WholeSize
         };
 
         vk::WriteDescriptorSet writeDescriptorSetObjDesc{
@@ -270,7 +258,7 @@ void Renderer::uploadObjDescription(const Mesh& mesh) {
     }
 }
 
-void Renderer::setReservoirSSBOs(const std::array<VkUtils::BufferAlloc, 2>& reservoirBuffers) {
+void Renderer::setReservoirSSBOs(const std::array<VkUtils::BufferAlloc, 3>& reservoirBuffers) {
 
     for (uint32_t i = 0; i < Constants::maxFramesInFlight; ++i) {
         for (int j = 0; j < reservoirBuffers.size(); ++j) {

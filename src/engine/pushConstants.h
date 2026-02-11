@@ -99,8 +99,10 @@ struct PcsRaygen{
     struct Data{
         uint32_t albedoMapHandle;
         uint32_t normalMapHandle;
+        uint32_t motionMapHandle;
         uint32_t depthMapHandle;
         uint32_t materialMapHandle;
+        uint32_t objectIdMapHandle;
 
         uint32_t targetHandle;
         uint32_t skyHandle;
@@ -159,7 +161,6 @@ struct PcsRaygen{
         uint32_t M_area{1};
         uint32_t M_env{1};
 
-        uint32_t doSpatialReuse{0};
         // spatial reuse neighbor count
         uint32_t M_neighbor{0};
         uint32_t neighborSearchRadius{0};

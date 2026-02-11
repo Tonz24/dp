@@ -89,7 +89,7 @@ public:
     static constexpr vk::ImageUsageFlags depthMapUsageFlags{vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eDepthStencilAttachment}; // sampled because of world space position reconstruction from depth
 
     static constexpr vk::Format idMapVkFormat{vk::Format::eR32Uint};
-    static constexpr vk::ImageUsageFlags idMapUsageFlags{vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc};  // transfer src for retrieving id at cursor position
+    static constexpr vk::ImageUsageFlags idMapUsageFlags{defaultAttachmentUsageFlags};
 
     static constexpr vk::Format accumulatorFormat{vk::Format::eR32G32B32A32Sfloat};
     static constexpr vk::ImageUsageFlags accumulatorUsageFlags{vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled};

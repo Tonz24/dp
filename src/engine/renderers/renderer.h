@@ -40,7 +40,7 @@ public:
     static void registerTextureBindless(const Texture& texture);
     static void registerTextureStorage(const Texture& texture);
     static void uploadObjDescription(const Mesh& mesh);
-    static void setReservoirSSBOs(const std::array<VkUtils::BufferAlloc,2>& reservoirBuffers);
+    static void setReservoirSSBOs(const std::array<VkUtils::BufferAlloc, 3>& reservoirBuffers);
 
     void flushExportBuffer();
 
@@ -145,7 +145,7 @@ private:
         vk::DescriptorSetLayoutBinding { // reservoir buffers
             .binding = 9,
             .descriptorType = vk::DescriptorType::eStorageBuffer,
-            .descriptorCount = 2,
+            .descriptorCount = 3,
             .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR
         }
     };

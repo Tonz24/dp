@@ -190,8 +190,7 @@ void main() {
 
     // finalize resampling
     outReservoir.wSum = sanitize(outReservoir.wSum);
-
-    //outReservoir.W = sanitize(correctionFactor / acceptedPhat * outReservoir.wSum);    
+    
     outReservoir.W = sanitize(outReservoir.wSum / acceptedPhat);    
 
     // write output reservoir to buffer 
