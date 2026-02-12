@@ -26,11 +26,11 @@ vec2 getMotionVector(){
 
     vec3 posNDC = inPosCS.xyz / inPosCS.w;
     posNDC = posNDC * 0.5 + 0.5; // normalize to [0,1] range
-    posNDC.y = 1.0f - posNDC.y;
+    //posNDC.y = 1.0f - posNDC.y;
 
     vec3 posNDCPrev = posCSPrev.xyz / posCSPrev.w;
     posNDCPrev = posNDCPrev * 0.5 + 0.5; // normalize to [0,1] range
-    posNDCPrev.y = 1.0f - posNDCPrev.y;
+    //posNDCPrev.y = 1.0f - posNDCPrev.y;
 
     motionVec = posNDCPrev.xy - posNDC.xy;
 

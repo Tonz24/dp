@@ -33,7 +33,7 @@ void main() {
 
     // get the reservoir to read from
     uint bufferReadPosition = flatten2DCoord(gl_LaunchIDEXT.xy, uvec2(imageSize));
-    uint bufferReadIndex = getBufferReadIndex(); 
+    uint bufferReadIndex = getBufferReadIndex();
     Reservoir r = reservoirBuffers[bufferReadIndex].reservoirs[bufferReadPosition];
 
     // save it to history, so that it can be used during the next temporal pass 

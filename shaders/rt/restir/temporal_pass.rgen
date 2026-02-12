@@ -57,7 +57,7 @@ void main() {
 
     //  calculate texture coordinate for sampling
     vec2 imageSize = vec2(imageSize(outputImage));
-    vec2 imageCoord = vec2(gl_LaunchIDEXT.xy) + 0.5; // add half pixel offset (sample pixel centers, not corners)
+    vec2 imageCoord = vec2(gl_LaunchIDEXT.xy) + 0.5f; // add half pixel offset (sample pixel centers, not corners)
     vec2 uv = imageCoord / imageSize;
 
     if (!unpackFirstHitRestir(uv,params,posWS,rayDir, mat))
@@ -71,8 +71,16 @@ void main() {
     Reservoir outReservoir = makeEmptyReservoir();
 
     // add the motion vector to screen uv to get reprojected screen uv coordinates
-    vec2 uvPrev = uv + texture(textures[pcs.motionMapHandle], uv).xy;
-    vec2 imageCoordPrev = uvPrev * imageSize;
+    vec2 motion = texture(textures[pcs.motionMapHandle], uv).xy;
+    vec2 uvPrev = uv + vec2(motion.x, -motion.y);
+    ivec2 imageCoordPrev = ivec2(uvPrev * imageSize);
+
+    // handle previous position being out of frame
+    if (imageCoordPrev.x < 0 || imageCoordPrev.x >= gl_LaunchIDEXT.x ||
+        imageCoordPrev.y < 0 || imageCoordPrev.y >= gl_LaunchIDEXT.y){
+            reservoirBuffers[bufferWriteIndex].reservoirs[bufferPosition] = reservoirBuffers[bufferReadIndex].reservoirs[bufferPosition];
+            return;
+    }
 
     uint bufferPositionPrev = flatten2DCoord(uvec2(imageCoordPrev), uvec2(imageSize)); 
 
@@ -85,7 +93,7 @@ void main() {
     vec3 rayDirPrev = normalize(posWSPrev - cameraUBO.posWSPrev);
         
     uint objIdCurrent = texelFetch(utextures[pcs.objectIdMapHandle], ivec2(imageCoord), 0).x;
-    uint objIdPrev = texelFetch(utextures[pcs.objectIdMapHandle], ivec2(imageCoordPrev), 0).x;
+    uint objIdPrev = texelFetch(utextures[pcs.objectIdMapHandle], imageCoordPrev, 0).x;
     bool idMatch = objIdCurrent == objIdPrev; // detect occlusions and disocclusions -- found when the ids don't match
 
     // occlusion or disocclusion -- pass through
