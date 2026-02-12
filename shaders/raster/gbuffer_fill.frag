@@ -24,8 +24,13 @@ vec2 getMotionVector(){
     // multiply the world space position with the inverse of the previous frame VP matrix
     vec4 posCSPrev = cameraUBO.matVPPrev * vec4(inPosWS,1.0f);
 
-    vec3 posNDC = (inPosCS.xyz / inPosCS.w) * 0.5 + 0.5;
-    vec3 posNDCPrev = (posCSPrev.xyz / posCSPrev.w) * 0.5 + 0.5; 
+    vec3 posNDC = inPosCS.xyz / inPosCS.w;
+    posNDC = posNDC * 0.5 + 0.5; // normalize to [0,1] range
+    posNDC.y = 1.0f - posNDC.y;
+
+    vec3 posNDCPrev = posCSPrev.xyz / posCSPrev.w;
+    posNDCPrev = posNDCPrev * 0.5 + 0.5; // normalize to [0,1] range
+    posNDCPrev.y = 1.0f - posNDCPrev.y;
 
     motionVec = posNDCPrev.xy - posNDC.xy;
 

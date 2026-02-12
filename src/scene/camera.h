@@ -33,6 +33,7 @@ public:
 
     void updateOrientation(double dx, double dy);
     void updatePosition(const glm::vec3& velocity);
+    void updatePreviousMatrices();
 
     bool drawGUI() override;
 

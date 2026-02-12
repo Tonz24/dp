@@ -942,6 +942,11 @@ void Engine::mainLoop() {
         deltaTime_ = currentTime - oldTime_;
         oldTime_ = currentTime;
 
+        // update previous frame matrices irrespective of actual camera movement
+        // in the case of a still camera, the resulting motion vectors are going to be zero
+        if (scene_ != nullptr)
+            scene_->getCamera().updatePreviousMatrices();
+
         glfwPollEvents();
         processInput();
 

@@ -63,10 +63,6 @@ void Camera::updateOrientation(double dx, double dy) {
 
 void Camera::updatePosition(const glm::vec3 &velocity) {
 
-    // copy this frame data into previous frame data fields
-    memcpy(&uboFormat_.matViewPrev, &uboFormat_ , sizeof(glm::mat4) * 4);
-    uboFormat_.positionWorldPrev = uboFormat_.positionWorld;
-
     glm::vec3 oldPos{positionWorld_};
     positionWorld_ += camRightDir_ * velocity.x * movementSpeed_ * 2.0f;
     positionWorld_ += camUpDir_ * velocity.y * movementSpeed_ * 2.0f;
@@ -76,6 +72,12 @@ void Camera::updatePosition(const glm::vec3 &velocity) {
         isMoving_ = true;
         recalculateMatrices();
     }
+}
+
+void Camera::updatePreviousMatrices() {
+    // copy this frame data into previous frame data fields
+    memcpy(&uboFormat_.matViewPrev, &uboFormat_ , sizeof(glm::mat4) * 4);
+    uboFormat_.positionWorldPrev = uboFormat_.positionWorld;
 }
 
 bool Camera::drawGUI() {
